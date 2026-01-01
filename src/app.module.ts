@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-
+import { PrismaModule } from './modules/prisma/prisma.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { EmployeesModule } from './modules/employees/employees.module';
+import { RolesModule } from './modules/roles/roles.module';
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    // ConfigModule.forRoot({ isGlobal: true }), // blocked by npm install error
+    PrismaModule,
+    UsersModule,
+    AuthModule,
+    EmployeesModule,
+    RolesModule,
+  ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

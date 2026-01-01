@@ -1,0 +1,456 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // url = env("DATABASE_URL")
+}
+
+// --------------------------------------
+// User Management & Auth
+// --------------------------------------
+
+model User {
+  id           String  @id @default(uuid()) @db.VarChar(36)
+  username     String  @unique @db.VarChar(25)
+  email        String  @unique @db.VarChar(100)
+  passwordhash String  @db.VarChar(255)
+
+  userRoles    UserRole[]
+  employee     Employee?
+  auditLogs    AuditLog[]
+  createdSlugs Slug[]     @relation("SlugCreator")
+  updatedSlugs Slug[]     @relation("SlugUpdater")
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("users")
+  @@index([id])
+  @@index([email])
+  @@index([isDeleted, isActive])
+}
+
+model Role {
+  id   String @id @default(uuid()) @db.VarChar(36)
+  name String @unique @db.VarChar(50)
+
+  userRoles UserRole[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("roles")
+  @@index([id])
+  @@index([name])
+  @@index([isDeleted, isActive])
+}
+
+model UserRole {
+  userId String @map("user_id") @db.VarChar(36)
+  roleId String @map("role_id") @db.VarChar(36)
+
+  assignedAt DateTime @default(now()) @db.Timestamptz()
+  assignedBy String?  @db.VarChar(36)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  // Composite Primary Key: A user cannot have the same role twice
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+// --------------------------------------
+// HR Core
+// --------------------------------------
+
+model Department {
+  id             String @id @default(uuid()) @db.VarChar(36)
+  departmentName String @map("department_name") @db.VarChar(150)
+
+  employees Employee[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("departments")
+}
+
+model EmployeePosition {
+  id             String  @id @default(uuid()) @db.VarChar(36)
+  title          String  @db.VarChar(100)
+  description    String? @db.Text
+  salaryRangeMin Decimal @map("salary_range_min") @db.Decimal(10, 2)
+  salaryRangeMax Decimal @map("salary_range_max") @db.Decimal(10, 2)
+
+  employees Employee[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("employee_positions")
+}
+
+model Employee {
+  id           String   @id @default(uuid()) @db.VarChar(36)
+  userId       String?  @unique @map("user_id") @db.VarChar(36)
+  departmentId String   @map("department_id") @db.VarChar(36)
+  positionId   String   @map("position_id") @db.VarChar(36)
+  managerId    String?  @map("manager_id") @db.VarChar(36)
+  employeeCode String   @unique @map("employee_code") @db.VarChar(15)
+  hireDate     DateTime @map("hire_date") @db.Date
+
+  firstname String   @db.VarChar(70)
+  lastname  String   @db.VarChar(70)
+  gender    Int      @db.SmallInt
+  dob       DateTime @db.Date
+  email     String   @db.VarChar(50)
+  address   String?  @db.Text
+  phone     String?  @db.VarChar(20)
+
+  user        User?             @relation(fields: [userId], references: [id])
+  department  Department        @relation(fields: [departmentId], references: [id])
+  position    EmployeePosition  @relation(fields: [positionId], references: [id])
+  manager     Employee?         @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates Employee[]       @relation("ManagerSubordinates")
+  taxConfig   EmployeeTaxConfig?
+
+  attendances           Attendance[]
+  leaveRequests         LeaveRequest[]   @relation("EmployeeLeaves")
+  approvedLeaveRequests LeaveRequest[]   @relation("ApproverLeaves")
+  payrolls              Payroll[]
+  taxCalculations       TaxCalculation[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("employees")
+  @@index([departmentId])
+  @@index([positionId])
+  @@index([managerId])
+  @@index([lastname]) // Frequent search by name
+  @@index([email])
+}
+
+model Attendance {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  employeeId   String    @map("employee_id") @db.VarChar(36)
+  status       String    @db.VarChar(20)
+  date         DateTime  @db.Date
+  checkInTime  DateTime? @map("check_in_time") @db.Time
+  checkOutTime DateTime? @map("check_out_time") @db.Time
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("attendances")
+  @@index([employeeId])
+  @@index([date]) // Optimize date range reports
+  @@index([employeeId, date]) // Optimize specific employee attendance lookup
+}
+
+model LeaveRequest {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  employeeId  String   @map("employee_id") @db.VarChar(36)
+  approvedBy  String?  @map("approved_by") @db.VarChar(36)
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  leaveType   String   @map("leave_type") @db.VarChar(50)
+  status      String   @db.VarChar(20)
+  requestDate DateTime @default(now()) @map("request_date") @db.Date
+  reason      String?  @db.Text
+
+  requester Employee  @relation("EmployeeLeaves", fields: [employeeId], references: [id])
+  approver  Employee? @relation("ApproverLeaves", fields: [approvedBy], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("leave_requests")
+  @@index([employeeId])
+  @@index([approvedBy])
+  @@index([status]) // Filter Pending vs Approved
+  @@index([startDate, endDate]) // Overlap checks
+}
+
+// --------------------------------------
+// Finance & Payroll
+// --------------------------------------
+
+model Currency {
+  id      String @id @default(uuid()) @db.VarChar(36)
+  code    String @unique @db.VarChar(5)
+  name    String @db.VarChar(50)
+  symbol  String @db.VarChar(5)
+  country String @db.VarChar(15)
+
+  payrolls          Payroll[]         @relation("PayrollCurrency")
+  basePayrolls      Payroll[]         @relation("BasePayrollCurrency")
+  payrollItems      PayrollItems[]
+  taxBrackets       TaxBracket[]
+  exchangeRatesFrom ExchangeRate[]    @relation("FromCurrency")
+  exchangeRatesTo   ExchangeRate[]    @relation("ToCurrency")
+  companySettings   CompanySettings[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  fromCurrencyCode String   @map("from_currency_code") @db.VarChar(5)
+  toCurrencyCode   String   @map("to_currency_code") @db.VarChar(5)
+  rate             Decimal  @db.Decimal(10, 6)
+  date             DateTime @db.Date
+  source           String?  @db.VarChar(100)
+
+  fromCurrency Currency @relation("FromCurrency", fields: [fromCurrencyCode], references: [code])
+  toCurrency   Currency @relation("ToCurrency", fields: [toCurrencyCode], references: [code])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("exchange_rates")
+  @@index([fromCurrencyCode, toCurrencyCode, date]) // Optimize rate lookup by date
+}
+
+model Payroll {
+  id               String  @id @default(uuid()) @db.VarChar(36)
+  employeeId       String  @map("employee_id") @db.VarChar(36)
+  currencyCode     String  @map("currency_code") @db.VarChar(5)
+  baseCurrencyCode String? @map("base_currency_code") @db.VarChar(5)
+
+  payPeriodStart DateTime  @map("pay_period_start") @db.Date
+  payPeriodEnd   DateTime  @map("pay_period_end") @db.Date
+  paymentDate    DateTime? @map("payment_date") @db.Date
+
+  basicSalary Decimal @map("basic_salary") @db.Decimal(12, 2)
+  overtimeHrs Decimal @map("overtime_hours") @db.Decimal(4, 2)
+  overtimeRate Decimal @map("overtime_rate") @db.Decimal(12, 2)
+  bonus       Decimal @db.Decimal(12, 2)
+  deductions  Decimal @db.Decimal(12, 2)
+  netSalary   Decimal @map("net_salary") @db.Decimal(12, 2)
+
+  exchangeRate       Decimal? @map("exchange_rate") @db.Decimal(10, 6)
+  baseCurrencyAmount Decimal? @map("base_currency_amount") @db.Decimal(12, 2)
+
+  status      String    @db.VarChar(20)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz
+
+  employee       Employee        @relation(fields: [employeeId], references: [id])
+  currency       Currency        @relation("PayrollCurrency", fields: [currencyCode], references: [code])
+  baseCurrency   Currency?       @relation("BasePayrollCurrency", fields: [baseCurrencyCode], references: [code])
+  items          PayrollItems[]
+  taxCalculation TaxCalculation?
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("payrolls")
+  @@index([employeeId])
+  @@index([payPeriodStart, payPeriodEnd]) // Reporting by period
+  @@index([status]) // Find pending payrolls
+  @@index([currencyCode])
+}
+
+model PayrollItems {
+  id           String  @id @default(uuid()) @db.VarChar(36)
+  payrollId    String  @map("payroll_id") @db.VarChar(36)
+  currencyCode String? @map("currency_code") @db.VarChar(5)
+  itemType     String  @map("item_type") @db.VarChar(50)
+  itemName     String  @map("item_name") @db.VarChar(100)
+  amount       Decimal @db.Decimal(12, 2)
+  description  String? @db.Text
+
+  payroll  Payroll   @relation(fields: [payrollId], references: [id])
+  currency Currency? @relation(fields: [currencyCode], references: [code])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("payroll_items")
+  @@index([payrollId]) // Vital for loading items with payroll
+}
+
+// --------------------------------------
+// Tax System
+// --------------------------------------
+
+model TaxBracket {
+  id           String  @id @default(uuid()) @db.VarChar(36)
+  currencyCode String  @map("currency_code") @db.VarChar(5)
+  countryCode  String  @map("country_code") @db.VarChar(5)
+  taxYear      Int     @map("tax_year") @db.SmallInt
+  bracketName  String  @map("bracket_name") @db.VarChar(100)
+  minAmount    Decimal @map("min_amount") @db.Decimal(12, 2)
+  maxAmount    Decimal @map("max_amount") @db.Decimal(12, 2)
+  taxRate      Decimal @map("tax_rate") @db.Decimal(5, 4)
+  fixedAmount  Decimal @map("fixed_amount") @db.Decimal(12, 2)
+
+  currency        Currency         @relation(fields: [currencyCode], references: [code])
+  taxCalculations TaxCalculation[]
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("tax_brackets")
+  @@index([countryCode, taxYear]) // Lookup relevant brackets
+}
+
+model EmployeeTaxConfig {
+  id         String  @id @default(uuid()) @db.VarChar(36)
+  employeeId String  @unique @map("employee_id") @db.VarChar(36)
+  taxCountry String  @map("tax_country") @db.VarChar(5)
+  taxCode    String  @map("tax_code") @db.VarChar(50)
+  taxExempt  Boolean @map("tax_exempt")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("employee_tax_configs")
+}
+
+model TaxCalculation {
+  id           String @id @default(uuid()) @db.VarChar(36)
+  payrollId    String @unique @map("payroll_id") @db.VarChar(36)
+  employeeId   String @map("employee_id") @db.VarChar(36)
+  taxBracketId String @map("tax_bracket_id") @db.VarChar(36)
+
+  taxPeriodStart DateTime @map("tax_period_start") @db.Date
+  taxPeriodEnd   DateTime @map("tax_period_end") @db.Date
+
+  grossIncome   Decimal @map("gross_income") @db.Decimal(12, 2)
+  taxableIncome Decimal @map("taxable_income") @db.Decimal(12, 2)
+  taxAmount     Decimal @map("tax_amount") @db.Decimal(12, 2)
+  taxRateUsed   Decimal @map("tax_rate_used") @db.Decimal(5, 4)
+
+  payroll    Payroll    @relation(fields: [payrollId], references: [id])
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+  taxBracket TaxBracket @relation(fields: [taxBracketId], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("tax_calculations")
+  @@index([employeeId])
+  @@index([taxBracketId])
+  @@index([taxPeriodStart, taxPeriodEnd])
+}
+
+// --------------------------------------
+// System Config & Audit
+// --------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String?  @map("user_id") @db.VarChar(36)
+  action    String   @db.VarChar(100)
+  tableName String   @map("table_name") @db.VarChar(100)
+  recordId  String   @map("record_id") @db.VarChar(150)
+  oldValue  Json?    @map("old_value")
+  newValue  Json?    @map("new_value")
+  timestamp DateTime @default(now()) @db.Timestamptz
+
+  user User? @relation(fields: [userId], references: [id])
+
+  isDeleted Boolean @default(false) @map("is_deleted")
+  isActive  Boolean @default(true) @map("is_active")
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([tableName, recordId]) // Find history for specific record
+  @@index([timestamp]) // Order logs chronologically
+}
+
+model CompanySettings {
+  id                   String @id @default(uuid()) @db.VarChar(36)
+  name                 String @db.VarChar(255)
+  baseCurrencyCode     String @map("base_currency_code") @db.VarChar(5)
+  fiscalYearStartMonth Int    @map("fiscal_year_start_month") @db.SmallInt
+
+  baseCurrency Currency @relation(fields: [baseCurrencyCode], references: [code])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("company_settings")
+}
+
+model Slug {
+  id          String  @id @default(uuid()) @db.VarChar(36)
+  slug        String  @unique @db.VarChar(50)
+  title       String  @db.VarChar(50)
+  description String? @db.Text
+  data        Json?
+  status      String  @db.VarChar(5)
+  createdBy   String  @map("created_by") @db.VarChar(36)
+  updatedBy   String  @map("updated_by") @db.VarChar(36)
+
+  creator User @relation("SlugCreator", fields: [createdBy], references: [id])
+  updater User @relation("SlugUpdater", fields: [updatedBy], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("slugs")
+  @@index([status])
+}
