@@ -30,7 +30,7 @@ export class AuthService {
       throw new UnauthorizedException('Email or password is required');
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordhash);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials!');
     }
@@ -68,7 +68,7 @@ export class AuthService {
       data: {
         email,
         username,
-        passwordhash: hashedPassword,
+        password: hashedPassword,
         userRoles: {
           create: {
             roleId: role.id,

@@ -18,7 +18,7 @@ model User {
   id           String  @id @default(uuid()) @db.VarChar(36)
   username     String  @unique @db.VarChar(25)
   email        String  @unique @db.VarChar(100)
-  passwordhash String  @db.VarChar(255)
+  password     String  @db.VarChar(255)
 
   userRoles    UserRole[]
   employee     Employee?

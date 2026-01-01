@@ -9,7 +9,7 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   // This property will hold the logic-enriched client
-  private _extendedClient;
+  private readonly _extendedClient;
 
   constructor() {
     const connectionString = process.env.DATABASE_URL || '';
