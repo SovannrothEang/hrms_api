@@ -121,7 +121,6 @@ model Employee {
   lastname  String   @db.VarChar(70)
   gender    Int      @db.SmallInt
   dob       DateTime @db.Date
-  email     String   @db.VarChar(50)
   address   String?  @db.Text
   phone     String?  @db.VarChar(20)
 
@@ -148,8 +147,7 @@ model Employee {
   @@index([departmentId])
   @@index([positionId])
   @@index([managerId])
-  @@index([lastname]) // Frequent search by name
-  @@index([email])
+  @@index([lastname])
 }
 
 model Attendance {
