@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { UserContextService } from './utils/user-context.service';
+import { ContextMiddleware } from './common/context.middleware';
 @Module({
   imports: [
     // ConfigModule.forRoot({ isGlobal: true }), // blocked by npm install error
@@ -14,6 +16,11 @@ import { RolesModule } from './modules/roles/roles.module';
     RolesModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [UserContextService],
+  exports: [UserContextService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ContextMiddleware).forRoutes('*');
+  }
+}

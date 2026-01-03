@@ -4,16 +4,23 @@ import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from '../../utils/jwt.strategy';
+import { UserContextService } from '../../utils/user-context.service';
+import { UsersService } from '../users/users.service';
 
 @Module({
   imports: [
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'superSecretKey',
-      signOptions: { expiresIn: '1h' },
+      signOptions: {
+        audience: 'hrms_audience',
+        issuer: 'hrms_issuer',
+        algorithm: 'HS256',
+        expiresIn: '1h',
+      },
     }),
   ],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, UsersService, UserContextService],
   controllers: [AuthController],
 })
 export class AuthModule {}

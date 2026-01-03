@@ -7,12 +7,18 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { UsersService } from '../users/users.service';
+import { UserDto } from '../users/dtos/user.dto';
+import { RegisterDto } from './dtos/register.dto';
+import { UserContextService } from '../../utils/user-context.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
+    private readonly userContext: UserContextService,
   ) {}
 
   async signInAsync(email: string, password: string) {
@@ -45,39 +51,41 @@ export class AuthService {
     };
   }
 
-  async registerAsync(username: string, email: string, password: string) {
-    const isEmailExist = await this.prisma.user.findFirst({ where: { email } });
+  async registerAsync(dto: RegisterDto): Promise<UserDto> {
+    const isEmailExist = await this.prisma.user.findFirst({
+      where: { email: dto.email },
+    });
     if (isEmailExist) {
       throw new ConflictException('Credentials is already registered!');
     }
 
     const isUserNameExist = await this.prisma.user.findFirst({
-      where: { username },
+      where: { username: dto.username },
     });
     if (isUserNameExist) {
       throw new ConflictException('Credentials is already registered!');
     }
 
-    const role = await this.prisma.role.findUnique({ where: { name: 'user' } });
-    if (!role) {
-      throw new BadRequestException('Roles do not match or exist!');
-    }
+    if (dto.password !== dto.confirmPassword)
+      throw new BadRequestException('Passwords do not match!');
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    return this.prisma.user.create({
-      data: {
-        email,
-        username,
-        password: hashedPassword,
-        userRoles: {
-          create: {
-            roleId: role.id,
-          },
-        },
-      },
-      include: {
-        userRoles: { include: { role: true } },
-      },
+    return await this.usersService.create({
+      username: dto.username,
+      email: dto.email,
+      password: dto.password,
     });
+  }
+
+  validateToken(token: string) {
+    try {
+      return this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException(error);
+    }
+  }
+
+  getMe() {
+    const currentUser = this.userContext.getUser();
+    return currentUser;
   }
 }
