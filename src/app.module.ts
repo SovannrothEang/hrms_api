@@ -33,7 +33,14 @@ import { ContextMiddleware } from './common/context.middleware';
             paths: ['req.headers.authorization', 'res.headers.password'],
             remove: true,
           },
-          transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+          transport: process.env.NODE_ENV !== 'production'
+            ? {
+              target: 'pino-pretty',
+              options: {
+                singleLine: true
+              }
+            }
+            : undefined,
           autoLogging: true,
 
           // Simplify the request object in logs to avoid huge JSON blobs
