@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Post, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Auth } from 'src/common/decorators/auth.decorator';
 
 
 @ApiTags('Auth')
@@ -33,11 +33,9 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @Auth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Return current user details' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@CurrentUser('sub') userId: string) {
     // this.authService.getMe();
     return userId;

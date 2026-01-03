@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { plainToInstance } from 'class-transformer';
 import { UserDto } from './dtos/user.dto';
@@ -25,16 +29,17 @@ export class UsersService {
     return users.map((u) => plainToInstance(UserDto, u));
   }
 
-  async findOne(userId: string) {
-    return this.prisma.user.findUnique({
+  async findOne(userId: string): Promise<UserDto | null> {
+    const user = this.prisma.user.findUnique({
       where: {
         id: userId,
         isDeleted: false,
       },
     });
+    return user === null ? null : plainToInstance(UserDto, user);
   }
 
-  async create(dto: UserCreateDto): Promise<UserDto> {
+  async create(dto: UserCreateDto, userId: string | null): Promise<UserDto> {
     const role = await this.prisma.role.findUnique({ where: { name: 'user' } });
     if (!role) {
       throw new BadRequestException('Roles do not match or exist!');
@@ -49,6 +54,7 @@ export class UsersService {
         userRoles: {
           create: {
             roleId: role.id,
+            performBy: userId,
           },
         },
       },

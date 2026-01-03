@@ -89,7 +89,7 @@ export class AuthService {
       username: dto.username,
       email: dto.email,
       password: dto.password,
-    });
+    }, null); // null because it is registered
   }
 
   validateToken(token: string) {

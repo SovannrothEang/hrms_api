@@ -80,7 +80,6 @@ model UserRole {
   roleId String @map("role_id") @db.VarChar(36)
 
   assignedAt DateTime @default(now()) @db.Timestamptz()
-  assignedBy String?  @db.VarChar(36)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
