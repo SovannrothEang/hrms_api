@@ -5,10 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import {
-  UserContext,
-  UserContextService,
-} from '../../utils/user-context.service';
+import { UserContext, UserContextService } from './user-context.service';
 import { AuthService } from './auth.service';
 
 @Injectable()

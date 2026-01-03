@@ -1,5 +1,5 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
-import { UserContextService } from '../utils/user-context.service';
+import { UserContextService } from '../modules/auth/user-context.service';
 
 @Injectable()
 export class ContextMiddleware implements NestMiddleware {

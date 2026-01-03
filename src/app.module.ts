@@ -1,14 +1,54 @@
-import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { RolesModule } from './modules/roles/roles.module';
-import { UserContextService } from './utils/user-context.service';
+import { UserContextService } from './modules/auth/user-context.service';
 import { ContextMiddleware } from './common/context.middleware';
 @Module({
   imports: [
-    // ConfigModule.forRoot({ isGlobal: true }), // blocked by npm install error
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        pinoHttp: {
+          level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+
+          // Automatically reads X-Request-ID header or generates a new UUID
+          genReqId: (req, res) => {
+            const existingID = req.headers['x-request-id'];
+            if (existingID) return existingID;
+            const id = uuidv4();
+            res.setHeader('X-Request-ID', id);
+            return id;
+          },
+
+          redact: {
+            paths: ['req.headers.authorization', 'res.headers.password'],
+            remove: true,
+          },
+          transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+          autoLogging: true,
+
+          // Simplify the request object in logs to avoid huge JSON blobs
+          serializers: {
+            req: (req) => ({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+              query: req.query,
+              params: req.params,
+            }),
+          },
+        }
+      })
+    }),
     PrismaModule,
     UsersModule,
     AuthModule,
