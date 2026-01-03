@@ -26,6 +26,22 @@ model User {
   createdSlugs Slug[]     @relation("SlugCreator")
   updatedSlugs Slug[]     @relation("SlugUpdater")
 
+  performedRoles            Role[]              @relation("RolePerformer")
+  performedUserRoles        UserRole[]          @relation("UserRolePerformer")
+  performedDepartments      Department[]        @relation("DepartmentPerformer")
+  performedPositions        EmployeePosition[]  @relation("EmployeePositionPerformer")
+  performedEmployees        Employee[]          @relation("EmployeePerformer")
+  performedAttendances      Attendance[]        @relation("AttendancePerformer")
+  performedLeaveRequests    LeaveRequest[]      @relation("LeaveRequestPerformer")
+  performedCurrencies       Currency[]          @relation("CurrencyPerformer")
+  performedExchangeRates    ExchangeRate[]      @relation("ExchangeRatePerformer")
+  performedPayrolls         Payroll[]           @relation("PayrollPerformer")
+  performedPayrollItems     PayrollItems[]      @relation("PayrollItemsPerformer")
+  performedTaxBrackets      TaxBracket[]        @relation("TaxBracketPerformer")
+  performedTaxConfigs       EmployeeTaxConfig[] @relation("EmployeeTaxConfigPerformer")
+  performedTaxCalculations  TaxCalculation[]    @relation("TaxCalculationPerformer")
+  performedCompanySettings  CompanySettings[]   @relation("CompanySettingsPerformer")
+
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -43,6 +59,9 @@ model Role {
   name String @unique @db.VarChar(50)
 
   userRoles UserRole[]
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("RolePerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -66,6 +85,9 @@ model UserRole {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("UserRolePerformer", fields: [performBy], references: [id])
+
   // Composite Primary Key: A user cannot have the same role twice
   @@id([userId, roleId])
   @@map("user_roles")
@@ -80,6 +102,9 @@ model Department {
   departmentName String @map("department_name") @db.VarChar(150)
 
   employees Employee[]
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("DepartmentPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -98,6 +123,9 @@ model EmployeePosition {
   salaryRangeMax Decimal @map("salary_range_max") @db.Decimal(10, 2)
 
   employees Employee[]
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("EmployeePositionPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -137,6 +165,9 @@ model Employee {
   payrolls              Payroll[]
   taxCalculations       TaxCalculation[]
 
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("EmployeePerformer", fields: [performBy], references: [id])
+
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -159,6 +190,9 @@ model Attendance {
   checkOutTime DateTime? @map("check_out_time") @db.Time
 
   employee Employee @relation(fields: [employeeId], references: [id])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("AttendancePerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -185,6 +219,9 @@ model LeaveRequest {
 
   requester Employee  @relation("EmployeeLeaves", fields: [employeeId], references: [id])
   approver  Employee? @relation("ApproverLeaves", fields: [approvedBy], references: [id])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("LeaveRequestPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -218,6 +255,9 @@ model Currency {
   exchangeRatesTo   ExchangeRate[]    @relation("ToCurrency")
   companySettings   CompanySettings[]
 
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("CurrencyPerformer", fields: [performBy], references: [id])
+
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -237,6 +277,9 @@ model ExchangeRate {
 
   fromCurrency Currency @relation("FromCurrency", fields: [fromCurrencyCode], references: [code])
   toCurrency   Currency @relation("ToCurrency", fields: [toCurrencyCode], references: [code])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("ExchangeRatePerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -277,6 +320,9 @@ model Payroll {
   items          PayrollItems[]
   taxCalculation TaxCalculation?
 
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("PayrollPerformer", fields: [performBy], references: [id])
+
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -301,6 +347,9 @@ model PayrollItems {
 
   payroll  Payroll   @relation(fields: [payrollId], references: [id])
   currency Currency? @relation(fields: [currencyCode], references: [code])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("PayrollItemsPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -330,6 +379,9 @@ model TaxBracket {
   currency        Currency         @relation(fields: [currencyCode], references: [code])
   taxCalculations TaxCalculation[]
 
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("TaxBracketPerformer", fields: [performBy], references: [id])
+
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -348,6 +400,9 @@ model EmployeeTaxConfig {
   taxExempt  Boolean @map("tax_exempt")
 
   employee Employee @relation(fields: [employeeId], references: [id])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("EmployeeTaxConfigPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -375,6 +430,9 @@ model TaxCalculation {
   payroll    Payroll    @relation(fields: [payrollId], references: [id])
   employee   Employee   @relation(fields: [employeeId], references: [id])
   taxBracket TaxBracket @relation(fields: [taxBracketId], references: [id])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("TaxCalculationPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -420,6 +478,9 @@ model CompanySettings {
   fiscalYearStartMonth Int    @map("fiscal_year_start_month") @db.SmallInt
 
   baseCurrency Currency @relation(fields: [baseCurrencyCode], references: [code])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("CompanySettingsPerformer", fields: [performBy], references: [id])
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
