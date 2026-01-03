@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { UserPayload } from 'src/common/decorators/current-user.decorator';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -12,9 +13,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: UserPayload) {
     // This payload is the decoded JWT.
     // We return what we want injected into `request.user`
-    return { userId: payload.sub, email: payload.email, roles: payload.roles };
+    return { sub: payload.sub, email: payload.email, roles: payload.roles };
   }
 }

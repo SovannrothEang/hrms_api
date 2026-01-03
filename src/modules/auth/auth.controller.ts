@@ -3,7 +3,9 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
-import { AuthGuard } from './auth.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -31,12 +33,13 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(AuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'Return current user details' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getMe() {
-    this.authService.getMe();
+  async getMe(@CurrentUser('sub') userId: string) {
+    // this.authService.getMe();
+    return userId;
   }
 }

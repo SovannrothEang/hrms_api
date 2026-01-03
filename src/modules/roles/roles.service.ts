@@ -27,4 +27,6 @@ export class RolesService {
     });
     return plainToInstance(RoleDto, role);
   }
+
+  async updateAsync();
 }

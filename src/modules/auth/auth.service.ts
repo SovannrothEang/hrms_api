@@ -12,6 +12,7 @@ import { UsersService } from '../users/users.service';
 import { UserDto } from '../users/dtos/user.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { UserContextService } from './user-context.service';
+import { UserPayload } from 'src/common/decorators/current-user.decorator';
 
 @Injectable()
 export class AuthService {
@@ -54,7 +55,7 @@ export class AuthService {
       throw new UnauthorizedException('Roles do not match!');
     }
 
-    const payloads = { sub: user.id, email: user.email, roles: roles };
+    const payloads: UserPayload = { sub: user.id, email: user.email, roles: roles };
     return {
       access_token: this.jwtService.sign(payloads),
     };
