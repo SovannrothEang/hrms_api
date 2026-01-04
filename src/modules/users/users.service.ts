@@ -12,6 +12,7 @@ import UserCreateDto from './dtos/user-create.dto';
 import * as bcrypt from 'bcrypt';
 import { UserUpdateDto } from './dtos/user-update.dto';
 import { Result } from 'src/common/logic/result';
+import { RoleName } from 'src/common/enums/roles.enum';
 
 @Injectable()
 export class UsersService {
@@ -72,9 +73,8 @@ export class UsersService {
   }
 
   async createAsync(dto: UserCreateDto, userId?: string): Promise<Result<UserDto>> {
-    this.logger.log('Creating user with {username}.', dto.username);
-    this.logger.log('Creating user with {email}.', dto.email);
-    const role = await this.prisma.role.findUnique({ where: { name: 'user' } });
+    this.logger.log('Creating user with {username} and {email}.', dto.username, dto.email);
+    const role = await this.prisma.role.findUnique({ where: { name: RoleName.EMPLOYEE } });
     if (!role) {
       this.logger.warn('Role not found!');
       return Result.fail('Roles do not match or exist!');
