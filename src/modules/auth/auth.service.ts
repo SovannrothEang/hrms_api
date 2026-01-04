@@ -11,8 +11,9 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { UserDto } from '../users/dtos/user.dto';
 import { RegisterDto } from './dtos/register.dto';
-import { UserContextService } from './user-context.service';
+import { UserContext, UserContextService } from './user-context.service';
 import { UserPayload } from 'src/common/decorators/current-user.decorator';
+import { Result } from 'src/common/logic/result';
 
 @Injectable()
 export class AuthService {
@@ -61,7 +62,7 @@ export class AuthService {
     };
   }
 
-  async registerAsync(dto: RegisterDto): Promise<UserDto> {
+  async registerAsync(dto: RegisterDto): Promise<Result<UserDto>> {
     this.logger.log('Registering user with {email}.', dto.email);
 
     const isEmailExist = await this.prisma.user.findFirst({
@@ -69,7 +70,7 @@ export class AuthService {
     });
     if (isEmailExist) {
       this.logger.warn('Email already exists!');
-      throw new ConflictException('Credentials is already registered!');
+      return Result.fail('Credentials is already registered!');
     }
 
     const isUserNameExist = await this.prisma.user.findFirst({
@@ -77,19 +78,19 @@ export class AuthService {
     });
     if (isUserNameExist) {
       this.logger.warn('Username already exists!');
-      throw new ConflictException('Credentials is already registered!');
+      return Result.fail('Credentials is already registered!');
     }
 
     if (dto.password !== dto.confirmPassword) {
       this.logger.warn('Passwords do not match!');
-      throw new BadRequestException('Passwords do not match!');
+      return Result.fail('Passwords do not match!');
     }
 
-    return await this.usersService.create({
+    return await this.usersService.createAsync({
       username: dto.username,
       email: dto.email,
       password: dto.password,
-    }, null); // null because it is registered
+    });
   }
 
   validateToken(token: string) {
@@ -99,13 +100,12 @@ export class AuthService {
       return this.jwtService.verify(token);
     } catch (error) {
       this.logger.warn('Invalid token!');
-      throw new UnauthorizedException(error);
+      return Result.fail(error);
     }
   }
 
-  getMe() {
+  async getMe(userId: string) {
     this.logger.log('Getting current user');
-    const currentUser = this.userContext.getUser();
-    return currentUser;
+    return await this.usersService.findOneAsync(userId);
   }
 }

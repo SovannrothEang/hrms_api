@@ -21,8 +21,9 @@ export class UserDto {
 
   @Expose()
   @Transform(({ obj }) => {
-    if (!obj.employees) return null;
-    return plainToInstance(EmployeeDto, obj.employees);
+    if (!obj.employee) return null;
+    return plainToInstance(EmployeeDto, obj.employee);
+
   })
   employees: EmployeeDto;
 

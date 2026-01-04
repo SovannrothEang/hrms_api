@@ -12,8 +12,8 @@ async function main() {
     console.log('Seeding database...');
 
     // 1. Seed Admin Role
-    const adminRoleName = 'admin';
-    let adminRole = await prisma.role.findUnique({
+    const adminRoleName = 'ADMIN';
+    let adminRole = await prisma.role.findFirst({
         where: { name: adminRoleName },
     });
 

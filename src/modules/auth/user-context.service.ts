@@ -15,7 +15,7 @@ export class UserContextService {
     this.als.run(store, callback);
   }
 
-  getUser() {
+  getUserContext() {
     return this.als.getStore();
   }
 

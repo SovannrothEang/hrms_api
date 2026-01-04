@@ -1,28 +1,79 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleDto } from './dtos/roles.dto';
 import { plainToInstance } from 'class-transformer';
+import { Result } from 'src/common/logic/result';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(RolesService.name);
 
-  async findAll(): Promise<RoleDto[]> {
-    const roles = await this.prisma.role.findMany();
-    return roles.map((e) => plainToInstance(RoleDto, e));
-  }
+  constructor(private readonly prisma: PrismaService) { }
 
-  async findOne(id: string): Promise<RoleDto | null> {
-    const role = await this.prisma.role.findUnique({
-      where: { id },
+  async findAllAsync(childIncluded: boolean = false): Promise<Result<RoleDto[]>> {
+    this.logger.log('Getting all roles');
+    const roles = await this.prisma.role.findMany({
+      include: {
+        performer: childIncluded ? {
+          include: {
+            userRoles: {
+              include: {
+                role: true
+              }
+            }
+          }
+        } : false,
+      }
     });
-    return role === null ? null : plainToInstance(RoleDto, role);
+    return Result.ok(roles.map((e) => plainToInstance(RoleDto, e)));
   }
 
-  async createAsync(roleName: string, userId: string): Promise<RoleDto> {
+  async findOneAsync(id: string, childIncluded: boolean = false): Promise<Result<RoleDto>> {
+    this.logger.log('Getting role with id: {id}.', id);
+    if (childIncluded === null) childIncluded = false;
+    const role = await this.prisma.role.findFirst({
+      where: { id },
+      include: {
+        performer: childIncluded ? {
+          include: {
+            userRoles: {
+              include: {
+                role: true
+              }
+            }
+          }
+        } : false,
+      }
+    });
+    if (!role) {
+      this.logger.warn('Role not found!');
+      return Result.notFound(`No role was found with id: ${id}`);
+    }
+    return Result.ok(plainToInstance(RoleDto, role));
+  }
+
+  async isExistAsync(roleName: string): Promise<boolean> {
+    this.logger.log('Checking if role exists with name: {roleName}.', roleName);
+    const role = await this.prisma.role.findFirst({
+      where: { name: roleName.toUpperCase() },
+      select: { id: true }
+    });
+    return role !== null;
+  }
+
+
+  async createAsync(roleName: string, userId: string): Promise<Result<RoleDto>> {
+    this.logger.log('Creating role with name: {roleName}.', roleName);
+    const isExist = await this.isExistAsync(roleName);
+    if (isExist) {
+      this.logger.warn('Role already exists!');
+      return Result.fail('Role already exists!');
+    }
+
     const role = await this.prisma.role.create({
       data: {
-        name: roleName.toLowerCase(),
+        name: roleName.toUpperCase(),
         performer: {
           connect: {
             id: userId,
@@ -30,10 +81,26 @@ export class RolesService {
         },
       },
     });
-    return plainToInstance(RoleDto, role);
+    return Result.ok(plainToInstance(RoleDto, role));
   }
 
   async updateAsync(id: string, roleName: string, userId: string) {
+    this.logger.log('Updating role with id: {id}.', id);
+    const role = await this.prisma.role.findFirst({
+      where: { id },
+      select: { id: true }
+    });
+    if (!role) {
+      this.logger.warn('Role not found!');
+      throw new NotFoundException('Role not found!');
+    }
+
+    const isExist = await this.isExistAsync(roleName);
+    if (isExist) {
+      this.logger.warn('Role already exists!');
+      throw new BadRequestException('Role already exists!');
+    }
+
     await this.prisma.role.update({
       where: { id },
       data: {
@@ -49,6 +116,16 @@ export class RolesService {
 
   // Soft delete
   async deleteAsync(id: string, userId: string) {
+    this.logger.log('Deleting role with id: {id}.', id);
+    const role = await this.prisma.role.findFirst({
+      where: { id },
+      select: { id: true }
+    });
+    if (!role) {
+      this.logger.warn('Role not found!');
+      throw new NotFoundException('Role not found!');
+    }
+
     await this.prisma.role.update({
       where: { id },
       data: {
