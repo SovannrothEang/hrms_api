@@ -8,19 +8,19 @@ import { UserContextService } from './user-context.service';
 import { UsersService } from '../users/users.service';
 
 @Module({
-  imports: [
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'superSecretKey',
-      signOptions: {
-        audience: 'hrms_audience',
-        issuer: 'hrms_issuer',
-        algorithm: 'HS256',
-        expiresIn: '1h',
-      },
-    }),
-  ],
-  providers: [AuthService, JwtStrategy, UsersService, UserContextService],
-  controllers: [AuthController],
+    imports: [
+        PassportModule,
+        JwtModule.register({
+            secret: process.env.JWT_SECRET || 'superSecretKey',
+            signOptions: {
+                audience: 'hrms_audience',
+                issuer: 'hrms_issuer',
+                algorithm: 'HS256',
+                expiresIn: '1h',
+            },
+        }),
+    ],
+    providers: [AuthService, JwtStrategy, UsersService, UserContextService],
+    controllers: [AuthController],
 })
 export class AuthModule {}

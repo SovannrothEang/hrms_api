@@ -10,7 +10,8 @@ export class Result<T> {
     }
 
     public getData(): T {
-        if (!this.isSuccess) throw new Error('Cannot get value of error result.');
+        if (!this.isSuccess)
+            throw new Error('Cannot get value of error result.');
         return this.data!;
     }
 

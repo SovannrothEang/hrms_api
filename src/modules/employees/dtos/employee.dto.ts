@@ -1,52 +1,50 @@
 import { Expose, Transform } from 'class-transformer';
-import { BadRequestException } from '@nestjs/common';
+import { Employee } from '@prisma/client';
 
 export class EmployeeDto {
-  @Expose({ name: 'id' })
-  id: string;
+    @Expose({ name: 'id' })
+    id: string;
 
-  @Expose({ name: 'employee_code' })
-  code: string;
+    @Expose({ name: 'employee_code' })
+    code: string;
 
-  @Expose({ name: 'firstname' })
-  firstname: string;
+    @Expose({ name: 'firstname' })
+    firstname: string;
 
-  @Expose({ name: 'lastname' })
-  lastname: string;
+    @Expose({ name: 'lastname' })
+    lastname: string;
 
-  @Expose({ name: 'gender' })
-  @Transform(({ obj }) => {
-    if (isNaN(obj.gender))
-      throw new BadRequestException('Gender must be an integer');
+    @Expose({ name: 'gender' })
+    @Transform(({ obj }: { obj: Employee }) => {
+        switch (obj.gender) {
+            case 0:
+                return 'male';
+            case 1:
+                return 'female';
+            default:
+                return 'unknown';
+        }
+    })
+    gender: string;
 
-    try {
-      const parsed = parseInt(obj.gender, 10);
-      switch (parsed) {
-        case 0:
-          return 'male';
-        case 1:
-          return 'female';
-        default:
-          return 'unknown';
-      }
-    } catch (e) {
-      throw new BadRequestException(e);
-    }
-  })
-  gender: string;
+    @Expose({ name: 'dob' })
+    @Transform(({ obj }: { obj: Employee }) => {
+        return obj.dob.toISOString().split('T')[0];
+    })
+    dateOfBirth: string;
 
-  @Expose({ name: 'dob' })
-  @Transform(({ obj }) => {
-    return obj.dob.toString();
-  })
-  dateOfBirth: string;
+    @Expose({ name: 'address' })
+    address: string;
 
-  @Expose({ name: 'address' })
-  address: string;
+    @Expose({ name: 'phone' })
+    phoneNumber: string;
 
-  @Expose({ name: 'phone' })
-  phoneNumber: string;
+    @Expose({ name: 'hire_date' })
+    hireDate: Date;
 
-  @Expose({ name: 'hire_date' })
-  hireDate: Date;
+    @Expose({ name: 'createdAt' })
+    createdAt: Date;
+
+    @Expose({ name: 'updatedAt' })
+    updatedAt: Date | null;
 }
