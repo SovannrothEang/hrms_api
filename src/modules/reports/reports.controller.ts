@@ -52,9 +52,17 @@ export class ReportsController {
 
     @Get('leave-utilization')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get leave balances for all employees' })
-    async getLeaveUtilization() {
-        return await this.reportsService.getLeaveUtilizationData();
+    @ApiOperation({ summary: 'Get leave balances for all employees (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 10' })
+    async getLeaveUtilization(
+        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+        @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    ) {
+        return await this.reportsService.getPaginatedLeaveUtilization(
+            page || 1,
+            limit || 10
+        );
     }
 
     @Get('leave-utilization/export')

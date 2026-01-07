@@ -6,6 +6,7 @@ import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
 import { plainToInstance } from 'class-transformer';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
+import { ResultPagination } from '../../common/logic/result-pagination';
 
 import { EmailService } from '../notifications/email.service';
 
@@ -33,6 +34,42 @@ export class LeavesService {
             },
         });
         return Result.ok(leaves.map((l) => plainToInstance(LeaveRequestDto, l)));
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        childIncluded?: boolean,
+        employeeId?: string,
+    ): Promise<Result<ResultPagination<LeaveRequestDto>>> {
+        const skip = (page - 1) * limit;
+        const whereClause = employeeId ? { employeeId } : {};
+
+        const [total, leaves] = await Promise.all([
+            this.prisma.leaveRequest.count({ where: whereClause }),
+            this.prisma.leaveRequest.findMany({
+                where: whereClause,
+                skip,
+                take: limit,
+                orderBy: { startDate: 'desc' }, // Future to past
+                include: {
+                    requester: childIncluded ? { include: { department: true } } : false,
+                    approver: childIncluded ? true : false,
+                    performer: childIncluded
+                        ? {
+                            include: {
+                                userRoles: {
+                                    include: { role: true },
+                                },
+                            },
+                        }
+                        : false,
+                },
+            }),
+        ]);
+
+        const dtos = leaves.map((l) => plainToInstance(LeaveRequestDto, l));
+        return Result.ok(ResultPagination.of(dtos, total, page, limit));
     }
 
     async findOneByIdAsync(

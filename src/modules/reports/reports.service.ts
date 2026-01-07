@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
+import { ResultPagination } from '../../common/logic/result-pagination';
 
 @Injectable()
 export class ReportsService {
@@ -50,6 +51,42 @@ export class ReportsService {
             remaining:
                 Number(b.totalDays) - Number(b.usedDays) - Number(b.pendingDays),
         }));
+    }
+
+    async getPaginatedLeaveUtilization(page: number, limit: number) {
+        const skip = (page - 1) * limit;
+        const [total, balances] = await Promise.all([
+            this.prisma.leaveBalance.count(),
+            this.prisma.leaveBalance.findMany({
+                skip,
+                take: limit,
+                include: {
+                    employee: {
+                        select: {
+                            firstname: true,
+                            lastname: true,
+                            employeeCode: true,
+                            department: { select: { departmentName: true } },
+                        },
+                    },
+                },
+            })
+        ]);
+
+        const data = balances.map((b) => ({
+            employee: `${b.employee.firstname} ${b.employee.lastname}`,
+            code: b.employee.employeeCode,
+            department: b.employee.department.departmentName,
+            type: b.leaveType,
+            year: b.year,
+            total: Number(b.totalDays),
+            used: Number(b.usedDays),
+            pending: Number(b.pendingDays),
+            remaining:
+                Number(b.totalDays) - Number(b.usedDays) - Number(b.pendingDays),
+        }));
+
+        return ResultPagination.of(data, total, page, limit);
     }
 
     async exportAttendanceSummary(month: number, year: number) {

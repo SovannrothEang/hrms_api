@@ -11,8 +11,9 @@ import {
     Query,
     BadRequestException,
     ParseBoolPipe,
+    ParseIntPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
@@ -28,14 +29,24 @@ export class LeavesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all leave requests' })
+    @ApiOperation({ summary: 'Get all leave requests (Paginated)' })
     @ApiResponse({ status: HttpStatus.OK, type: [LeaveRequestDto] })
-    @ApiParam({ name: 'childIncluded', required: false, type: 'boolean' })
+    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 10' })
+    @ApiQuery({ name: 'employeeId', required: false, type: String })
     async findAll(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
+        @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
+        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+        @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+        @Query('employeeId') employeeId?: string,
     ) {
-        return await this.leavesService.findAllAsync(childIncluded);
+        return await this.leavesService.findAllPaginatedAsync(
+            page || 1,
+            limit || 10,
+            childIncluded,
+            employeeId
+        );
     }
 
     @Get(':id')
