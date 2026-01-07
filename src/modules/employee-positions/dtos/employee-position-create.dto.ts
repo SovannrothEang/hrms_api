@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
     IsDecimal,
     IsNotEmpty,
+    IsNumber,
     IsString,
     Max,
     MaxLength,
@@ -20,15 +21,15 @@ export class EmployeePositionCreateDto {
     @ApiProperty({ example: 'Software Engineer description', required: false })
     description: string;
 
-    @IsDecimal()
+    @IsNumber({ maxDecimalPlaces: 2 })
     @IsNotEmpty()
     @Min(0)
-    @ApiProperty({ example: 0, required: true })
+    @ApiProperty({ example: 700, required: true, minimum: 0 })
     salaryRangeMin: number;
 
-    @IsDecimal()
+    @IsNumber({ maxDecimalPlaces: 2 })
     @IsNotEmpty()
     @Max(99999999)
-    @ApiProperty({ example: 99999999, required: true })
+    @ApiProperty({ example: 1000, required: true, maximum: 9999999 })
     salaryRangeMax: number;
 }

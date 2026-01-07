@@ -5,7 +5,6 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { UserDto } from '../users/dtos/user.dto';
 import { RegisterDto } from './dtos/register.dto';
-import { UserContextService } from './user-context.service';
 import { UserPayload } from 'src/common/decorators/current-user.decorator';
 import { Result } from 'src/common/logic/result';
 
@@ -17,8 +16,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly usersService: UsersService,
-        private readonly userContext: UserContextService,
-    ) {}
+    ) { }
 
     async signInAsync(email: string, password: string) {
         this.logger.log('Signing in user with {email}.', email);

@@ -1,7 +1,17 @@
-import { Expose, plainToInstance, Transform } from 'class-transformer';
+import {
+    Exclude,
+    Expose,
+    plainToInstance,
+    Transform,
+    Type,
+} from 'class-transformer';
 import { UserDto } from 'src/modules/users/dtos/user.dto';
 import { EmployeePosition, User } from '@prisma/client';
+import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
+import { DecimalNumber } from '../../../config/decimal-number';
+import { Decimal } from '@prisma/client/runtime/client';
 
+@Exclude()
 export class EmployeePositionDto {
     @Expose({ name: 'id' })
     id: string;
@@ -12,11 +22,23 @@ export class EmployeePositionDto {
     @Expose({ name: 'description' })
     description: string;
 
-    @Expose({ name: 'salary_range_min' })
-    salaryRangeMin: number;
+    @Expose()
+    @Type(() => DecimalNumber)
+    @Transform(({ obj }: { obj: EmployeePosition }) => {
+        if (!obj.salaryRangeMin) return null;
 
-    @Expose({ name: 'salary_range_max' })
-    salaryRangeMax: number;
+        return new Decimal(obj.salaryRangeMin);
+    })
+    salaryRangeMin: DecimalNumber;
+
+    @Expose()
+    @Type(() => DecimalNumber)
+    @Transform(({ obj }: { obj: EmployeePosition }) => {
+        if (!obj.salaryRangeMax) return null;
+
+        return new Decimal(obj.salaryRangeMax);
+    })
+    salaryRangeMax: DecimalNumber;
 
     @Expose({ name: 'perform_by' })
     performBy: string;
@@ -29,6 +51,13 @@ export class EmployeePositionDto {
         },
     )
     performer: UserDto;
+
+    @Expose({ name: 'employees' })
+    @Type(() => EmployeeDto)
+    employees: EmployeeDto[];
+
+    @Expose({ name: 'is_active' })
+    isActive: boolean;
 
     @Expose({ name: 'createdAt' })
     createdAt: Date;

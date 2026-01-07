@@ -7,8 +7,10 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { EmployeePositionsModule } from './modules/employee-positions/employee-positions.module';
 import { UserContextService } from './modules/auth/user-context.service';
 import { ContextMiddleware } from './common/context.middleware';
+import { AttendancesModule } from './modules/attendances/attendances.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -61,6 +63,8 @@ import { ContextMiddleware } from './common/context.middleware';
     AuthModule,
     EmployeesModule,
     RolesModule,
+    EmployeePositionsModule,
+    AttendancesModule,
   ],
   controllers: [],
   providers: [UserContextService],
