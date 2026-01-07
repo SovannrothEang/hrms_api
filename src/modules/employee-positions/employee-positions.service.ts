@@ -3,7 +3,7 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionDto } from './dtos/employee-position.dto';
 import { plainToInstance } from 'class-transformer';
@@ -12,7 +12,7 @@ import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
 
 @Injectable()
 export class EmployeePositionsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -22,8 +22,8 @@ export class EmployeePositionsService {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: { userRoles: { include: { role: true } } },
-                    }
+                          include: { userRoles: { include: { role: true } } },
+                      }
                     : false,
             },
         });
@@ -42,8 +42,8 @@ export class EmployeePositionsService {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: { userRoles: { include: { role: true } } },
-                    }
+                          include: { userRoles: { include: { role: true } } },
+                      }
                     : false,
             },
         });

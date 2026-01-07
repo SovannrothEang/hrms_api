@@ -3,7 +3,7 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { RoleDto } from './dtos/roles.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';

@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
 import { EmployeeDto } from './dtos/employee.dto';
@@ -10,9 +10,12 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class EmployeesService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
-    async createAsync(dto: EmployeeCreateDto, performerId: string): Promise<Result<EmployeeDto>> {
+    async createAsync(
+        dto: EmployeeCreateDto,
+        performerId: string,
+    ): Promise<Result<EmployeeDto>> {
         // Validate unqiue checks (username, email, code)
         const check = await this.prisma.user.findFirst({
             where: {
@@ -71,30 +74,37 @@ export class EmployeesService {
 
             return Result.ok(plainToInstance(EmployeeDto, employee));
         } catch (e) {
-            return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
+            return Result.fail(
+                e instanceof Error ? e.message : 'Transaction failed',
+            );
         }
     }
 
-    async findAllAsync(childIncluded?: boolean): Promise<Result<EmployeeDto[]>> {
+    async findAllAsync(
+        childIncluded?: boolean,
+    ): Promise<Result<EmployeeDto[]>> {
         const employees = await this.prisma.employee.findMany({
             include: {
                 department: true,
                 position: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
         return Result.ok(employees.map((e) => plainToInstance(EmployeeDto, e)));
     }
 
-    async findOneByIdAsync(id: string, childIncluded?: boolean): Promise<Result<EmployeeDto>> {
+    async findOneByIdAsync(
+        id: string,
+        childIncluded?: boolean,
+    ): Promise<Result<EmployeeDto>> {
         const employee = await this.prisma.employee.findUnique({
             where: { id },
             include: {
@@ -103,12 +113,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -121,7 +131,9 @@ export class EmployeesService {
         dto: EmployeeUpdateDto,
         performerId: string,
     ): Promise<Result<EmployeeDto>> {
-        const employee = await this.prisma.employee.findUnique({ where: { id } });
+        const employee = await this.prisma.employee.findUnique({
+            where: { id },
+        });
         if (!employee) return Result.fail('Employee not found');
 
         const updated = await this.prisma.employee.update({
@@ -151,7 +163,7 @@ export class EmployeesService {
     async deleteAsync(id: string): Promise<Result<void>> {
         // Check if employee exists
         const check = await this.prisma.employee.findUnique({ where: { id } });
-        if (!check) return Result.fail("Employee not found");
+        if (!check) return Result.fail('Employee not found');
 
         // Optional: Check dependencies (e.g. payrolls) before delete
 

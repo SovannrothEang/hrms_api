@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { Result } from 'src/common/logic/result';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
@@ -14,26 +14,32 @@ import { EmailService } from '../notifications/email.service';
 export class LeavesService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly emailService: EmailService
-    ) { }
+        private readonly emailService: EmailService,
+    ) {}
 
-    async findAllAsync(childIncluded?: boolean): Promise<Result<LeaveRequestDto[]>> {
+    async findAllAsync(
+        childIncluded?: boolean,
+    ): Promise<Result<LeaveRequestDto[]>> {
         const leaves = await this.prisma.leaveRequest.findMany({
             include: {
-                requester: childIncluded ? { include: { department: true } } : false,
+                requester: childIncluded
+                    ? { include: { department: true } }
+                    : false,
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
-        return Result.ok(leaves.map((l) => plainToInstance(LeaveRequestDto, l)));
+        return Result.ok(
+            leaves.map((l) => plainToInstance(LeaveRequestDto, l)),
+        );
     }
 
     async findAllPaginatedAsync(
@@ -53,16 +59,18 @@ export class LeavesService {
                 take: limit,
                 orderBy: { startDate: 'desc' }, // Future to past
                 include: {
-                    requester: childIncluded ? { include: { department: true } } : false,
+                    requester: childIncluded
+                        ? { include: { department: true } }
+                        : false,
                     approver: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
-                            include: {
-                                userRoles: {
-                                    include: { role: true },
-                                },
-                            },
-                        }
+                              include: {
+                                  userRoles: {
+                                      include: { role: true },
+                                  },
+                              },
+                          }
                         : false,
                 },
             }),
@@ -79,16 +87,18 @@ export class LeavesService {
         const leave = await this.prisma.leaveRequest.findFirst({
             where: { id },
             include: {
-                requester: childIncluded ? { include: { department: true } } : false,
+                requester: childIncluded
+                    ? { include: { department: true } }
+                    : false,
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -119,7 +129,9 @@ export class LeavesService {
         });
 
         if (overlaps) {
-            return Result.fail('Leave request overlaps with an existing request.');
+            return Result.fail(
+                'Leave request overlaps with an existing request.',
+            );
         }
 
         // 2. Calculate requested days (Simple day diff for now)
@@ -170,9 +182,9 @@ export class LeavesService {
                             leaveType: dto.leaveType,
                             year: year,
                             totalDays: 0, // Or some default
-                            pendingDays: requestedDays
-                        }
-                    })
+                            pendingDays: requestedDays,
+                        },
+                    });
                     // Optional: If we want to enforcing strict 0 limit -> verify negative?
                     // For now, let's assume if it didn't exist, we track it.
                 }
@@ -195,13 +207,15 @@ export class LeavesService {
             this.emailService.sendLeaveRequestNotification(
                 'manager@company.com',
                 leave.id,
-                dto.leaveType
+                dto.leaveType,
             );
 
             return Result.ok(plainToInstance(LeaveRequestDto, leave));
         } catch (e) {
             return Result.fail(
-                e instanceof Error ? e.message : 'Failed to create leave request',
+                e instanceof Error
+                    ? e.message
+                    : 'Failed to create leave request',
             );
         }
     }
@@ -217,7 +231,9 @@ export class LeavesService {
 
         if (!leave) return Result.fail('Leave request not found');
         if (leave.status !== LeaveStatus.PENDING) {
-            return Result.fail(`Cannot update status from ${leave.status}. Only PENDING requests can be processed.`);
+            return Result.fail(
+                `Cannot update status from ${leave.status}. Only PENDING requests can be processed.`,
+            );
         }
 
         const startDate = new Date(leave.startDate);
@@ -235,12 +251,12 @@ export class LeavesService {
                         where: {
                             employeeId: leave.employeeId,
                             leaveType: leave.leaveType,
-                            year: year
+                            year: year,
                         },
                         data: {
                             pendingDays: { decrement: requestedDays },
-                            usedDays: { increment: requestedDays }
-                        }
+                            usedDays: { increment: requestedDays },
+                        },
                     });
                 } else if (dto.status === LeaveStatus.REJECTED) {
                     // Return from Pending (free up)
@@ -248,11 +264,11 @@ export class LeavesService {
                         where: {
                             employeeId: leave.employeeId,
                             leaveType: leave.leaveType,
-                            year: year
+                            year: year,
                         },
                         data: {
-                            pendingDays: { decrement: requestedDays }
-                        }
+                            pendingDays: { decrement: requestedDays },
+                        },
                     });
                 }
 
@@ -271,12 +287,14 @@ export class LeavesService {
             this.emailService.sendLeaveStatusUpdateNotification(
                 'employee@company.com', // In real app: leave.requester.email
                 id,
-                dto.status
+                dto.status,
             );
 
             return Result.ok(plainToInstance(LeaveRequestDto, updatedLeave));
         } catch (e) {
-            return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
+            return Result.fail(
+                e instanceof Error ? e.message : 'Transaction failed',
+            );
         }
     }
 
@@ -302,18 +320,20 @@ export class LeavesService {
                     where: {
                         employeeId: leave.employeeId,
                         leaveType: leave.leaveType,
-                        year: year
+                        year: year,
                     },
                     data: {
-                        pendingDays: { decrement: requestedDays }
-                    }
+                        pendingDays: { decrement: requestedDays },
+                    },
                 });
 
                 await tx.leaveRequest.delete({ where: { id } });
             });
             return Result.ok();
         } catch (e) {
-            return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
+            return Result.fail(
+                e instanceof Error ? e.message : 'Transaction failed',
+            );
         }
     }
 }

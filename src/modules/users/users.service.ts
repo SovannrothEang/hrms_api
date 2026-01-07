@@ -4,7 +4,7 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { plainToInstance } from 'class-transformer';
 import { UserDto } from './dtos/user.dto';
@@ -18,7 +18,7 @@ import { RoleName } from 'src/common/enums/roles.enum';
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync() {
         this.logger.log('Getting all users');

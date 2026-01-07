@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { AttendanceStatus } from '../../common/enums/attendance-status.enum';
 
 @Injectable()
 export class AutomationService {
     private readonly logger = new Logger(AutomationService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     // Run every day at 23:59:00
     @Cron('0 59 23 * * *')
@@ -31,7 +31,9 @@ export class AutomationService {
                     // If checkOutTime is null at end of day, we might set it to 23:59 or leave null but update status
                 },
             });
-            this.logger.log(`Auto-marked checkout for Attendance ${attendance.id}`);
+            this.logger.log(
+                `Auto-marked checkout for Attendance ${attendance.id}`,
+            );
         }
         this.logger.log('Auto-Checkout Job Completed.');
     }
@@ -64,8 +66,8 @@ export class AutomationService {
                     employeeId: employee.id,
                     startDate: { lte: today },
                     endDate: { gte: today },
-                    status: 'APPROVED'
-                }
+                    status: 'APPROVED',
+                },
             });
 
             if (!attendance && !onLeave) {

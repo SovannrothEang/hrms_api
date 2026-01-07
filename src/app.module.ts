@@ -2,7 +2,7 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { PrismaModule } from './modules/prisma/prisma.module';
+import { PrismaModule } from './common/services/prisma/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
@@ -15,71 +15,87 @@ import { LeavesModule } from './modules/leaves/leaves.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AutomationModule } from './modules/automation/automation.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { ShiftsModule } from './modules/shifts/shifts.module';
+import { PublicHolidaysModule } from './modules/public-holidays/public-holidays.module';
+import { CurrenciesModule } from './modules/payroll/currencies/currencies.module';
+import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.module';
+
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    LoggerModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        pinoHttp: {
-          level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+        }),
+        LoggerModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: (config: ConfigService) => ({
+                pinoHttp: {
+                    level:
+                        process.env.NODE_ENV !== 'production'
+                            ? 'debug'
+                            : 'info',
 
-          // Automatically reads X-Request-ID header or generates a new UUID
-          genReqId: (req, res) => {
-            const existingID = req.headers['x-request-id'];
-            if (existingID) return existingID;
-            const id = uuidv4();
-            res.setHeader('X-Request-ID', id);
-            return id;
-          },
+                    // Automatically reads X-Request-ID header or generates a new UUID
+                    genReqId: (req, res) => {
+                        const existingID = req.headers['x-request-id'];
+                        if (existingID) return existingID;
+                        const id = uuidv4();
+                        res.setHeader('X-Request-ID', id);
+                        return id;
+                    },
 
-          redact: {
-            paths: ['req.headers.authorization', 'res.headers.password'],
-            remove: true,
-          },
-          transport: process.env.NODE_ENV !== 'production'
-            ? {
-              target: 'pino-pretty',
-              options: {
-                singleLine: true
-              }
-            }
-            : undefined,
-          autoLogging: true,
+                    redact: {
+                        paths: [
+                            'req.headers.authorization',
+                            'res.headers.password',
+                        ],
+                        remove: true,
+                    },
+                    transport:
+                        process.env.NODE_ENV !== 'production'
+                            ? {
+                                target: 'pino-pretty',
+                                options: {
+                                    singleLine: true,
+                                },
+                            }
+                            : undefined,
+                    autoLogging: true,
 
-          // Simplify the request object in logs to avoid huge JSON blobs
-          serializers: {
-            req: (req) => ({
-              id: req.id,
-              method: req.method,
-              url: req.url,
-              query: req.query,
-              params: req.params,
+                    // Simplify the request object in logs to avoid huge JSON blobs
+                    serializers: {
+                        req: (req) => ({
+                            id: req.id,
+                            method: req.method,
+                            url: req.url,
+                            query: req.query,
+                            params: req.params,
+                        }),
+                    },
+                },
             }),
-          },
-        }
-      })
-    }),
-    PrismaModule,
-    UsersModule,
-    AuthModule,
-    EmployeesModule,
-    RolesModule,
-    EmployeePositionsModule,
-    AttendancesModule,
-    LeavesModule,
-    NotificationsModule,
-    AutomationModule,
-    ReportsModule,
-  ],
-  controllers: [],
-  providers: [UserContextService],
-  exports: [UserContextService],
+        }),
+        PrismaModule,
+        UsersModule,
+        AuthModule,
+        EmployeesModule,
+        RolesModule,
+        EmployeePositionsModule,
+        AttendancesModule,
+        LeavesModule,
+        NotificationsModule,
+        AutomationModule,
+        ReportsModule,
+        ShiftsModule,
+        PublicHolidaysModule,
+        CurrenciesModule,
+        TaxBracketsModule,
+    ],
+    controllers: [],
+    providers: [UserContextService],
+    exports: [UserContextService],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(ContextMiddleware).forRoutes('*');
-  }
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(ContextMiddleware).forRoutes('*');
+    }
 }

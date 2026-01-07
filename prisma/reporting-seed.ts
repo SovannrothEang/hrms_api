@@ -17,6 +17,9 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
     console.log('Starting reporting seed...');
 
+    const now = new Date();
+    const year = now.getFullYear();
+
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     // 1. Ensure Departments
@@ -52,7 +55,56 @@ async function main() {
         }
     }
 
-    // 3. Create Employees
+    // 3. Ensure Shifts
+    const shiftsData = [
+        { name: 'Morning Shift', start: '09:00', end: '18:00', grace: 15 },
+        { name: 'Evening Shift', start: '14:00', end: '23:00', grace: 15 }
+    ];
+    const shiftIds: string[] = [];
+
+    // Helper to fix time for DB (dummy date)
+    const toTime = (timeStr: string) => new Date(`1970-01-01T${timeStr}:00Z`);
+
+    for (const s of shiftsData) {
+        let shift = await prisma.shift.findFirst({ where: { name: s.name } });
+        if (!shift) {
+            shift = await prisma.shift.create({
+                data: {
+                    name: s.name,
+                    startTime: toTime(s.start),
+                    endTime: toTime(s.end),
+                    workDays: '1,2,3,4,5',
+                    gracePeriodMins: s.grace
+                }
+            });
+        }
+        shiftIds.push(shift.id);
+    }
+    console.log(`Ensured ${shiftIds.length} shifts.`);
+
+    // 4. Ensure Public Holidays
+    const holidaysData = [
+        { name: 'New Year', date: `${year}-01-01` },
+        { name: 'Labor Day', date: `${year}-05-01` },
+        { name: 'Independence Day', date: `${year}-07-04` } // Example
+    ];
+
+    for (const h of holidaysData) {
+        const d = new Date(h.date);
+        let holiday = await prisma.publicHoliday.findFirst({ where: { date: d } });
+        if (!holiday) {
+            await prisma.publicHoliday.create({
+                data: {
+                    name: h.name,
+                    date: d,
+                    isRecurring: true
+                }
+            });
+        }
+    }
+    console.log(`Ensured ${holidaysData.length} public holidays.`);
+
+    // 5. Create Employees with Shifts
     const employees: any[] = [];
     for (let i = 1; i <= 10; i++) {
         const email = `employee${i}@example.com`;
@@ -81,7 +133,8 @@ async function main() {
                     dob: new Date('1990-01-01'),
                     hireDate: new Date(),
                     departmentId: deptIds[i % deptIds.length],
-                    positionId: posIds[i % posIds.length]
+                    positionId: posIds[i % posIds.length],
+                    shiftId: shiftIds[i % shiftIds.length] // Assign shift round-robin
                 }
             });
         }
@@ -90,9 +143,7 @@ async function main() {
 
     console.log(`Ensured ${employees.length} employees.`);
 
-    // 4. Generate Attendance for Current Month
-    const now = new Date();
-    const year = now.getFullYear();
+    // 6. Generate Attendance for Current Month
     const month = now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -106,11 +157,23 @@ async function main() {
             const day = date.getDay();
             if (day === 0 || day === 6) continue;
 
+            // Check if Public Holiday
+            const isHoliday = await prisma.publicHoliday.findFirst({
+                where: { date: date }
+            });
+            if (isHoliday) continue;
+
             // Random status
             const rand = Math.random();
             let status = AttendanceStatus.PRESENT;
+
+            // Determine shift start
+            const shiftIdx = parseInt(emp.lastname) % 2 == 0 ? 1 : 0; // rough logic matching creation
+            // Better: fetch emp shift
+            // but for speed assuming data consistency or simple random
+
             let checkIn: Date | null = new Date(date);
-            checkIn.setHours(9, 0, 0);
+            checkIn.setHours(9, 0, 0); // Default
             let checkOut: Date | null = new Date(date);
             checkOut.setHours(18, 0, 0);
 
@@ -134,7 +197,7 @@ async function main() {
                         employeeId: emp.id,
                         date: date,
                         status: status,
-                        checkInTime: checkIn, // Prisma allows Date | null
+                        checkInTime: checkIn,
                         checkOutTime: checkOut
                     }
                 });
@@ -143,7 +206,7 @@ async function main() {
     }
     console.log('Attendance seeded.');
 
-    // 5. Leave Balances & Requests
+    // 7. Leave Balances & Requests
     for (const emp of employees) {
         // Balances
         const bal = await prisma.leaveBalance.findUnique({

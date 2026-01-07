@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import { ResultPagination } from '../../common/logic/result-pagination';
 
 @Injectable()
 export class ReportsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async getAttendanceSummaryData(month: number, year: number) {
         const startDate = new Date(year, month - 1, 1);
@@ -49,7 +49,9 @@ export class ReportsService {
             used: Number(b.usedDays),
             pending: Number(b.pendingDays),
             remaining:
-                Number(b.totalDays) - Number(b.usedDays) - Number(b.pendingDays),
+                Number(b.totalDays) -
+                Number(b.usedDays) -
+                Number(b.pendingDays),
         }));
     }
 
@@ -70,7 +72,7 @@ export class ReportsService {
                         },
                     },
                 },
-            })
+            }),
         ]);
 
         const data = balances.map((b) => ({
@@ -83,7 +85,9 @@ export class ReportsService {
             used: Number(b.usedDays),
             pending: Number(b.pendingDays),
             remaining:
-                Number(b.totalDays) - Number(b.usedDays) - Number(b.pendingDays),
+                Number(b.totalDays) -
+                Number(b.usedDays) -
+                Number(b.pendingDays),
         }));
 
         return ResultPagination.of(data, total, page, limit);

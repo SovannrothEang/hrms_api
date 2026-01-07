@@ -4,7 +4,7 @@ import { DepartmentDto } from './dtos/department.dto';
 import { plainToInstance } from 'class-transformer';
 import { DepartmentUpdateDto } from './dtos/department-update.dto';
 import { DepartmentCreateDto } from './dtos/department-create.dto';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 
 @Injectable()
 export class DepartmentsService {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { AttendanceDto } from './dtos/attendance.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
@@ -7,7 +7,7 @@ import { AttendanceStatus } from 'src/common/enums/attendance-status.enum';
 
 @Injectable()
 export class AttendancesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -16,20 +16,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
                 employee: childIncluded
                     ? {
-                        include: {
-                            department: true,
-                            position: true,
-                        },
-                    }
+                          include: {
+                              department: true,
+                              position: true,
+                          },
+                      }
                     : false,
             },
         });
@@ -47,20 +47,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
                 employee: childIncluded
                     ? {
-                        include: {
-                            department: true,
-                            position: true,
-                        },
-                    }
+                          include: {
+                              department: true,
+                              position: true,
+                          },
+                      }
                     : false,
             },
         });
@@ -86,10 +86,45 @@ export class AttendancesService {
             return Result.fail('Employee has already checked in for today.');
         }
 
+        // Fetch employee to get shift details
+        const employee = await this.prisma.employee.findUnique({
+            where: { id: dto.employeeId },
+            include: { shift: true },
+        });
+
+        if (!employee) return Result.fail('Employee not found');
+
         const now = new Date();
-        const startWorkTime = new Date();
-        startWorkTime.setHours(9, 0, 0, 0); // Default 9 AM
-        const status = now > startWorkTime ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
+        let status = AttendanceStatus.PRESENT;
+
+        if (employee.shift) {
+            const shiftStart = new Date(employee.shift.startTime); // 1970-01-01T09:00:00.000Z generally
+
+            // Construct today's expected start time
+            const expectedStart = new Date(now);
+            expectedStart.setHours(
+                shiftStart.getUTCHours(),
+                shiftStart.getUTCMinutes(),
+                0,
+                0,
+            );
+
+            // Adjust for local time offset if needed? checkInTime is usually stored/handled in server time.
+            // Assuming Shift.startTime is stored as UTC for the time-of-day.
+            // If checking "LATE", we compare now vs expectedStart + gracePeriod.
+
+            const graceMinutes = employee.shift.gracePeriodMins || 0;
+            expectedStart.setMinutes(expectedStart.getMinutes() + graceMinutes);
+
+            if (now > expectedStart) {
+                status = AttendanceStatus.LATE;
+            }
+        } else {
+            // Default fallback if no shift assigned (e.g. 9 AM)
+            const startWorkTime = new Date();
+            startWorkTime.setHours(9, 0, 0, 0);
+            if (now > startWorkTime) status = AttendanceStatus.LATE;
+        }
 
         const attendance = await this.prisma.attendance.create({
             data: {
