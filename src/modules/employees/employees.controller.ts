@@ -1,27 +1,98 @@
-import { Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Param,
+    ParseBoolPipe,
+    Patch,
+    Post,
+    Query,
+    BadRequestException,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
-import { RoleName } from 'src/common/enums/roles.enum';
-import { Auth } from 'src/common/decorators/roles.decorator';
+import { EmployeeCreateDto } from './dtos/employee-create.dto';
+import { EmployeeDto } from './dtos/employee.dto';
+import { EmployeeUpdateDto } from './dtos/employee-update.dto';
+import { Auth } from '../../common/decorators/auth.decorator';
+import { RoleName } from '../../common/enums/roles.enum';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('employees')
 @ApiTags('Employees')
+@Auth()
 export class EmployeesController {
-    constructor(private readonly employeesService: EmployeesService) {}
+    constructor(private readonly employeesService: EmployeesService) { }
+
+    @Get()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get all employees' })
+    @ApiResponse({ status: HttpStatus.OK, type: [EmployeeDto] })
+    async findAll(
+        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
+        childIncluded?: boolean,
+    ) {
+        return await this.employeesService.findAllAsync(childIncluded);
+    }
+
+    @Get(':id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get employee by ID' })
+    @ApiResponse({ status: HttpStatus.OK, type: EmployeeDto })
+    async findOne(
+        @Param('id') id: string,
+        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
+        childIncluded?: boolean,
+    ) {
+        return await this.employeesService.findOneByIdAsync(id, childIncluded);
+    }
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
+    @Auth(RoleName.ADMIN, RoleName.HR)
+    @ApiOperation({ summary: 'Create new employee (Admin/HR only)' })
+    @ApiResponse({ status: HttpStatus.CREATED, type: EmployeeDto })
+    @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
+    async create(
+        @Body() dto: EmployeeCreateDto,
+        @CurrentUser('sub') performerId: string,
+    ) {
+        const result = await this.employeesService.createAsync(dto, performerId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+        return result.getData();
+    }
+
+    @Patch(':id')
+    @HttpCode(HttpStatus.OK)
+    @Auth(RoleName.ADMIN, RoleName.HR)
+    @ApiOperation({ summary: 'Update employee details' })
+    @ApiResponse({ status: HttpStatus.OK, type: EmployeeDto })
+    async update(
+        @Param('id') id: string,
+        @Body() dto: EmployeeUpdateDto,
+        @CurrentUser('sub') performerId: string,
+    ) {
+        const result = await this.employeesService.updateAsync(id, dto, performerId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+        return result.getData();
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
     @Auth(RoleName.ADMIN)
-    @ApiOperation({ summary: 'Create new employee' })
-    @ApiResponse({
-        status: HttpStatus.CREATED,
-        description: 'Employee successfully created',
-    })
-    @ApiResponse({
-        status: HttpStatus.BAD_REQUEST,
-        description: 'Bad Request (e.g., email already exists)',
-    })
-    create() {
-        return 'hi';
+    @ApiOperation({ summary: 'Delete employee (Admin only)' })
+    @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Deleted' })
+    async delete(@Param('id') id: string) {
+        const result = await this.employeesService.deleteAsync(id);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
     }
 }
