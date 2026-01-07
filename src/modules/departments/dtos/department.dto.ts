@@ -8,6 +8,7 @@ export class DepartmentDto {
     id: string;
 
     @Expose({ name: 'department_name' })
+    @Transform(({ obj }) => obj.departmentName)
     name: string;
 
     @Expose({ name: 'employees' })
