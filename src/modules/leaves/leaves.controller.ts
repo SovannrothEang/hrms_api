@@ -12,7 +12,7 @@ import {
     BadRequestException,
     ParseBoolPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
@@ -30,6 +30,7 @@ export class LeavesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all leave requests' })
     @ApiResponse({ status: HttpStatus.OK, type: [LeaveRequestDto] })
+    @ApiParam({ name: 'childIncluded', required: false, type: 'boolean' })
     async findAll(
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
@@ -41,6 +42,7 @@ export class LeavesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get leave request by ID' })
     @ApiResponse({ status: HttpStatus.OK, type: LeaveRequestDto })
+    @ApiParam({ name: 'childIncluded', required: false, type: 'boolean' })
     async findOne(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
