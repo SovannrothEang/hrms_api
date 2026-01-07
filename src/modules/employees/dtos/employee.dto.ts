@@ -1,5 +1,7 @@
-import { Expose, Transform } from 'class-transformer';
-import { Employee } from '@prisma/client';
+import { Expose, plainToInstance, Transform } from 'class-transformer';
+import { Department, Employee, EmployeePosition } from '@prisma/client';
+import { DepartmentDto } from '../../departments/dtos/department.dto';
+import { EmployeePositionDto } from '../../employee-positions/dtos/employee-position.dto';
 
 export class EmployeeDto {
     @Expose({ name: 'id' })
@@ -41,6 +43,31 @@ export class EmployeeDto {
 
     @Expose({ name: 'hire_date' })
     hireDate: Date;
+
+    @Expose({ name: 'position' })
+    @Transform(
+        ({
+            obj,
+        }: {
+            obj: Employee & { position: EmployeePosition | null };
+        }) => {
+            if (!obj.position) return null;
+            return plainToInstance(EmployeePositionDto, obj.position);
+        },
+    )
+    position: EmployeePositionDto;
+
+    @Expose({ name: 'department' })
+    @Transform(
+        ({ obj }: { obj: Employee & { department: Department | null } }) => {
+            if (!obj.department) return null;
+            return plainToInstance(DepartmentDto, obj.department);
+        },
+    )
+    department: DepartmentDto;
+
+    @Expose({ name: 'isActive' })
+    isActive: boolean;
 
     @Expose({ name: 'createdAt' })
     createdAt: Date;

@@ -11,6 +11,7 @@ import { EmployeePositionsModule } from './modules/employee-positions/employee-p
 import { UserContextService } from './modules/auth/user-context.service';
 import { ContextMiddleware } from './common/context.middleware';
 import { AttendancesModule } from './modules/attendances/attendances.module';
+import { LeavesModule } from './modules/leaves/leaves.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -65,6 +66,7 @@ import { AttendancesModule } from './modules/attendances/attendances.module';
     RolesModule,
     EmployeePositionsModule,
     AttendancesModule,
+    LeavesModule,
   ],
   controllers: [],
   providers: [UserContextService],
