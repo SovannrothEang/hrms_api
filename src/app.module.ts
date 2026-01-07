@@ -12,6 +12,9 @@ import { UserContextService } from './modules/auth/user-context.service';
 import { ContextMiddleware } from './common/context.middleware';
 import { AttendancesModule } from './modules/attendances/attendances.module';
 import { LeavesModule } from './modules/leaves/leaves.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AutomationModule } from './modules/automation/automation.module';
+import { ReportsModule } from './modules/reports/reports.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -67,6 +70,9 @@ import { LeavesModule } from './modules/leaves/leaves.module';
     EmployeePositionsModule,
     AttendancesModule,
     LeavesModule,
+    NotificationsModule,
+    AutomationModule,
+    ReportsModule,
   ],
   controllers: [],
   providers: [UserContextService],

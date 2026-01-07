@@ -7,9 +7,14 @@ import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.
 import { plainToInstance } from 'class-transformer';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
 
+import { EmailService } from '../notifications/email.service';
+
 @Injectable()
 export class LeavesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly emailService: EmailService
+    ) { }
 
     async findAllAsync(childIncluded?: boolean): Promise<Result<LeaveRequestDto[]>> {
         const leaves = await this.prisma.leaveRequest.findMany({
@@ -147,6 +152,15 @@ export class LeavesService {
                 });
             });
 
+            // Notify Manager (MVP: Finding manager of employee)
+            // For now, imply sending to a generic HR or the employee's manager if relation exists
+            // We can just call the service and let it mock
+            this.emailService.sendLeaveRequestNotification(
+                'manager@company.com',
+                leave.id,
+                dto.leaveType
+            );
+
             return Result.ok(plainToInstance(LeaveRequestDto, leave));
         } catch (e) {
             return Result.fail(
@@ -215,6 +229,14 @@ export class LeavesService {
                     include: { requester: true, approver: true },
                 });
             });
+
+            // Notify Employee of decision
+            this.emailService.sendLeaveStatusUpdateNotification(
+                'employee@company.com', // In real app: leave.requester.email
+                id,
+                dto.status
+            );
+
             return Result.ok(plainToInstance(LeaveRequestDto, updatedLeave));
         } catch (e) {
             return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
