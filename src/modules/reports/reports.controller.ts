@@ -1,6 +1,7 @@
-import { Controller, Get, Query, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
-import { PrismaService } from '../prisma/prisma.service';
+import { Controller, Get, Query, HttpCode, HttpStatus, ParseIntPipe, Res } from '@nestjs/common';
+import { ApiOperation, ApiTags, ApiQuery, ApiProduces } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { ReportsService } from './reports.service';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
 
@@ -8,7 +9,7 @@ import { RoleName } from '../../common/enums/roles.enum';
 @ApiTags('Reports')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class ReportsController {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly reportsService: ReportsService) { }
 
     @Get('attendance-summary')
     @HttpCode(HttpStatus.OK)
@@ -19,59 +20,63 @@ export class ReportsController {
         @Query('month', ParseIntPipe) month: number,
         @Query('year', ParseIntPipe) year: number,
     ) {
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59);
+        return await this.reportsService.getAttendanceSummaryData(month, year);
+    }
 
-        const summary = await this.prisma.attendance.groupBy({
-            by: ['status'],
-            where: {
-                date: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-            },
-            _count: {
-                id: true,
-            },
-        });
+    @Get('attendance-summary/export')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Export attendance summary (xlsx/csv)' })
+    @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv')
+    @ApiQuery({ name: 'month', required: true, type: Number })
+    @ApiQuery({ name: 'year', required: true, type: Number })
+    @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
+    async exportAttendance(
+        @Query('month', ParseIntPipe) month: number,
+        @Query('year', ParseIntPipe) year: number,
+        @Query('format') format: 'xlsx' | 'csv',
+        @Res() res: Response,
+    ) {
+        const workbook = await this.reportsService.exportAttendanceSummary(month, year);
 
-        // Format for easier consumption
-        return summary.map(item => ({
-            status: item.status,
-            count: item._count.id
-        }));
+        if (format === 'csv') {
+            res.header('Content-Type', 'text/csv');
+            res.header('Content-Disposition', 'attachment; filename=attendance_summary.csv');
+            await workbook.csv.write(res);
+        } else {
+            res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.header('Content-Disposition', 'attachment; filename=attendance_summary.xlsx');
+            await workbook.xlsx.write(res);
+        }
+        res.end();
     }
 
     @Get('leave-utilization')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get leave balances for all employees' })
     async getLeaveUtilization() {
-        // Aggregate balances
-        const balances = await this.prisma.leaveBalance.findMany({
-            include: {
-                employee: {
-                    select: {
-                        firstname: true,
-                        lastname: true,
-                        employeeCode: true,
-                        department: {
-                            select: { departmentName: true }
-                        }
-                    }
-                }
-            }
-        });
+        return await this.reportsService.getLeaveUtilizationData();
+    }
 
-        return balances.map(b => ({
-            employee: `${b.employee.firstname} ${b.employee.lastname}`,
-            code: b.employee.employeeCode,
-            department: b.employee.department.departmentName,
-            type: b.leaveType,
-            year: b.year,
-            total: b.totalDays,
-            used: b.usedDays,
-            pending: b.pendingDays,
-            remaining: Number(b.totalDays) - Number(b.usedDays) - Number(b.pendingDays)
-        }));
+    @Get('leave-utilization/export')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Export leave utilization (xlsx/csv)' })
+    @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv')
+    @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
+    async exportLeaveUtilization(
+        @Query('format') format: 'xlsx' | 'csv',
+        @Res() res: Response,
+    ) {
+        const workbook = await this.reportsService.exportLeaveUtilization();
+
+        if (format === 'csv') {
+            res.header('Content-Type', 'text/csv');
+            res.header('Content-Disposition', 'attachment; filename=leave_utilization.csv');
+            await workbook.csv.write(res);
+        } else {
+            res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.header('Content-Disposition', 'attachment; filename=leave_utilization.xlsx');
+            await workbook.xlsx.write(res);
+        }
+        res.end();
     }
 }
