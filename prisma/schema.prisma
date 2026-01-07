@@ -41,6 +41,7 @@ model User {
   performedTaxConfigs       EmployeeTaxConfig[] @relation("EmployeeTaxConfigPerformer")
   performedTaxCalculations  TaxCalculation[]    @relation("TaxCalculationPerformer")
   performedCompanySettings  CompanySettings[]   @relation("CompanySettingsPerformer")
+  performedLeaveBalances    LeaveBalance[]      @relation("LeaveBalancePerformer")
 
   isDeleted Boolean   @default(false) @map("is_deleted")
   isActive  Boolean   @default(true) @map("is_active")
@@ -163,6 +164,7 @@ model Employee {
   approvedLeaveRequests LeaveRequest[]   @relation("ApproverLeaves")
   payrolls              Payroll[]
   taxCalculations       TaxCalculation[]
+  leaveBalances         LeaveBalance[]
 
   performBy String?   @map("perform_by") @db.VarChar(36)
   performer User?     @relation("EmployeePerformer", fields: [performBy], references: [id])
@@ -233,6 +235,31 @@ model LeaveRequest {
   @@index([approvedBy])
   @@index([status]) // Filter Pending vs Approved
   @@index([startDate, endDate]) // Overlap checks
+}
+
+model LeaveBalance {
+  id         String @id @default(uuid()) @db.VarChar(36)
+  employeeId String @map("employee_id") @db.VarChar(36)
+  leaveType  String @map("leave_type") @db.VarChar(50)
+  year       Int    @db.SmallInt
+  
+  totalDays   Decimal @map("total_days") @default(0) @db.Decimal(5, 2)
+  usedDays    Decimal @map("used_days") @default(0) @db.Decimal(5, 2)
+  pendingDays Decimal @map("pending_days") @default(0) @db.Decimal(5, 2)
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  performBy String?   @map("perform_by") @db.VarChar(36)
+  performer User?     @relation("LeaveBalancePerformer", fields: [performBy], references: [id])
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@map("leave_balances")
+  @@unique([employeeId, leaveType, year]) // One balance record per type per year
 }
 
 // --------------------------------------

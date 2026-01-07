@@ -58,7 +58,11 @@ export class LeavesService {
         dto: LeaveRequestCreateDto,
         performerId?: string,
     ): Promise<Result<LeaveRequestDto>> {
-        // Check overlap
+        const startDate = new Date(dto.startDate);
+        const endDate = new Date(dto.endDate);
+        const year = startDate.getFullYear();
+
+        // 1. Check overlap
         const overlaps = await this.prisma.leaveRequest.findFirst({
             where: {
                 employeeId: dto.employeeId,
@@ -76,16 +80,79 @@ export class LeavesService {
             return Result.fail('Leave request overlaps with an existing request.');
         }
 
-        const leave = await this.prisma.leaveRequest.create({
-            data: {
-                ...dto,
-                status: LeaveStatus.PENDING,
-                performBy: performerId,
-            },
-            include: { requester: true },
-        });
+        // 2. Calculate requested days (Simple day diff for now)
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        return Result.ok(plainToInstance(LeaveRequestDto, leave));
+        // 3. Transaction: Check Balance & Create Request
+        try {
+            const leave = await this.prisma.$transaction(async (tx) => {
+                // Find or Create Balance Record
+                let balance = await tx.leaveBalance.findUnique({
+                    where: {
+                        employeeId_leaveType_year: {
+                            employeeId: dto.employeeId,
+                            leaveType: dto.leaveType,
+                            year: year,
+                        },
+                    },
+                });
+
+                // Check sufficiency
+                if (balance) {
+                    const available =
+                        Number(balance.totalDays) -
+                        Number(balance.usedDays) -
+                        Number(balance.pendingDays);
+
+                    if (available < requestedDays) {
+                        throw new Error(
+                            `Insufficient leave balance. Available: ${available}, Requested: ${requestedDays}`,
+                        );
+                    }
+
+                    // Update Pending Balance
+                    await tx.leaveBalance.update({
+                        where: { id: balance.id },
+                        data: {
+                            pendingDays: { increment: requestedDays },
+                        },
+                    });
+                } else {
+                    // For MVP/Transition: If no balance record exists, we might want to fail OR allow (creating a negative/tracking record).
+                    // Let's create a 0-based record which will effectively act as "unpaid" or tracked but not strictly limited if we didn't seed balances.
+                    // But strictly speaking, we should fail or auto-create. Let's auto-create with 0 total for now to track usage.
+                    balance = await tx.leaveBalance.create({
+                        data: {
+                            employeeId: dto.employeeId,
+                            leaveType: dto.leaveType,
+                            year: year,
+                            totalDays: 0, // Or some default
+                            pendingDays: requestedDays
+                        }
+                    })
+                    // Optional: If we want to enforcing strict 0 limit -> verify negative?
+                    // For now, let's assume if it didn't exist, we track it.
+                }
+
+                return await tx.leaveRequest.create({
+                    data: {
+                        ...dto,
+                        startDate: startDate,
+                        endDate: endDate,
+                        status: LeaveStatus.PENDING,
+                        performBy: performerId,
+                    },
+                    include: { requester: true },
+                });
+            });
+
+            return Result.ok(plainToInstance(LeaveRequestDto, leave));
+        } catch (e) {
+            return Result.fail(
+                e instanceof Error ? e.message : 'Failed to create leave request',
+            );
+        }
     }
 
     async updateStatusAsync(
@@ -98,18 +165,60 @@ export class LeavesService {
         });
 
         if (!leave) return Result.fail('Leave request not found');
+        if (leave.status !== LeaveStatus.PENDING) {
+            return Result.fail(`Cannot update status from ${leave.status}. Only PENDING requests can be processed.`);
+        }
 
-        const updatedLeave = await this.prisma.leaveRequest.update({
-            where: { id },
-            data: {
-                status: dto.status,
-                approvedBy: dto.approverId,
-                performBy: performerId,
-            },
-            include: { requester: true, approver: true },
-        });
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        const year = startDate.getFullYear(); // Assuming simple single-year requests for MVP
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        return Result.ok(plainToInstance(LeaveRequestDto, updatedLeave));
+        try {
+            const updatedLeave = await this.prisma.$transaction(async (tx) => {
+                // Update Balance based on Decision
+                if (dto.status === LeaveStatus.APPROVED) {
+                    // Move from Pending to Used
+                    await tx.leaveBalance.updateMany({
+                        where: {
+                            employeeId: leave.employeeId,
+                            leaveType: leave.leaveType,
+                            year: year
+                        },
+                        data: {
+                            pendingDays: { decrement: requestedDays },
+                            usedDays: { increment: requestedDays }
+                        }
+                    });
+                } else if (dto.status === LeaveStatus.REJECTED) {
+                    // Return from Pending (free up)
+                    await tx.leaveBalance.updateMany({
+                        where: {
+                            employeeId: leave.employeeId,
+                            leaveType: leave.leaveType,
+                            year: year
+                        },
+                        data: {
+                            pendingDays: { decrement: requestedDays }
+                        }
+                    });
+                }
+
+                return await tx.leaveRequest.update({
+                    where: { id },
+                    data: {
+                        status: dto.status,
+                        approvedBy: dto.approverId,
+                        performBy: performerId,
+                    },
+                    include: { requester: true, approver: true },
+                });
+            });
+            return Result.ok(plainToInstance(LeaveRequestDto, updatedLeave));
+        } catch (e) {
+            return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
+        }
     }
 
     async deleteAsync(id: string): Promise<Result<void>> {
@@ -118,9 +227,34 @@ export class LeavesService {
         });
 
         if (!leave) return Result.fail('Leave request not found');
-        if (leave.status !== LeaveStatus.PENDING) return Result.fail('Cannot delete processed leave request');
+        if (leave.status !== LeaveStatus.PENDING)
+            return Result.fail('Cannot delete processed leave request');
 
-        await this.prisma.leaveRequest.delete({ where: { id } });
-        return Result.ok();
+        const startDate = new Date(leave.startDate);
+        const endDate = new Date(leave.endDate);
+        const year = startDate.getFullYear();
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        try {
+            await this.prisma.$transaction(async (tx) => {
+                // Restore Pending Balance
+                await tx.leaveBalance.updateMany({
+                    where: {
+                        employeeId: leave.employeeId,
+                        leaveType: leave.leaveType,
+                        year: year
+                    },
+                    data: {
+                        pendingDays: { decrement: requestedDays }
+                    }
+                });
+
+                await tx.leaveRequest.delete({ where: { id } });
+            });
+            return Result.ok();
+        } catch (e) {
+            return Result.fail(e instanceof Error ? e.message : 'Transaction failed');
+        }
     }
 }
