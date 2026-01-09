@@ -31,6 +31,24 @@
 $ pnpm install
 ```
 
+## Seed database
+
+```bash
+$ pnpm run seed
+```
+
+## Project setup with Docker
+
+```bash
+$ docker compose -f docker-compose.development.yml up --build -d
+```
+
+## Seed database (Docker)
+
+```bash
+$ docker compose -f docker-compose.development.yml exec api pnpm exec prisma db seed
+```
+
 ## Compile and run the project
 
 ```bash
