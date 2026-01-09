@@ -103,6 +103,6 @@
     }
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts && ts-node prisma/reporting-seed.ts"
+    "seed": "ts-node prisma/seed/main.ts"
   }
 }
