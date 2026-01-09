@@ -3,17 +3,18 @@ import {
     Injectable,
     NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '../../common/services/prisma/prisma.service';
+
 import { RoleDto } from './dtos/roles.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import { Logger } from '@nestjs/common';
+import { PrismaService } from 'src/common/services/prisma/prisma.service';
 
 @Injectable()
 export class RolesService {
     private readonly logger = new Logger(RolesService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -23,14 +24,14 @@ export class RolesService {
             include: {
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: {
-                                      role: true,
-                                  },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: {
+                                    role: true,
+                                },
+                            },
+                        },
+                    }
                     : false,
             },
         });
@@ -48,14 +49,14 @@ export class RolesService {
             include: {
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: {
-                                      role: true,
-                                  },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: {
+                                    role: true,
+                                },
+                            },
+                        },
+                    }
                     : false,
             },
         });

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Param, Body, Post, NotFoundException, Delete, Put, HttpCode, HttpStatus, ParseBoolPipe } from '@nestjs/common';
+import { Controller, Get, Query, Param, Body, Post, NotFoundException, Delete, Put, HttpCode, HttpStatus, ParseBoolPipe, Logger, BadRequestException } from '@nestjs/common';
 import { EmployeePositionsService } from './employee-positions.service';
 import { Result } from 'src/common/logic/result';
 import { EmployeePositionDto } from './dtos/employee-position.dto';
@@ -14,6 +14,8 @@ import { ApiTags } from '@nestjs/swagger';
 @ApiTags('Employee Positions')
 @Auth(RoleName.ADMIN)
 export class EmployeePositionsController {
+    private readonly _logger = new Logger(EmployeePositionsController.name);
+
     constructor(private readonly employeePositionsService: EmployeePositionsService) { }
 
     @Get()
@@ -23,8 +25,10 @@ export class EmployeePositionsController {
     @ApiResponse({ status: HttpStatus.OK })
     async findAllAsync(
         @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
-    ): Promise<Result<EmployeePositionDto[]>> {
-        return await this.employeePositionsService.findAllAsync(childIncluded);
+    ): Promise<EmployeePositionDto[]> {
+        this._logger.log(`Get all positions`);
+        const result = await this.employeePositionsService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')
@@ -36,11 +40,11 @@ export class EmployeePositionsController {
     async findOneByIdAsync(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
-    ): Promise<Result<EmployeePositionDto>> {
+    ): Promise<EmployeePositionDto> {
         const result = await this.employeePositionsService.findOneByIdAsync(id, childIncluded);
         if (!result.isSuccess)
             throw new NotFoundException(result.error);
-        return result;
+        return result.getData();
     }
 
     @Post()
@@ -51,8 +55,11 @@ export class EmployeePositionsController {
     async createEmployeePosition(
         @Body() dto: EmployeePositionCreateDto,
         @CurrentUser('sub') userId: string
-    ): Promise<Result<EmployeePositionDto>> {
-        return await this.employeePositionsService.createEmployeePosition(dto, userId);
+    ): Promise<EmployeePositionDto> {
+        const result = await this.employeePositionsService.createEmployeePosition(dto, userId);
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error);
+        return result.getData();
     }
 
     @Put(':id')

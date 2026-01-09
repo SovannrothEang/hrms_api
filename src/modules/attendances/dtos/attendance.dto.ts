@@ -5,7 +5,7 @@ import {
     Transform,
     Type,
 } from 'class-transformer';
-import { UserDto } from '../../users/dtos/user.dto';
+import { UserDto } from '../../iam/users/dtos/user.dto';
 import { EmployeeDto } from '../../employees/dtos/employee.dto';
 import { Attendance, Employee, User } from '@prisma/client';
 

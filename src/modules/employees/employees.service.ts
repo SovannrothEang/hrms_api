@@ -6,11 +6,10 @@ import { EmployeeDto } from './dtos/employee.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class EmployeesService {
-    constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService) { }
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -21,15 +20,23 @@ export class EmployeesService {
             where: {
                 OR: [{ username: dto.username }, { email: dto.email }],
             },
+            select: { id: true }
         });
         if (check) return Result.fail('Username or Email already exists');
 
         const codeCheck = await this.prisma.employee.findUnique({
             where: { employeeCode: dto.employeeCode },
+            select: { id: true }
         });
         if (codeCheck) return Result.fail('Employee Code already exists');
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+        const role = await this.prisma.role.findFirst({
+            where: { name: dto.roleName },
+            select: { id: true }
+        });
+        if (!role) return Result.fail('Role not found');
 
         try {
             const employee = await this.prisma.$transaction(async (tx) => {
@@ -41,7 +48,7 @@ export class EmployeesService {
                         password: hashedPassword,
                         userRoles: {
                             create: {
-                                roleId: dto.roleId,
+                                roleId: role.id,
                                 performBy: performerId,
                             },
                         },
@@ -89,12 +96,12 @@ export class EmployeesService {
                 position: true,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });
@@ -113,12 +120,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });

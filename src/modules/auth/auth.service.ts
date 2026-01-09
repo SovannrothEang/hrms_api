@@ -2,8 +2,8 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { UserDto } from '../users/dtos/user.dto';
+import { UsersService } from '../iam/users/users.service';
+import { UserDto } from '../iam/users/dtos/user.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { UserPayload } from 'src/common/decorators/current-user.decorator';
 import { Result } from 'src/common/logic/result';
@@ -16,7 +16,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly usersService: UsersService,
-    ) {}
+    ) { }
 
     async signInAsync(email: string, password: string) {
         this.logger.log('Signing in user with {email}.', email);

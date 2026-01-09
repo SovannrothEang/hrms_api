@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: hrms_api_dev
+    restart: always
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    command: /bin/sh -c "pnpm exec prisma generate && pnpm exec prisma migrate deploy && pnpm start:dev"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:admin123@db:5432/hrms_db
+      - WATCHPACK_POLLING=true
+    develop:
+      watch:
+        - action: rebuild
+          path: ./package.json
+
+        - action: rebuild
+          path: ./prisma/schema.prisma
+
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules
+    networks:
+      - app_network
+
+  db:
+    image: postgres:15-alpine
+    container_name: hrms_db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin123
+      - POSTGRES_DB=hrms_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d hrms_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:

@@ -30,7 +30,7 @@ export class EmployeesController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all employees' })
-    @ApiResponse({ status: HttpStatus.OK, type: [EmployeeDto] })
+    @ApiResponse({ status: HttpStatus.OK })
     async findAll(
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
@@ -41,7 +41,7 @@ export class EmployeesController {
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get employee by ID' })
-    @ApiResponse({ status: HttpStatus.OK, type: EmployeeDto })
+    @ApiResponse({ status: HttpStatus.OK })
     async findOne(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
@@ -54,7 +54,7 @@ export class EmployeesController {
     @HttpCode(HttpStatus.CREATED)
     @Auth(RoleName.ADMIN, RoleName.HR)
     @ApiOperation({ summary: 'Create new employee (Admin/HR only)' })
-    @ApiResponse({ status: HttpStatus.CREATED, type: EmployeeDto })
+    @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
     async create(
         @Body() dto: EmployeeCreateDto,
@@ -71,7 +71,7 @@ export class EmployeesController {
     @HttpCode(HttpStatus.OK)
     @Auth(RoleName.ADMIN, RoleName.HR)
     @ApiOperation({ summary: 'Update employee details' })
-    @ApiResponse({ status: HttpStatus.OK, type: EmployeeDto })
+    @ApiResponse({ status: HttpStatus.OK })
     async update(
         @Param('id') id: string,
         @Body() dto: EmployeeUpdateDto,

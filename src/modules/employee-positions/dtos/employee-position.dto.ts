@@ -5,7 +5,7 @@ import {
     Transform,
     Type,
 } from 'class-transformer';
-import { UserDto } from 'src/modules/users/dtos/user.dto';
+import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
 import { EmployeePosition, User } from '@prisma/client';
 import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
 import { DecimalNumber } from '../../../config/decimal-number';

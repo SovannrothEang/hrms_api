@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Result } from '../../../src/common/logic/result';
-import { UsersController } from '../../../src/modules/users/users.controller';
-import { UsersService } from '../../../src/modules/users/users.service';
+import { UsersController } from '../../../src/modules/iam/users/users.controller';
+import { UsersService } from '../../../src/modules/iam/users/users.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 

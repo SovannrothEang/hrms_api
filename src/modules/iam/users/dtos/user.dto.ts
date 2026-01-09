@@ -1,5 +1,5 @@
 import { Exclude, Expose, plainToInstance, Transform } from 'class-transformer';
-import { EmployeeDto } from '../../employees/dtos/employee.dto';
+import { EmployeeDto } from '../../../employees/dtos/employee.dto';
 import { Employee, Role, User, UserRole } from '@prisma/client';
 
 @Exclude()

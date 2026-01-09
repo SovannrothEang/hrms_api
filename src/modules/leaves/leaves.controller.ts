@@ -30,7 +30,7 @@ export class LeavesController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all leave requests (Paginated)' })
-    @ApiResponse({ status: HttpStatus.OK, type: [LeaveRequestDto] })
+    @ApiResponse({ status: HttpStatus.OK })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 10' })
@@ -52,7 +52,7 @@ export class LeavesController {
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get leave request by ID' })
-    @ApiResponse({ status: HttpStatus.OK, type: LeaveRequestDto })
+    @ApiResponse({ status: HttpStatus.OK })
     @ApiParam({ name: 'childIncluded', required: false, type: 'boolean' })
     async findOne(
         @Param('id') id: string,
@@ -65,7 +65,7 @@ export class LeavesController {
     @Post()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create new leave request' })
-    @ApiResponse({ status: HttpStatus.CREATED, type: LeaveRequestDto })
+    @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
     async create(
         @Body() dto: LeaveRequestCreateDto,
@@ -81,7 +81,7 @@ export class LeavesController {
     @Patch(':id/status')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Update leave request status' })
-    @ApiResponse({ status: HttpStatus.OK, type: LeaveRequestDto })
+    @ApiResponse({ status: HttpStatus.OK })
     async updateStatus(
         @Param('id') id: string,
         @Body() dto: LeaveRequestStatusUpdateDto,

@@ -3,6 +3,7 @@ import {
     IsDateString,
     IsEmail,
     IsEnum,
+    IsIn,
     IsNotEmpty,
     IsOptional,
     IsString,
@@ -89,8 +90,14 @@ export class EmployeeCreateDto {
     @MinLength(8)
     password: string;
 
-    @ApiProperty({ example: 'uuid-role' })
+    // @ApiProperty({ example: 'uuid-role' })
+    // @IsNotEmpty()
+    // @IsString()
+    // roleId: string;
+
+    @ApiProperty({ example: 'employee' })
     @IsNotEmpty()
     @IsString()
-    roleId: string;
+    @IsIn(['employee', 'hr'])
+    roleName: string;
 }

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UsersService } from '../../../src/modules/users/users.service';
+import { UsersService } from '../../../src/modules/iam/users/users.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { RoleName } from '../../../src/common/enums/roles.enum';
 

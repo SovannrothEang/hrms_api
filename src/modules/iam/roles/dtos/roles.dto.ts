@@ -1,5 +1,5 @@
 import { Exclude, Expose, plainToInstance, Transform } from 'class-transformer';
-import { UserDto } from 'src/modules/users/dtos/user.dto';
+import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
 import { Role, User } from '@prisma/client';
 
 @Exclude()

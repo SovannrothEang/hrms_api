@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from '../../../src/modules/auth/auth.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../../../src/modules/users/users.service';
+import { UsersService } from '../../../src/modules/iam/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { UnauthorizedException } from '@nestjs/common';
 

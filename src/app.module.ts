@@ -3,10 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './common/services/prisma/prisma.module';
-import { UsersModule } from './modules/users/users.module';
+import { UsersModule } from './modules/iam/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
-import { RolesModule } from './modules/roles/roles.module';
+import { RolesModule } from './modules/iam/roles/roles.module';
 import { EmployeePositionsModule } from './modules/employee-positions/employee-positions.module';
 import { UserContextService } from './modules/auth/user-context.service';
 import { ContextMiddleware } from './common/context.middleware';
@@ -19,6 +19,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { PublicHolidaysModule } from './modules/public-holidays/public-holidays.module';
 import { CurrenciesModule } from './modules/payroll/currencies/currencies.module';
 import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
 
 @Module({
     imports: [
@@ -74,21 +75,22 @@ import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.m
                 },
             }),
         }),
-        PrismaModule,
-        UsersModule,
-        AuthModule,
-        EmployeesModule,
-        RolesModule,
-        EmployeePositionsModule,
         AttendancesModule,
+        AuthModule,
+        AutomationModule,
+        CurrenciesModule,
+        DepartmentsModule,
+        EmployeePositionsModule,
+        EmployeesModule,
         LeavesModule,
         NotificationsModule,
-        AutomationModule,
-        ReportsModule,
-        ShiftsModule,
+        PrismaModule,
         PublicHolidaysModule,
-        CurrenciesModule,
+        ReportsModule,
+        RolesModule,
+        ShiftsModule,
         TaxBracketsModule,
+        UsersModule,
     ],
     controllers: [],
     providers: [UserContextService],

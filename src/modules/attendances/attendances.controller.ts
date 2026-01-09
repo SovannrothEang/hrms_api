@@ -10,7 +10,7 @@ import {
     BadRequestException,
     ParseBoolPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AttendancesService } from './attendances.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
@@ -26,16 +26,18 @@ export class AttendancesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiOperation({ summary: 'Get all attendances' })
-    @ApiResponse({ status: HttpStatus.OK, type: [AttendanceDto] })
+    @ApiResponse({ status: HttpStatus.OK })
     async findAll(@Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean) {
         return await this.attendancesService.findAllAsync(childIncluded);
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiOperation({ summary: 'Get attendance by ID' })
-    @ApiResponse({ status: HttpStatus.OK, type: AttendanceDto })
+    @ApiResponse({ status: HttpStatus.OK })
     async findOne(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
@@ -46,7 +48,7 @@ export class AttendancesController {
     @Post('check-in')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Check in an employee' })
-    @ApiResponse({ status: HttpStatus.CREATED, type: AttendanceDto })
+    @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
     async checkIn(
         @Body() dto: CheckInDto,
@@ -62,7 +64,7 @@ export class AttendancesController {
     @Post('check-out')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Check out an employee' })
-    @ApiResponse({ status: HttpStatus.OK, type: AttendanceDto })
+    @ApiResponse({ status: HttpStatus.OK })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
     async checkOut(
         @Body() dto: CheckOutDto,

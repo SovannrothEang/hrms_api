@@ -1,6 +1,7 @@
 import {
     BadRequestException,
     Injectable,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
@@ -12,21 +13,26 @@ import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
 
 @Injectable()
 export class EmployeePositionsService {
-    constructor(private readonly prisma: PrismaService) {}
+    private readonly _logger = new Logger(EmployeePositionsService.name);
+
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(
         childIncluded?: boolean,
     ): Promise<Result<EmployeePositionDto[]>> {
+        this._logger.log('Get all positions');
         const positions = await this.prisma.employeePosition.findMany({
             include: {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                          include: { userRoles: { include: { role: true } } },
-                      }
+                        include: { userRoles: { include: { role: true } } },
+                    }
                     : false,
             },
         });
+        this._logger.log(`Positions: ${JSON.stringify(positions)}`);
+
         return Result.ok(
             positions.map((p) => plainToInstance(EmployeePositionDto, p)),
         );
@@ -42,8 +48,8 @@ export class EmployeePositionsService {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                          include: { userRoles: { include: { role: true } } },
-                      }
+                        include: { userRoles: { include: { role: true } } },
+                    }
                     : false,
             },
         });

@@ -1,7 +1,6 @@
 require('dotenv').config();
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 import { AttendanceStatus } from '../src/common/enums/attendance-status.enum';
 import { LeaveType } from '../src/common/enums/leave-type.enum';
 import { LeaveStatus } from '../src/common/enums/leave-status.enum';

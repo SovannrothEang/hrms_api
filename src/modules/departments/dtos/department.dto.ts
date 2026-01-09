@@ -1,7 +1,7 @@
 import { Department, Employee, User } from '@prisma/client';
 import { Expose, plainToInstance, Transform } from 'class-transformer';
 import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
-import { UserDto } from 'src/modules/users/dtos/user.dto';
+import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
 
 export class DepartmentDto {
     @Expose({ name: 'id' })
