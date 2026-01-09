@@ -6,9 +6,12 @@ import { EmployeeDto } from './dtos/employee.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import * as bcrypt from 'bcrypt';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class EmployeesService {
+    private readonly logger = new Logger(EmployeesService.name);
+
     constructor(private prisma: PrismaService) { }
 
     async createAsync(
@@ -33,10 +36,12 @@ export class EmployeesService {
         const hashedPassword = await bcrypt.hash(dto.password, 10);
 
         const role = await this.prisma.role.findFirst({
-            where: { name: dto.roleName },
+            where: { name: dto.roleName.toUpperCase(), isDeleted: false, isActive: true },
             select: { id: true }
         });
-        if (!role) return Result.fail('Role not found');
+        this.logger.log('Role: ' + JSON.stringify(role));
+        if (!role) return Result.fail
+            ('Role not found');
 
         try {
             const employee = await this.prisma.$transaction(async (tx) => {
@@ -90,6 +95,7 @@ export class EmployeesService {
     async findAllAsync(
         childIncluded?: boolean,
     ): Promise<Result<EmployeeDto[]>> {
+        this.logger.log('Finding all employees');
         const employees = await this.prisma.employee.findMany({
             include: {
                 department: true,

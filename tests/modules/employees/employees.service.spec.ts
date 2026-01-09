@@ -13,6 +13,9 @@ const mockPrismaService = {
         findFirst: jest.fn(),
         create: jest.fn(),
     },
+    role: {
+        findFirst: jest.fn(),
+    },
     $transaction: jest.fn((callback) => callback(mockPrismaService)),
 };
 
@@ -62,7 +65,7 @@ describe('EmployeesService', () => {
                 username: 'john', email: 'john@example.com', password: 'pass',
                 employeeCode: 'EMP001', firstname: 'John', lastname: 'Doe',
                 gender: 1, dob: '1990-01-01', hireDate: '2020-01-01',
-                departmentId: 'dep-1', positionId: 'pos-1', roleId: 'role-1'
+                departmentId: 'dep-1', positionId: 'pos-1', roleName: 'employee'
             };
 
             const createdEmployee = {
@@ -77,6 +80,7 @@ describe('EmployeesService', () => {
             (prisma.employee.findUnique as jest.Mock).mockResolvedValue(null);
             (prisma.user.create as jest.Mock).mockResolvedValue(createdUser);
             (prisma.employee.create as jest.Mock).mockResolvedValue(createdEmployee);
+            (prisma.role.findFirst as jest.Mock).mockResolvedValue({ id: 'role-1' });
 
             const result = await service.createAsync(dto as any, 'admin-id');
             if (!result.isSuccess) console.error(result.error);

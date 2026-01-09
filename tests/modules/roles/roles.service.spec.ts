@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RolesService } from '../../../src/modules/roles/roles.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
+import { RolesService } from 'src/modules/iam/roles/roles.service';
 
 const mockPrismaService = {
     role: {

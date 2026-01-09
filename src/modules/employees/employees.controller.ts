@@ -12,7 +12,7 @@ import {
     Query,
     BadRequestException,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeDto } from './dtos/employee.dto';
@@ -29,6 +29,7 @@ export class EmployeesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'childIncluded', required: false })
     @ApiOperation({ summary: 'Get all employees' })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
@@ -40,6 +41,7 @@ export class EmployeesController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'childIncluded', required: false })
     @ApiOperation({ summary: 'Get employee by ID' })
     @ApiResponse({ status: HttpStatus.OK })
     async findOne(

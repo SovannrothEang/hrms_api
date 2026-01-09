@@ -2,10 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Result } from '../../../src/common/logic/result';
-import { RolesController } from '../../../src/modules/roles/roles.controller';
-import { RolesService } from '../../../src/modules/roles/roles.service';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
+import { RolesController } from 'src/modules/iam/roles/roles.controller';
+import { RolesService } from 'src/modules/iam/roles/roles.service';
 
 // Mock Guards
 jest.mock('src/common/guards/jwt-auth.guard', () => ({
