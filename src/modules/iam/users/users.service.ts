@@ -38,6 +38,9 @@ export class UsersService {
         this.logger.log('Getting user with {id}.', userId);
         const user = await this.prisma.user.findFirst({
             where: { id: userId },
+            include: {
+                userRoles: { include: { role: true } },
+            },
         });
         if (!user) {
             this.logger.warn('User not found!');
@@ -47,25 +50,25 @@ export class UsersService {
         return Result.ok(plainToInstance(UserDto, user));
     }
 
-    async isExistAsync(username?: string, email?: string): Promise<boolean> {
+    async isExistAsync(username?: string, email?: string, excludeId?: string): Promise<boolean> {
         const conditions: Prisma.UserWhereInput[] = [];
 
         if (username) {
-            this.logger.log('Checking username with {username}.', username);
             conditions.push({ username });
         }
         if (email) {
-            this.logger.log('Checking email with {email}.', email);
             conditions.push({ email });
         }
 
         if (conditions.length <= 0) {
-            this.logger.warn('No conditions provided!');
             return false;
         }
 
         const user = await this.prisma.user.findFirst({
-            where: { OR: conditions },
+            where: {
+                OR: conditions,
+                ...(excludeId ? { id: { not: excludeId } } : {}),
+            },
             select: { id: true },
         });
         return user !== null;
@@ -73,7 +76,8 @@ export class UsersService {
 
     async createAsync(
         dto: UserCreateDto,
-        userId?: string,
+        performBy?: string,
+        roleName: string = RoleName.ADMIN,
     ): Promise<Result<UserDto>> {
         this.logger.log(
             'Creating user with {username} and {email}.',
@@ -81,11 +85,11 @@ export class UsersService {
             dto.email,
         );
         const role = await this.prisma.role.findFirst({
-            where: { name: RoleName.ADMIN },
+            where: { name: roleName.toUpperCase(), isActive: true },
         });
         if (!role) {
-            this.logger.warn('Role not found!');
-            return Result.fail('Roles do not match or exist!');
+            this.logger.warn(`Role not found: {roleName}`, roleName);
+            return Result.fail(`Role '${roleName}' does not exist!`);
         }
 
         const existingUser = await this.isExistAsync(dto.username, dto.email);
@@ -103,7 +107,7 @@ export class UsersService {
                 userRoles: {
                     create: {
                         roleId: role.id,
-                        performBy: userId,
+                        performBy: performBy,
                     },
                 },
             },
@@ -125,9 +129,10 @@ export class UsersService {
             throw new NotFoundException('User not found!');
         }
 
-        const existingUser = await this.isExistAsync(dto.username, dto.email);
+        // Exclude current user from duplicate check (self-update scenario)
+        const existingUser = await this.isExistAsync(dto.username, dto.email, id);
         if (existingUser) {
-            this.logger.warn('User already exists!');
+            this.logger.warn('Username or email already taken by another user!');
             throw new BadRequestException('Username or Email already exists!');
         }
 

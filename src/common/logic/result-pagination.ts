@@ -17,3 +17,10 @@ export class ResultPagination<T> {
         return new ResultPagination<U>(data, total, page, limit);
     }
 }
+
+export class PaginationOption {
+    public page?: number = 1;
+    public pageSize?: number = 10;
+    public startDate?: Date;
+    public endDate?: Date;
+}

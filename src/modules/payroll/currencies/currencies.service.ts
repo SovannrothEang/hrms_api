@@ -78,8 +78,9 @@ export class CurrenciesService {
 
     async deleteAsync(id: string, userId: string): Promise<Result<void>> {
         try {
-            const exists = await this.prisma.currency.findUnique({
-                where: { id, isDeleted: false }
+            const exists = await this.prisma.currency.findFirst({
+                where: { id },
+                select: { id: true }
             });
             if (!exists) return Result.fail('Currency not found');
 
@@ -87,6 +88,7 @@ export class CurrenciesService {
                 where: { id },
                 data: {
                     isDeleted: true,
+                    deletedAt: new Date(),
                     performBy: userId
                 }
             });

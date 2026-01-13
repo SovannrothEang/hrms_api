@@ -55,15 +55,21 @@ describe('LeavesService', () => {
 
     describe('createAsync', () => {
         it('should create leave request', async () => {
+            // Use future dates to pass validation
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfter = new Date();
+            dayAfter.setDate(dayAfter.getDate() + 2);
+
             const dto = {
                 employeeId: 'emp-1',
                 leaveType: 'ANNUAL',
-                startDate: '2023-01-01',
-                endDate: '2023-01-02',
+                startDate: tomorrow.toISOString().split('T')[0],
+                endDate: dayAfter.toISOString().split('T')[0],
                 reason: 'Vacation'
             };
 
-            const created = { id: '1', ...dto, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate), status: LeaveStatus.PENDING };
+            const created = { id: '1', ...dto, startDate: tomorrow, endDate: dayAfter, status: LeaveStatus.PENDING };
             const balance = { id: 'b-1', totalDays: 10, usedDays: 0, pendingDays: 0 };
 
             // Mock no overlap
@@ -80,11 +86,17 @@ describe('LeavesService', () => {
         });
 
         it('should create leave request with auto check balance (no balance record)', async () => {
+            // Use future dates to pass validation
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfter = new Date();
+            dayAfter.setDate(dayAfter.getDate() + 2);
+
             const dto = {
                 employeeId: 'emp-1',
                 leaveType: 'ANNUAL',
-                startDate: '2023-01-01',
-                endDate: '2023-01-02',
+                startDate: tomorrow.toISOString().split('T')[0],
+                endDate: dayAfter.toISOString().split('T')[0],
                 reason: 'Vacation'
             };
 
@@ -93,7 +105,7 @@ describe('LeavesService', () => {
             // Mock no balance
             (prisma.leaveBalance.findUnique as jest.Mock).mockResolvedValue(null);
             // Mock create request return
-            const created = { id: '1', ...dto, startDate: new Date(dto.startDate), endDate: new Date(dto.endDate), status: LeaveStatus.PENDING };
+            const created = { id: '1', ...dto, startDate: tomorrow, endDate: dayAfter, status: LeaveStatus.PENDING };
             (prisma.leaveRequest.create as jest.Mock).mockResolvedValue(created);
 
             const result = await service.createAsync(dto as any, 'admin-id');

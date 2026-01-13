@@ -11,7 +11,7 @@ const mockPrismaService = {
         update: jest.fn(),
     },
     employee: {
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
     },
 };
 
@@ -53,7 +53,7 @@ describe('AttendancesService', () => {
             // If it runs after 9 AM, it's Late. Tests should be deterministic.
             // Let's mock a shift that starts at 23:00 (11 PM) so it's always PRESENT if run before then.
             const shift = { startTime: new Date('1970-01-01T23:00:00Z'), gracePeriodMins: 0 };
-            (prisma.employee.findUnique as jest.Mock).mockResolvedValue({ id: 'emp-1', shift });
+            (prisma.employee.findFirst as jest.Mock).mockResolvedValue({ id: 'emp-1', shift });
 
             const created = { id: '1', status: AttendanceStatus.PRESENT, date: today };
             (prisma.attendance.create as jest.Mock).mockResolvedValue(created);

@@ -43,7 +43,6 @@ export class RolesService {
         childIncluded: boolean = false,
     ): Promise<Result<RoleDto>> {
         this.logger.log('Getting role with id: {id}.', id);
-        if (childIncluded === null) childIncluded = false;
         const role = await this.prisma.role.findFirst({
             where: { id },
             include: {
@@ -67,13 +66,17 @@ export class RolesService {
         return Result.ok(plainToInstance(RoleDto, role));
     }
 
-    async isExistAsync(roleName: string): Promise<boolean> {
+    async isExistAsync(roleName: string, excludeId?: string): Promise<boolean> {
         this.logger.log(
             'Checking if role exists with name: {roleName}.',
             roleName,
         );
         const role = await this.prisma.role.findFirst({
-            where: { name: roleName.toUpperCase() },
+            where: {
+                name: roleName.toUpperCase(),
+                isDeleted: false,
+                ...(excludeId ? { id: { not: excludeId } } : {}),
+            },
             select: { id: true },
         });
         return role !== null;

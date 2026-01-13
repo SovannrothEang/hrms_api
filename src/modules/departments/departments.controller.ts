@@ -9,6 +9,7 @@ import {
     Post,
     Body,
     BadRequestException,
+    NotFoundException,
     Put,
     Delete,
 } from '@nestjs/common';
@@ -35,7 +36,8 @@ export class DepartmentsController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return this.departmentsService.findAllAsync(childIncluded);
+        const result = await this.departmentsService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')
@@ -50,7 +52,11 @@ export class DepartmentsController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return this.departmentsService.findOneByIdAsync(id, childIncluded);
+        const result = await this.departmentsService.findOneByIdAsync(id, childIncluded);
+        if (!result.isSuccess) {
+            throw new NotFoundException(result.error);
+        }
+        return result.getData();
     }
 
     @Post()
@@ -62,14 +68,11 @@ export class DepartmentsController {
         @CurrentUser('sub') userId: string,
         @Body() dto: DepartmentCreateDto,
     ) {
-        const department = await this.departmentsService.createAsync(
-            dto,
-            userId,
-        );
-        if (!department.isSuccess) {
-            throw new BadRequestException(department.error);
+        const result = await this.departmentsService.createAsync(dto, userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
         }
-        return department;
+        return result.getData();
     }
 
     @Put(':id')

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
@@ -118,7 +118,7 @@ export class EmployeesService {
         id: string,
         childIncluded?: boolean,
     ): Promise<Result<EmployeeDto>> {
-        const employee = await this.prisma.employee.findUnique({
+        const employee = await this.prisma.employee.findFirst({
             where: { id },
             include: {
                 department: true,
@@ -144,7 +144,7 @@ export class EmployeesService {
         dto: EmployeeUpdateDto,
         performerId: string,
     ): Promise<Result<EmployeeDto>> {
-        const employee = await this.prisma.employee.findUnique({
+        const employee = await this.prisma.employee.findFirst({
             where: { id },
         });
         if (!employee) return Result.fail('Employee not found');
@@ -152,17 +152,8 @@ export class EmployeesService {
         const updated = await this.prisma.employee.update({
             where: { id },
             data: {
-                firstname: dto.firstname,
-                lastname: dto.lastname,
-                gender: dto.gender,
-                dob: dto.dob ? new Date(dto.dob) : undefined,
-                address: dto.address,
-                phone: dto.phone,
-                hireDate: dto.hireDate ? new Date(dto.hireDate) : undefined,
-                departmentId: dto.departmentId,
-                positionId: dto.positionId,
-                managerId: dto.managerId,
-                performBy: performerId,
+                ...dto,
+                performBy: performerId
             },
             include: {
                 department: true,
@@ -173,14 +164,21 @@ export class EmployeesService {
         return Result.ok(plainToInstance(EmployeeDto, updated));
     }
 
-    async deleteAsync(id: string): Promise<Result<void>> {
+    async deleteAsync(id: string, performerId: string): Promise<Result<void>> {
         // Check if employee exists
-        const check = await this.prisma.employee.findUnique({ where: { id } });
+        const check = await this.prisma.employee.findFirst({ where: { id }, select: { id: true } });
         if (!check) return Result.fail('Employee not found');
 
         // Optional: Check dependencies (e.g. payrolls) before delete
 
-        await this.prisma.employee.delete({ where: { id } });
+        await this.prisma.employee.update({
+            where: { id, isDeleted: false },
+            data: {
+                isDeleted: true,
+                deletedAt: new Date(),
+                performer: { connect: { id: performerId } }
+            }
+        });
         // Ideally we should also soft-delete the linked User, but that depends on requirements.
         return Result.ok();
     }

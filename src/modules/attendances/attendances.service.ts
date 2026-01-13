@@ -7,7 +7,7 @@ import { AttendanceStatus } from 'src/common/enums/attendance-status.enum';
 
 @Injectable()
 export class AttendancesService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -16,20 +16,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
                 employee: childIncluded
                     ? {
-                          include: {
-                              department: true,
-                              position: true,
-                          },
-                      }
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    }
                     : false,
             },
         });
@@ -47,20 +47,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
                 employee: childIncluded
                     ? {
-                          include: {
-                              department: true,
-                              position: true,
-                          },
-                      }
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    }
                     : false,
             },
         });
@@ -87,7 +87,7 @@ export class AttendancesService {
         }
 
         // Fetch employee to get shift details
-        const employee = await this.prisma.employee.findUnique({
+        const employee = await this.prisma.employee.findFirst({
             where: { id: dto.employeeId },
             include: { shift: true },
         });

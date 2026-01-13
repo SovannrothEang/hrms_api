@@ -37,7 +37,7 @@ export class DepartmentsService {
         id: string,
         childIncluded: boolean = false,
     ): Promise<Result<DepartmentDto>> {
-        this.logger.log('Getting department by id {departmentId}', { departmentId: id });
+        this.logger.log('Getting department by id {departmentId}', id);
         const department = await this.prisma.department.findFirst({
             where: { id },
             include: {
@@ -51,6 +51,9 @@ export class DepartmentsService {
                     : false,
             },
         });
+        if (!department) {
+            return Result.fail(`Department not found with id: ${id}`);
+        }
         return Result.ok(plainToInstance(DepartmentDto, department));
     }
 

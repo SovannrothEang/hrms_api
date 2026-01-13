@@ -25,7 +25,7 @@ import { RoleUpdateDto } from './dtos/role-update.dto';
 @ApiTags('Roles')
 @Auth(RoleName.ADMIN)
 export class RolesController {
-    constructor(private readonly rolesService: RolesService) {}
+    constructor(private readonly rolesService: RolesService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -36,28 +36,26 @@ export class RolesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.rolesService.findAllAsync(childIncluded);
+        const result = await this.rolesService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get a role id' })
+    @ApiOperation({ summary: 'Get a role by id' })
     @ApiQuery({ name: 'childIncluded', required: false })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Get a role id' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Get a role by id' })
     @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Not Found' })
     async findOne(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const role = await this.rolesService.findOneByIdAsync(
-            id,
-            childIncluded,
-        );
-        if (!role) {
-            throw new NotFoundException(`Role not found with id: ${id}`);
+        const result = await this.rolesService.findOneByIdAsync(id, childIncluded);
+        if (!result.isSuccess) {
+            throw new NotFoundException(result.error);
         }
-        return role;
+        return result.getData();
     }
 
     @Post()
@@ -68,19 +66,15 @@ export class RolesController {
         description: 'Create a new role',
     })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
-    @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Not found' })
     async create(
         @Body() dto: RoleCreateDto,
         @CurrentUser('sub') userId: string,
     ) {
-        const result = await this.rolesService.createAsync(
-            dto.roleName,
-            userId,
-        );
+        const result = await this.rolesService.createAsync(dto.roleName, userId);
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }
-        return result;
+        return result.getData();
     }
 
     @Put(':id')

@@ -15,7 +15,7 @@ export class LeavesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
-    ) {}
+    ) { }
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -28,12 +28,12 @@ export class LeavesService {
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });
@@ -65,12 +65,12 @@ export class LeavesService {
                     approver: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
-                              include: {
-                                  userRoles: {
-                                      include: { role: true },
-                                  },
-                              },
-                          }
+                            include: {
+                                userRoles: {
+                                    include: { role: true },
+                                },
+                            },
+                        }
                         : false,
                 },
             }),
@@ -93,12 +93,12 @@ export class LeavesService {
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });
@@ -112,6 +112,18 @@ export class LeavesService {
     ): Promise<Result<LeaveRequestDto>> {
         const startDate = new Date(dto.startDate);
         const endDate = new Date(dto.endDate);
+
+        // Date validation
+        if (endDate < startDate) {
+            return Result.fail('End date must be on or after start date');
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (startDate < today) {
+            return Result.fail('Start date cannot be in the past');
+        }
+
         const year = startDate.getFullYear();
 
         // 1. Check overlap

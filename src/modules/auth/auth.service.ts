@@ -22,7 +22,7 @@ export class AuthService {
         this.logger.log('Signing in user with {email}.', email);
 
         const user = await this.prisma.user.findFirst({
-            where: { email },
+            where: { email, isActive: true },
             include: {
                 userRoles: {
                     include: {
@@ -31,15 +31,16 @@ export class AuthService {
                 },
             },
         });
-        if (!user) {
-            this.logger.warn('User not found!');
-            throw new UnauthorizedException('Email or password is required');
-        }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            this.logger.warn('Invalid credentials!');
-            throw new UnauthorizedException('Invalid credentials!');
+        // Timing attack prevention: always run bcrypt compare
+        // Use a dummy hash when user not found to maintain consistent timing
+        const dummyHash = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtoG0f1CJ.fne';
+        const passwordToCompare = user?.password ?? dummyHash;
+        const isMatch = await bcrypt.compare(password, passwordToCompare);
+
+        if (!user || !isMatch) {
+            this.logger.warn('Invalid credentials attempt');
+            throw new UnauthorizedException('Invalid email or password');
         }
 
         const roles = user.userRoles.map((e) => e.role.name);

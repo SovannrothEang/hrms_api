@@ -15,7 +15,6 @@ import {
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
-import { EmployeeDto } from './dtos/employee.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
@@ -91,8 +90,11 @@ export class EmployeesController {
     @Auth(RoleName.ADMIN)
     @ApiOperation({ summary: 'Delete employee (Admin only)' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Deleted' })
-    async delete(@Param('id') id: string) {
-        const result = await this.employeesService.deleteAsync(id);
+    async delete(
+        @Param('id') id: string,
+        @CurrentUser('sub') performerId: string,
+    ) {
+        const result = await this.employeesService.deleteAsync(id, performerId);
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }
