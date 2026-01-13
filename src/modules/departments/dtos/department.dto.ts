@@ -36,3 +36,12 @@ export class DepartmentDto {
     @Expose({ name: 'updated_at' })
     updatedAt: Date;
 }
+
+export const DepartmentDtoField = {
+    id: true,
+    departmentName: true,
+    performer: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true
+} as const;

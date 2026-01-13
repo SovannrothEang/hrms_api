@@ -18,38 +18,31 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { DepartmentUpdateDto } from './dtos/department-update.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @Controller('departments')
 @Auth(RoleName.ADMIN)
 @ApiTags('Departments')
 export class DepartmentsController {
-    constructor(private readonly departmentsService: DepartmentsService) {}
+    constructor(private readonly departmentsService: DepartmentsService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all departments' })
-    @ApiParam({ name: 'childIncluded', required: false })
-    @ApiParam({ name: 'employeeIncluded', required: false })
+    @ApiQuery({ name: 'childIncluded', required: false })
     @ApiResponse({ status: HttpStatus.OK })
     async findAllAsync(
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
-        @Query('employeeIncluded', new ParseBoolPipe({ optional: true }))
-        employeeIncluded?: boolean,
     ) {
-        if (!employeeIncluded)
-            return this.departmentsService.findAllAsync(childIncluded);
-        else
-            return this.departmentsService.findAllWithEmployeeAsync(
-                childIncluded,
-            );
+        return this.departmentsService.findAllAsync(childIncluded);
     }
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get department by id' })
-    @ApiParam({ name: 'childIncluded', required: false })
+    @ApiParam({ name: 'id', required: true })
+    @ApiQuery({ name: 'childIncluded', required: false })
     @ApiResponse({ status: HttpStatus.OK })
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async findOneByIdAsync(
@@ -82,6 +75,7 @@ export class DepartmentsController {
     @Put(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Update a department by id' })
+    @ApiParam({ name: 'id', required: true })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'No Content' })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad request' })
     async updateAsync(
@@ -95,6 +89,7 @@ export class DepartmentsController {
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a department by id' })
+    @ApiParam({ name: 'id', required: true })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'No Content' })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad request' })
     async deleteAsync(

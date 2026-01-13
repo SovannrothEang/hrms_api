@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Result } from 'src/common/logic/result';
-import { DepartmentDto } from './dtos/department.dto';
+import { DepartmentDto, DepartmentDtoField } from './dtos/department.dto';
 import { plainToInstance } from 'class-transformer';
 import { DepartmentUpdateDto } from './dtos/department-update.dto';
 import { DepartmentCreateDto } from './dtos/department-create.dto';
@@ -10,7 +10,7 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 export class DepartmentsService {
     private readonly logger = new Logger(DepartmentsService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -18,33 +18,13 @@ export class DepartmentsService {
         this.logger.log('Getting all departments');
         const departments = await this.prisma.department.findMany({
             include: {
+                employees: childIncluded,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: { include: { role: true } },
-                          },
-                      }
-                    : false,
-            },
-        });
-        return Result.ok(
-            departments.map((d) => plainToInstance(DepartmentDto, d)),
-        );
-    }
-
-    async findAllWithEmployeeAsync(
-        childIncluded: boolean = false,
-    ): Promise<Result<DepartmentDto[]>> {
-        this.logger.log('Getting all departments with employees');
-        const departments = await this.prisma.department.findMany({
-            include: {
-                employees: true,
-                performer: childIncluded
-                    ? {
-                          include: {
-                              userRoles: { include: { role: true } },
-                          },
-                      }
+                        include: {
+                            userRoles: { include: { role: true } },
+                        },
+                    }
                     : false,
             },
         });
@@ -57,17 +37,17 @@ export class DepartmentsService {
         id: string,
         childIncluded: boolean = false,
     ): Promise<Result<DepartmentDto>> {
-        this.logger.log('Getting department by id');
+        this.logger.log('Getting department by id {departmentId}', { departmentId: id });
         const department = await this.prisma.department.findFirst({
             where: { id },
             include: {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: { include: { role: true } },
-                          },
-                      }
+                        include: {
+                            userRoles: { include: { role: true } },
+                        },
+                    }
                     : false,
             },
         });
@@ -91,15 +71,7 @@ export class DepartmentsService {
                 departmentName: dto.name,
                 performer: { connect: { id: performBy } },
             },
-            select: {
-                id: true,
-                departmentName: true,
-                employees: true,
-                performer: true,
-                isActive: true,
-                createdAt: true,
-                updatedAt: true,
-            },
+            select: DepartmentDtoField
         });
         return Result.ok(plainToInstance(DepartmentDto, department));
     }
@@ -109,7 +81,7 @@ export class DepartmentsService {
         dto: DepartmentUpdateDto,
         performBy: string,
     ): Promise<void> {
-        this.logger.log('Updating department by user: {performBy}', performBy);
+        this.logger.log('Updating department with id: {departmentId} by user: {performBy}', id, performBy);
         await this.prisma.department.update({
             where: { id },
             data: {
@@ -120,7 +92,7 @@ export class DepartmentsService {
     }
 
     async deleteAsync(id: string, performBy: string): Promise<void> {
-        this.logger.log('Deleting department by user: {performBy}', performBy);
+        this.logger.log('Deleting department with id: {departmentId} by user: {performBy}', id, performBy);
         await this.prisma.department.update({
             where: { id, isDeleted: false },
             data: {
