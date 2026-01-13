@@ -68,4 +68,38 @@ describe('TaxBracketsController (Feature)', () => {
             .get('/tax-brackets?country=US&year=2026')
             .expect(200);
     });
+
+    it('/tax-brackets/:id (DELETE) should delete bracket', () => {
+        mockService.deleteAsync.mockResolvedValue(Result.ok());
+        return request(app.getHttpServer())
+            .delete('/tax-brackets/1')
+            .expect(200);
+    });
+
+    it('/tax-brackets (POST) should throw on service failure', () => {
+        const dto = {
+            currencyCode: 'XXX', countryCode: 'US', taxYear: 2026,
+            bracketName: 'Tier 1', minAmount: 0, maxAmount: 10000,
+            taxRate: 0.1, fixedAmount: 0
+        };
+        mockService.createAsync.mockResolvedValue(Result.fail('Invalid Currency Code'));
+        return request(app.getHttpServer())
+            .post('/tax-brackets')
+            .send(dto)
+            .expect(500);
+    });
+
+    it('/tax-brackets (GET) should throw on service failure', () => {
+        mockService.findAllAsync.mockResolvedValue(Result.fail('Failed to fetch'));
+        return request(app.getHttpServer())
+            .get('/tax-brackets')
+            .expect(500);
+    });
+
+    it('/tax-brackets/:id (DELETE) should throw on service failure', () => {
+        mockService.deleteAsync.mockResolvedValue(Result.fail('Not found'));
+        return request(app.getHttpServer())
+            .delete('/tax-brackets/non-existent')
+            .expect(500);
+    });
 });
