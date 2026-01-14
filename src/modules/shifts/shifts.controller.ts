@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
-import { ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShiftsService } from './shifts.service';
 import { CreateShiftDto } from './dtos/create-shift.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
@@ -13,6 +13,10 @@ export class ShiftsController {
     constructor(private readonly shiftsService: ShiftsService) { }
 
     @Post()
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({ summary: 'Create a new shift' })
+    @ApiResponse({ status: HttpStatus.CREATED })
+    @ApiResponse({ status: HttpStatus.BAD_REQUEST })
     async create(@Body() dto: CreateShiftDto, @CurrentUser('sub') userId: string) {
         const result = await this.shiftsService.createAsync(dto, userId);
         if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
@@ -20,12 +24,20 @@ export class ShiftsController {
     }
 
     @Get()
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get all shifts' })
+    @ApiResponse({ status: HttpStatus.OK })
     async findAll() {
         const result = await this.shiftsService.findAllAsync();
         return result.getData();
     }
 
     @Get(':id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get shift by ID' })
+    @ApiParam({ name: 'id', required: true, description: 'Shift ID' })
+    @ApiResponse({ status: HttpStatus.OK })
+    @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async findOne(@Param('id') id: string) {
         const result = await this.shiftsService.findOneByIdAsync(id);
         if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
@@ -33,8 +45,14 @@ export class ShiftsController {
     }
 
     @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete shift' })
+    @ApiParam({ name: 'id', required: true, description: 'Shift ID' })
+    @ApiResponse({ status: HttpStatus.NO_CONTENT })
+    @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {
         const result = await this.shiftsService.deleteAsync(id, userId);
         if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
     }
 }
+

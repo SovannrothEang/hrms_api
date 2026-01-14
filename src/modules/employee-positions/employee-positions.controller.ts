@@ -5,7 +5,7 @@ import { EmployeePositionDto } from './dtos/employee-position.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
-import { ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { ApiTags } from '@nestjs/swagger';
@@ -34,6 +34,7 @@ export class EmployeePositionsController {
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get employee position by id' })
+    @ApiParam({ name: 'id', required: true, description: 'Position ID' })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiResponse({ status: HttpStatus.OK })
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
@@ -65,6 +66,7 @@ export class EmployeePositionsController {
     @Put(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Update employee position' })
+    @ApiParam({ name: 'id', required: true, description: 'Position ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT })
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST })
@@ -79,6 +81,7 @@ export class EmployeePositionsController {
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete employee position' })
+    @ApiParam({ name: 'id', required: true, description: 'Position ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT })
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async deleteEmployeePositionAsync(

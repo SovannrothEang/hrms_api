@@ -35,6 +35,7 @@ export class AttendancesController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
+    @ApiParam({ name: 'id', required: true, description: 'Attendance ID' })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiOperation({ summary: 'Get attendance by ID' })
     @ApiResponse({ status: HttpStatus.OK })

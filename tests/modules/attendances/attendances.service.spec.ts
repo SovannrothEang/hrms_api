@@ -89,5 +89,72 @@ describe('AttendancesService', () => {
             const result = await service.checkOut({ employeeId: 'emp-1' }, 'admin-id');
             expect(result.isSuccess).toBe(false);
         });
+
+        it('should fail if already checked out', async () => {
+            (prisma.attendance.findFirst as jest.Mock).mockResolvedValue({
+                id: '1', checkOutTime: new Date()
+            });
+            const result = await service.checkOut({ employeeId: 'emp-1' }, 'admin-id');
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toContain('already checked out');
+        });
+    });
+
+    describe('findAllAsync', () => {
+        it('should return list of attendances', async () => {
+            const attendances = [{ id: '1' }, { id: '2' }];
+            (prisma.attendance.findMany as jest.Mock).mockResolvedValue(attendances);
+            const result = await service.findAllAsync();
+            expect(result.isSuccess).toBe(true);
+            expect(result.getData()).toHaveLength(2);
+        });
+    });
+
+    describe('findOneByIdAsync', () => {
+        it('should return attendance when found', async () => {
+            const attendance = { id: '1', status: AttendanceStatus.PRESENT };
+            (prisma.attendance.findFirst as jest.Mock).mockResolvedValue(attendance);
+            const result = await service.findOneByIdAsync('1');
+            expect(result.isSuccess).toBe(true);
+        });
+
+        it('should fail when not found', async () => {
+            (prisma.attendance.findFirst as jest.Mock).mockResolvedValue(null);
+            const result = await service.findOneByIdAsync('non-existent');
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toBe('Attendance not found');
+        });
+    });
+
+    describe('checkIn - LATE status', () => {
+        it('should mark as LATE when past shift start time', async () => {
+            const dto = { employeeId: 'emp-1' };
+            (prisma.attendance.findFirst as jest.Mock).mockResolvedValue(null);
+
+            // Shift that started hours ago (e.g., 01:00 AM UTC)
+            const shift = { startTime: new Date('1970-01-01T01:00:00Z'), gracePeriodMins: 0 };
+            (prisma.employee.findFirst as jest.Mock).mockResolvedValue({ id: 'emp-1', shift });
+
+            const created = { id: '1', status: AttendanceStatus.LATE };
+            (prisma.attendance.create as jest.Mock).mockResolvedValue(created);
+
+            const result = await service.checkIn(dto, 'admin-id');
+            expect(result.isSuccess).toBe(true);
+            expect(prisma.attendance.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    data: expect.objectContaining({ status: AttendanceStatus.LATE })
+                })
+            );
+        });
+
+        it('should fail when employee not found', async () => {
+            const dto = { employeeId: 'non-existent' };
+            (prisma.attendance.findFirst as jest.Mock).mockResolvedValue(null);
+            (prisma.employee.findFirst as jest.Mock).mockResolvedValue(null);
+
+            const result = await service.checkIn(dto, 'admin-id');
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toBe('Employee not found');
+        });
     });
 });

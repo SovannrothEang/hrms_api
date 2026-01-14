@@ -75,4 +75,37 @@ describe('AttendancesController (Feature)', () => {
             .get('/attendances')
             .expect(200);
     });
+
+    it('/attendances/:id (GET) should return single attendance', () => {
+        mockService.findOneByIdAsync.mockResolvedValue(Result.ok({ id: '1' }));
+        return request(app.getHttpServer())
+            .get('/attendances/1')
+            .expect(200);
+    });
+
+    it('/attendances/:id (GET) not found returns Result with isSuccess false', () => {
+        mockService.findOneByIdAsync.mockResolvedValue(Result.fail('Attendance not found'));
+        return request(app.getHttpServer())
+            .get('/attendances/non-existent')
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.isSuccess).toBe(false);
+            });
+    });
+
+    it('/attendances/check-in (POST) should return 400 on service failure', () => {
+        mockService.checkIn.mockResolvedValue(Result.fail('Already checked in'));
+        return request(app.getHttpServer())
+            .post('/attendances/check-in')
+            .send({ employeeId: 'emp-1' })
+            .expect(400);
+    });
+
+    it('/attendances/check-out (POST) should return 400 on service failure', () => {
+        mockService.checkOut.mockResolvedValue(Result.fail('No check in record'));
+        return request(app.getHttpServer())
+            .post('/attendances/check-out')
+            .send({ employeeId: 'emp-1' })
+            .expect(400);
+    });
 });

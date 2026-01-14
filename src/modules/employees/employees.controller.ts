@@ -12,7 +12,7 @@ import {
     Query,
     BadRequestException,
 } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
@@ -40,6 +40,7 @@ export class EmployeesController {
 
     @Get(':id')
     @HttpCode(HttpStatus.OK)
+    @ApiParam({ name: 'id', required: true, description: 'Employee ID' })
     @ApiQuery({ name: 'childIncluded', required: false })
     @ApiOperation({ summary: 'Get employee by ID' })
     @ApiResponse({ status: HttpStatus.OK })
@@ -71,6 +72,7 @@ export class EmployeesController {
     @Patch(':id')
     @HttpCode(HttpStatus.OK)
     @Auth(RoleName.ADMIN, RoleName.HR)
+    @ApiParam({ name: 'id', required: true, description: 'Employee ID' })
     @ApiOperation({ summary: 'Update employee details' })
     @ApiResponse({ status: HttpStatus.OK })
     async update(
@@ -88,6 +90,7 @@ export class EmployeesController {
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @Auth(RoleName.ADMIN)
+    @ApiParam({ name: 'id', required: true, description: 'Employee ID' })
     @ApiOperation({ summary: 'Delete employee (Admin only)' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Deleted' })
     async delete(

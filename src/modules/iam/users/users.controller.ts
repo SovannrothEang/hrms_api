@@ -11,7 +11,7 @@ import {
     Put,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
@@ -22,7 +22,7 @@ import { UserUpdateDto } from './dtos/user-update.dto';
 @Controller('users')
 @Auth(RoleName.ADMIN)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+    constructor(private readonly usersService: UsersService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -35,6 +35,7 @@ export class UsersController {
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get user by id' })
+    @ApiParam({ name: 'id', required: true, description: 'User ID' })
     @ApiResponse({ status: HttpStatus.OK, description: 'User dto' })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
@@ -67,6 +68,7 @@ export class UsersController {
     @Put(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Update user by id' })
+    @ApiParam({ name: 'id', required: true, description: 'User ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'User updated' })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
@@ -79,6 +81,7 @@ export class UsersController {
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete user by id' })
+    @ApiParam({ name: 'id', required: true, description: 'User ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'User deleted' })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,

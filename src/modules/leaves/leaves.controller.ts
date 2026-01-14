@@ -53,7 +53,8 @@ export class LeavesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get leave request by ID' })
     @ApiResponse({ status: HttpStatus.OK })
-    @ApiParam({ name: 'childIncluded', required: false, type: 'boolean' })
+    @ApiParam({ name: 'id', required: true, description: 'Leave request ID' })
+    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     async findOne(
         @Param('id') id: string,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
@@ -82,6 +83,7 @@ export class LeavesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Update leave request status' })
     @ApiResponse({ status: HttpStatus.OK })
+    @ApiParam({ name: 'id', required: true, description: 'Leave request ID' })
     async updateStatus(
         @Param('id') id: string,
         @Body() dto: LeaveRequestStatusUpdateDto,
@@ -102,6 +104,7 @@ export class LeavesController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete pending leave request' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Deleted' })
+    @ApiParam({ name: 'id', required: true, description: 'Leave request ID' })
     async delete(@Param('id') id: string) {
         const result = await this.leavesService.deleteAsync(id);
         if (!result.isSuccess) {

@@ -74,5 +74,40 @@ describe('ShiftsController (Feature)', () => {
             .expect(responseDto);
     });
 
-    // Add more tests for Validation failure, Error handling, etc.
+    it('/shifts/:id (GET) should return single shift', () => {
+        mockShiftsService.findOneByIdAsync.mockResolvedValue(Result.ok({ id: '1', name: 'Shift 1' }));
+        return request(app.getHttpServer())
+            .get('/shifts/1')
+            .expect(200);
+    });
+
+    it('/shifts/:id (GET) should throw on not found', () => {
+        mockShiftsService.findOneByIdAsync.mockResolvedValue(Result.fail('Shift not found'));
+        return request(app.getHttpServer())
+            .get('/shifts/non-existent')
+            .expect(500);
+    });
+
+    it('/shifts/:id (DELETE) should delete shift', () => {
+        mockShiftsService.deleteAsync.mockResolvedValue(Result.ok());
+        return request(app.getHttpServer())
+            .delete('/shifts/1')
+            .expect(204);
+    });
+
+    it('/shifts/:id (DELETE) should throw on service failure', () => {
+        mockShiftsService.deleteAsync.mockResolvedValue(Result.fail('Shift not found'));
+        return request(app.getHttpServer())
+            .delete('/shifts/non-existent')
+            .expect(500);
+    });
+
+    it('/shifts (POST) should throw on service failure', () => {
+        const dto = { name: 'New Shift', startTime: '09:00', endTime: '18:00', workDays: '1' };
+        mockShiftsService.createAsync.mockResolvedValue(Result.fail('Create failed'));
+        return request(app.getHttpServer())
+            .post('/shifts')
+            .send(dto)
+            .expect(500);
+    });
 });

@@ -67,4 +67,52 @@ describe('LeavesController (Feature)', () => {
             .get('/takeleave')
             .expect(200);
     });
+
+    it('/takeleave/:id (GET) should return single leave', () => {
+        mockService.findOneByIdAsync.mockResolvedValue(Result.ok({ id: '1' }));
+        return request(app.getHttpServer())
+            .get('/takeleave/1')
+            .expect(200);
+    });
+
+    it('/takeleave/:id (GET) not found returns Result with isSuccess false', () => {
+        mockService.findOneByIdAsync.mockResolvedValue(Result.fail('Not found'));
+        return request(app.getHttpServer())
+            .get('/takeleave/non-existent')
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.isSuccess).toBe(false);
+            });
+    });
+
+    it('/takeleave/:id/status (PATCH) should update status', () => {
+        mockService.updateStatusAsync.mockResolvedValue(Result.ok({ id: '1', status: 'APPROVED' }));
+        return request(app.getHttpServer())
+            .patch('/takeleave/1/status')
+            .send({ status: 'APPROVED', approverId: 'admin' })
+            .expect(200);
+    });
+
+    it('/takeleave/:id (DELETE) should delete leave', () => {
+        mockService.deleteAsync.mockResolvedValue(Result.ok());
+        return request(app.getHttpServer())
+            .delete('/takeleave/1')
+            .expect(204);
+    });
+
+    it('/takeleave/:id (DELETE) should return 400 on service failure', () => {
+        mockService.deleteAsync.mockResolvedValue(Result.fail('Cannot delete'));
+        return request(app.getHttpServer())
+            .delete('/takeleave/1')
+            .expect(400);
+    });
+
+    it('/takeleave (POST) should return 400 on service failure', () => {
+        const dto = { employeeId: 'emp-1', leaveType: 'ANNUAL', startDate: '2023-01-01', endDate: '2023-01-02' };
+        mockService.createAsync.mockResolvedValue(Result.fail('Overlap'));
+        return request(app.getHttpServer())
+            .post('/takeleave')
+            .send(dto)
+            .expect(400);
+    });
 });

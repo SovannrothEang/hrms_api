@@ -91,7 +91,7 @@ describe('CurrenciesController (Feature)', () => {
         mockService.deleteAsync.mockResolvedValue(Result.ok());
         return request(app.getHttpServer())
             .delete('/currencies/1')
-            .expect(200);
+            .expect(204);
     });
 
     it('/currencies/:id (DELETE) should throw on service failure', () => {

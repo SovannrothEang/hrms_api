@@ -13,6 +13,13 @@ async function bootstrap() {
   app.useLogger(app.get(PinoLogger));
   app.use(helmet());
 
+  app.enableCors({
+    origin: "*",
+    methods: "*",
+    allowedHeaders: "*",
+    credentials: true,
+  })
+
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());

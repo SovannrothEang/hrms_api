@@ -73,7 +73,7 @@ describe('TaxBracketsController (Feature)', () => {
         mockService.deleteAsync.mockResolvedValue(Result.ok());
         return request(app.getHttpServer())
             .delete('/tax-brackets/1')
-            .expect(200);
+            .expect(204);
     });
 
     it('/tax-brackets (POST) should throw on service failure', () => {

@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { RoleCreateDto } from './dtos/role-create.dto';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -43,6 +43,7 @@ export class RolesController {
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get a role by id' })
+    @ApiParam({ name: 'id', required: true, description: 'Role ID' })
     @ApiQuery({ name: 'childIncluded', required: false })
     @ApiResponse({ status: HttpStatus.OK, description: 'Get a role by id' })
     @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Not Found' })
@@ -80,6 +81,7 @@ export class RolesController {
     @Put(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Update a role' })
+    @ApiParam({ name: 'id', required: true, description: 'Role ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'No Content' })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
     @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Not Found' })
@@ -94,6 +96,7 @@ export class RolesController {
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a role' })
+    @ApiParam({ name: 'id', required: true, description: 'Role ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'No Content' })
     @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Not Found' })
     async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {

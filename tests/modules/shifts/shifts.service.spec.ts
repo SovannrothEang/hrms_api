@@ -102,5 +102,47 @@ describe('ShiftsService', () => {
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Shift not found');
         });
+
+        it('should fail if shift is deleted', async () => {
+            prisma.shift.findUnique.mockResolvedValue({ id: '1', name: 'Shift 1', isDeleted: true });
+
+            const result = await service.findOneByIdAsync('1');
+
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toBe('Shift not found');
+        });
+    });
+
+    describe('deleteAsync', () => {
+        it('should soft-delete existing shift', async () => {
+            prisma.shift.findUnique.mockResolvedValue({ id: '1', isDeleted: false });
+            prisma.shift.update.mockResolvedValue({});
+
+            const result = await service.deleteAsync('1', 'admin');
+
+            expect(result.isSuccess).toBe(true);
+            expect(prisma.shift.update).toHaveBeenCalledWith({
+                where: { id: '1' },
+                data: { isDeleted: true, performBy: 'admin' }
+            });
+        });
+
+        it('should fail when shift not found', async () => {
+            prisma.shift.findUnique.mockResolvedValue(null);
+
+            const result = await service.deleteAsync('non-existent', 'admin');
+
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toBe('Shift not found');
+        });
+
+        it('should fail when shift already deleted', async () => {
+            prisma.shift.findUnique.mockResolvedValue({ id: '1', isDeleted: true });
+
+            const result = await service.deleteAsync('1', 'admin');
+
+            expect(result.isSuccess).toBe(false);
+            expect(result.error).toBe('Shift not found');
+        });
     });
 });
