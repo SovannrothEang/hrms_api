@@ -19,6 +19,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { PublicHolidaysModule } from './modules/public-holidays/public-holidays.module';
 import { CurrenciesModule } from './modules/payroll/currencies/currencies.module';
 import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.module';
+import { PayrollsModule } from './modules/payroll/payrolls/payrolls.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 
 @Module({
@@ -84,6 +85,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
         EmployeesModule,
         LeavesModule,
         NotificationsModule,
+        PayrollsModule,
         PrismaModule,
         PublicHolidaysModule,
         ReportsModule,
