@@ -29,15 +29,19 @@ describe('EmailService', () => {
         expect(service).toBeDefined();
     });
 
-    it('should log leave request notification', async () => {
-        const spy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => { });
-        await service.sendLeaveRequestNotification('to', 'id', 'name');
+    it('should log leave request notification', () => {
+        const spy = jest
+            .spyOn(Logger.prototype, 'log')
+            .mockImplementation(() => { });
+        service.sendLeaveRequestNotification('to', 'id');
         expect(spy).toHaveBeenCalled();
     });
 
-    it('should log leave status update', async () => {
-        const spy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => { });
-        await service.sendLeaveStatusUpdateNotification('to', 'id', 'APPROVED');
+    it('should log leave status update', () => {
+        const spy = jest
+            .spyOn(Logger.prototype, 'log')
+            .mockImplementation(() => { });
+        service.sendLeaveStatusUpdateNotification('to', 'id', 'APPROVED');
         expect(spy).toHaveBeenCalled();
     });
 });
