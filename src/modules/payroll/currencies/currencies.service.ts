@@ -9,13 +9,16 @@ import { plainToInstance } from 'class-transformer';
 export class CurrenciesService {
     private readonly logger = new Logger(CurrenciesService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
-    async createAsync(dto: CreateCurrencyDto, userId: string): Promise<Result<CurrencyDto>> {
+    async createAsync(
+        dto: CreateCurrencyDto,
+        userId: string,
+    ): Promise<Result<CurrencyDto>> {
         try {
             // Check for existing code
             const existing = await this.prisma.currency.findUnique({
-                where: { code: dto.code }
+                where: { code: dto.code },
             });
 
             if (existing) {
@@ -29,8 +32,8 @@ export class CurrenciesService {
                             name: dto.name,
                             symbol: dto.symbol,
                             country: dto.country,
-                            performBy: userId
-                        }
+                            performBy: userId,
+                        },
                     });
                     return Result.ok(plainToInstance(CurrencyDto, reactivated));
                 }
@@ -40,8 +43,8 @@ export class CurrenciesService {
             const newValue = await this.prisma.currency.create({
                 data: {
                     ...dto,
-                    performBy: userId
-                }
+                    performBy: userId,
+                },
             });
 
             return Result.ok(plainToInstance(CurrencyDto, newValue));
@@ -54,7 +57,7 @@ export class CurrenciesService {
     async findAllAsync(): Promise<Result<CurrencyDto[]>> {
         try {
             const values = await this.prisma.currency.findMany({
-                where: { isDeleted: false }
+                where: { isDeleted: false },
             });
             return Result.ok(plainToInstance(CurrencyDto, values));
         } catch (error) {
@@ -66,7 +69,7 @@ export class CurrenciesService {
     async findOneByIdAsync(id: string): Promise<Result<CurrencyDto>> {
         try {
             const value = await this.prisma.currency.findUnique({
-                where: { id, isDeleted: false }
+                where: { id, isDeleted: false },
             });
             if (!value) return Result.fail('Currency not found');
             return Result.ok(plainToInstance(CurrencyDto, value));
@@ -80,7 +83,7 @@ export class CurrenciesService {
         try {
             const exists = await this.prisma.currency.findFirst({
                 where: { id },
-                select: { id: true }
+                select: { id: true },
             });
             if (!exists) return Result.fail('Currency not found');
 
@@ -89,8 +92,8 @@ export class CurrenciesService {
                 data: {
                     isDeleted: true,
                     deletedAt: new Date(),
-                    performBy: userId
-                }
+                    performBy: userId,
+                },
             });
             return Result.ok();
         } catch (error) {

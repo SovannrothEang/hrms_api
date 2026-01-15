@@ -15,7 +15,7 @@ import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
 export class EmployeePositionsService {
     private readonly _logger = new Logger(EmployeePositionsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -26,8 +26,8 @@ export class EmployeePositionsService {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: { userRoles: { include: { role: true } } },
-                    }
+                          include: { userRoles: { include: { role: true } } },
+                      }
                     : false,
             },
         });
@@ -48,8 +48,8 @@ export class EmployeePositionsService {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: { userRoles: { include: { role: true } } },
-                    }
+                          include: { userRoles: { include: { role: true } } },
+                      }
                     : false,
             },
         });

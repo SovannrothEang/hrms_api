@@ -1,6 +1,6 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from './common/services/prisma/prisma.module';
 import { UsersModule } from './modules/iam/users/users.module';
@@ -29,7 +29,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
         }),
         LoggerModule.forRootAsync({
             imports: [ConfigModule],
-            useFactory: (config: ConfigService) => ({
+            useFactory: () => ({
                 pinoHttp: {
                     level:
                         process.env.NODE_ENV !== 'production'
@@ -55,17 +55,23 @@ import { DepartmentsModule } from './modules/departments/departments.module';
                     transport:
                         process.env.NODE_ENV !== 'production'
                             ? {
-                                target: 'pino-pretty',
-                                options: {
-                                    singleLine: true,
-                                },
-                            }
+                                  target: 'pino-pretty',
+                                  options: {
+                                      singleLine: true,
+                                  },
+                              }
                             : undefined,
                     autoLogging: true,
 
                     // Simplify the request object in logs to avoid huge JSON blobs
                     serializers: {
-                        req: (req) => ({
+                        req: (req: {
+                            id?: string;
+                            method?: string;
+                            url?: string;
+                            query?: unknown;
+                            params?: unknown;
+                        }) => ({
                             id: req.id,
                             method: req.method,
                             url: req.url,

@@ -23,4 +23,4 @@ import { EmailService } from './email.service';
     providers: [EmailService],
     exports: [EmailService], // Export so valid for usage in other modules
 })
-export class NotificationsModule { }
+export class NotificationsModule {}

@@ -12,7 +12,13 @@ import {
     Query,
     BadRequestException,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { EmployeesService } from './employees.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
@@ -24,7 +30,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @ApiTags('Employees')
 @Auth()
 export class EmployeesController {
-    constructor(private readonly employeesService: EmployeesService) { }
+    constructor(private readonly employeesService: EmployeesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -62,7 +68,10 @@ export class EmployeesController {
         @Body() dto: EmployeeCreateDto,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.employeesService.createAsync(dto, performerId);
+        const result = await this.employeesService.createAsync(
+            dto,
+            performerId,
+        );
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }
@@ -80,7 +89,11 @@ export class EmployeesController {
         @Body() dto: EmployeeUpdateDto,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.employeesService.updateAsync(id, dto, performerId);
+        const result = await this.employeesService.updateAsync(
+            id,
+            dto,
+            performerId,
+        );
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }

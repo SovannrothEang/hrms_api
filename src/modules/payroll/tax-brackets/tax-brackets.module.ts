@@ -5,6 +5,6 @@ import { TaxBracketsService } from './tax-brackets.service';
 @Module({
     controllers: [TaxBracketsController],
     providers: [TaxBracketsService],
-    exports: [TaxBracketsService]
+    exports: [TaxBracketsService],
 })
-export class TaxBracketsModule { }
+export class TaxBracketsModule {}

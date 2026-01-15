@@ -6,4 +6,4 @@ import { AutomationService } from './automation.service';
     imports: [ScheduleModule.forRoot()],
     providers: [AutomationService],
 })
-export class AutomationModule { }
+export class AutomationModule {}

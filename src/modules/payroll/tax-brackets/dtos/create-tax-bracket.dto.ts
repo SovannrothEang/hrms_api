@@ -25,19 +25,25 @@ export class CreateTaxBracketDto {
     @IsString()
     bracketName: string;
 
-    @ApiProperty({ example: 0, description: 'Minimum Income Amount for this bracket' })
+    @ApiProperty({
+        example: 0,
+        description: 'Minimum Income Amount for this bracket',
+    })
     @IsNotEmpty()
     @IsNumber()
     @Min(0)
     minAmount: number;
 
-    @ApiProperty({ example: 10000, description: 'Maximum Income Amount for this bracket' })
+    @ApiProperty({
+        example: 10000,
+        description: 'Maximum Income Amount for this bracket',
+    })
     @IsNotEmpty()
     @IsNumber()
     @Min(0)
     maxAmount: number;
 
-    @ApiProperty({ example: 0.10, description: 'Tax Rate (e.g. 0.10 for 10%)' })
+    @ApiProperty({ example: 0.1, description: 'Tax Rate (e.g. 0.10 for 10%)' })
     @IsNotEmpty()
     @IsNumber()
     @Min(0)

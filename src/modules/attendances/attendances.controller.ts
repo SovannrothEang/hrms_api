@@ -10,11 +10,17 @@ import {
     BadRequestException,
     ParseBoolPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { AttendancesService } from './attendances.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
-import { AttendanceDto } from './dtos/attendance.dto';
+
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -22,14 +28,17 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Auth()
 @Controller('attendances')
 export class AttendancesController {
-    constructor(private readonly attendancesService: AttendancesService) { }
+    constructor(private readonly attendancesService: AttendancesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiOperation({ summary: 'Get all attendances' })
     @ApiResponse({ status: HttpStatus.OK })
-    async findAll(@Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean) {
+    async findAll(
+        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
+        childIncluded?: boolean,
+    ) {
         return await this.attendancesService.findAllAsync(childIncluded);
     }
 
@@ -41,9 +50,13 @@ export class AttendancesController {
     @ApiResponse({ status: HttpStatus.OK })
     async findOne(
         @Param('id') id: string,
-        @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
+        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
+        childIncluded?: boolean,
     ) {
-        return await this.attendancesService.findOneByIdAsync(id, childIncluded);
+        return await this.attendancesService.findOneByIdAsync(
+            id,
+            childIncluded,
+        );
     }
 
     @Post('check-in')

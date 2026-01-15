@@ -1,4 +1,10 @@
-import { Exclude, Expose, Transform, plainToInstance, Type } from 'class-transformer';
+import {
+    Exclude,
+    Expose,
+    Transform,
+    plainToInstance,
+    Type,
+} from 'class-transformer';
 import { EmployeeDto } from '../../employees/dtos/employee.dto';
 import { Employee, LeaveRequest, User } from '@prisma/client';
 import { UserDto } from '../../iam/users/dtos/user.dto';
@@ -34,18 +40,22 @@ export class LeaveRequestDto {
 
     @Expose({ name: 'requester' })
     @Type(() => EmployeeDto)
-    @Transform(({ obj }: { obj: LeaveRequest & { requester?: Employee | null } }) => {
-        if (!obj.requester) return null;
-        return plainToInstance(EmployeeDto, obj.requester);
-    })
+    @Transform(
+        ({ obj }: { obj: LeaveRequest & { requester?: Employee | null } }) => {
+            if (!obj.requester) return null;
+            return plainToInstance(EmployeeDto, obj.requester);
+        },
+    )
     requester: EmployeeDto;
 
     @Expose({ name: 'approver' })
     @Type(() => EmployeeDto)
-    @Transform(({ obj }: { obj: LeaveRequest & { approver?: Employee | null } }) => {
-        if (!obj.approver) return null;
-        return plainToInstance(EmployeeDto, obj.approver);
-    })
+    @Transform(
+        ({ obj }: { obj: LeaveRequest & { approver?: Employee | null } }) => {
+            if (!obj.approver) return null;
+            return plainToInstance(EmployeeDto, obj.approver);
+        },
+    )
     approver: EmployeeDto;
 
     @Expose({ name: 'perform_by' })
@@ -53,10 +63,12 @@ export class LeaveRequestDto {
 
     @Expose({ name: 'performer' })
     @Type(() => UserDto)
-    @Transform(({ obj }: { obj: LeaveRequest & { performer?: User | null } }) => {
-        if (!obj.performer) return null;
-        return plainToInstance(UserDto, obj.performer);
-    })
+    @Transform(
+        ({ obj }: { obj: LeaveRequest & { performer?: User | null } }) => {
+            if (!obj.performer) return null;
+            return plainToInstance(UserDto, obj.performer);
+        },
+    )
     performer: UserDto;
 
     @Expose({ name: 'isActive' })

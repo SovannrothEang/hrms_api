@@ -28,13 +28,16 @@ import { PayrollDto } from './dtos/payroll.dto';
 @Controller('payrolls')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class PayrollsController {
-    constructor(private readonly service: PayrollsService) { }
+    constructor(private readonly service: PayrollsService) {}
 
     @Post('process')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create a draft payroll with calculated values' })
     @ApiResponse({ status: HttpStatus.CREATED, type: PayrollDto })
-    @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Validation error' })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Validation error',
+    })
     async process(
         @Body() dto: ProcessPayrollDto,
         @CurrentUser('sub') userId: string,
@@ -49,10 +52,28 @@ export class PayrollsController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'List all payrolls with optional filters' })
-    @ApiQuery({ name: 'employeeId', required: false, description: 'Filter by employee' })
-    @ApiQuery({ name: 'status', required: false, description: 'Filter by status (PENDING, PROCESSED, PAID)' })
-    @ApiQuery({ name: 'year', required: false, type: Number, description: 'Filter by year' })
-    @ApiQuery({ name: 'month', required: false, type: Number, description: 'Filter by month (1-12)' })
+    @ApiQuery({
+        name: 'employeeId',
+        required: false,
+        description: 'Filter by employee',
+    })
+    @ApiQuery({
+        name: 'status',
+        required: false,
+        description: 'Filter by status (PENDING, PROCESSED, PAID)',
+    })
+    @ApiQuery({
+        name: 'year',
+        required: false,
+        type: Number,
+        description: 'Filter by year',
+    })
+    @ApiQuery({
+        name: 'month',
+        required: false,
+        type: Number,
+        description: 'Filter by month (1-12)',
+    })
     @ApiResponse({ status: HttpStatus.OK, type: [PayrollDto] })
     async findAll(
         @Query('employeeId') employeeId?: string,
@@ -77,7 +98,10 @@ export class PayrollsController {
     @ApiOperation({ summary: 'Get payroll by ID with items and tax details' })
     @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
     @ApiResponse({ status: HttpStatus.OK, type: PayrollDto })
-    @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Payroll not found' })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Payroll not found',
+    })
     async findOne(@Param('id') id: string) {
         const result = await this.service.findByIdAsync(id);
         if (!result.isSuccess) {
@@ -88,11 +112,19 @@ export class PayrollsController {
 
     @Patch(':id/finalize')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Finalize a pending payroll (changes status to PROCESSED)' })
+    @ApiOperation({
+        summary: 'Finalize a pending payroll (changes status to PROCESSED)',
+    })
     @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
     @ApiResponse({ status: HttpStatus.OK, type: PayrollDto })
-    @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Cannot finalize non-pending payroll' })
-    @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Payroll not found' })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Cannot finalize non-pending payroll',
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Payroll not found',
+    })
     async finalize(
         @Param('id') id: string,
         @CurrentUser('sub') userId: string,
@@ -109,12 +141,15 @@ export class PayrollsController {
     @ApiOperation({ summary: 'Delete a pending payroll' })
     @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
     @ApiResponse({ status: HttpStatus.NO_CONTENT })
-    @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Cannot delete non-pending payroll' })
-    @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Payroll not found' })
-    async delete(
-        @Param('id') id: string,
-        @CurrentUser('sub') userId: string,
-    ) {
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Cannot delete non-pending payroll',
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Payroll not found',
+    })
+    async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {
         const result = await this.service.deleteAsync(id, userId);
         if (!result.isSuccess) {
             throw new Error(result.error ?? 'Failed to delete payroll');

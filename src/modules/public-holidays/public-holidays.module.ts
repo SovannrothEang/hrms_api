@@ -7,4 +7,4 @@ import { PublicHolidaysService } from './public-holidays.service';
     providers: [PublicHolidaysService],
     exports: [PublicHolidaysService],
 })
-export class PublicHolidaysModule { }
+export class PublicHolidaysModule {}

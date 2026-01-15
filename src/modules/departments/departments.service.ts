@@ -10,7 +10,7 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 export class DepartmentsService {
     private readonly logger = new Logger(DepartmentsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -21,10 +21,10 @@ export class DepartmentsService {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: { include: { role: true } },
-                        },
-                    }
+                          include: {
+                              userRoles: { include: { role: true } },
+                          },
+                      }
                     : false,
             },
         });
@@ -44,10 +44,10 @@ export class DepartmentsService {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: { include: { role: true } },
-                        },
-                    }
+                          include: {
+                              userRoles: { include: { role: true } },
+                          },
+                      }
                     : false,
             },
         });
@@ -74,7 +74,7 @@ export class DepartmentsService {
                 departmentName: dto.name,
                 performer: { connect: { id: performBy } },
             },
-            select: DepartmentDtoField
+            select: DepartmentDtoField,
         });
         return Result.ok(plainToInstance(DepartmentDto, department));
     }
@@ -84,7 +84,11 @@ export class DepartmentsService {
         dto: DepartmentUpdateDto,
         performBy: string,
     ): Promise<void> {
-        this.logger.log('Updating department with id: {departmentId} by user: {performBy}', id, performBy);
+        this.logger.log(
+            'Updating department with id: {departmentId} by user: {performBy}',
+            id,
+            performBy,
+        );
         await this.prisma.department.update({
             where: { id },
             data: {
@@ -95,7 +99,11 @@ export class DepartmentsService {
     }
 
     async deleteAsync(id: string, performBy: string): Promise<void> {
-        this.logger.log('Deleting department with id: {departmentId} by user: {performBy}', id, performBy);
+        this.logger.log(
+            'Deleting department with id: {departmentId} by user: {performBy}',
+            id,
+            performBy,
+        );
         await this.prisma.department.update({
             where: { id, isDeleted: false },
             data: {

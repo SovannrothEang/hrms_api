@@ -24,18 +24,30 @@ export class EmployeePositionDto {
 
     @Expose()
     @Type(() => DecimalNumber)
-    @Transform(({ value }: { value: string | number | Decimal | null | undefined }) => {
-        if (value === null || value === undefined) return null;
-        return new Decimal(value);
-    })
+    @Transform(
+        ({
+            value,
+        }: {
+            value: string | number | Decimal | null | undefined;
+        }) => {
+            if (value === null || value === undefined) return null;
+            return new Decimal(value);
+        },
+    )
     salaryRangeMin: DecimalNumber;
 
     @Expose()
     @Type(() => DecimalNumber)
-    @Transform(({ value }: { value: string | number | Decimal | null | undefined }) => {
-        if (value === null || value === undefined) return null;
-        return new Decimal(value);
-    })
+    @Transform(
+        ({
+            value,
+        }: {
+            value: string | number | Decimal | null | undefined;
+        }) => {
+            if (value === null || value === undefined) return null;
+            return new Decimal(value);
+        },
+    )
     salaryRangeMax: DecimalNumber;
 
     @Expose({ name: 'perform_by' })

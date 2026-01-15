@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    HttpCode,
+    HttpStatus,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -10,14 +19,17 @@ import { CreateCurrencyDto } from './dtos/create-currency.dto';
 @Controller('currencies')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class CurrenciesController {
-    constructor(private readonly service: CurrenciesService) { }
+    constructor(private readonly service: CurrenciesService) {}
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create a new currency' })
     @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST })
-    async create(@Body() dto: CreateCurrencyDto, @CurrentUser('sub') userId: string) {
+    async create(
+        @Body() dto: CreateCurrencyDto,
+        @CurrentUser('sub') userId: string,
+    ) {
         const result = await this.service.createAsync(dto, userId);
         if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
         return result.getData();
@@ -56,4 +68,3 @@ export class CurrenciesController {
         if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
     }
 }
-

@@ -12,7 +12,7 @@ import { Logger } from '@nestjs/common';
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -23,25 +23,28 @@ export class EmployeesService {
             where: {
                 OR: [{ username: dto.username }, { email: dto.email }],
             },
-            select: { id: true }
+            select: { id: true },
         });
         if (check) return Result.fail('Username or Email already exists');
 
         const codeCheck = await this.prisma.employee.findUnique({
             where: { employeeCode: dto.employeeCode },
-            select: { id: true }
+            select: { id: true },
         });
         if (codeCheck) return Result.fail('Employee Code already exists');
 
         const hashedPassword = await bcrypt.hash(dto.password, 10);
 
         const role = await this.prisma.role.findFirst({
-            where: { name: dto.roleName.toUpperCase(), isDeleted: false, isActive: true },
-            select: { id: true }
+            where: {
+                name: dto.roleName.toUpperCase(),
+                isDeleted: false,
+                isActive: true,
+            },
+            select: { id: true },
         });
         this.logger.log('Role: ' + JSON.stringify(role));
-        if (!role) return Result.fail
-            ('Role not found');
+        if (!role) return Result.fail('Role not found');
 
         try {
             const employee = await this.prisma.$transaction(async (tx) => {
@@ -102,12 +105,12 @@ export class EmployeesService {
                 position: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -126,12 +129,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -153,7 +156,7 @@ export class EmployeesService {
             where: { id },
             data: {
                 ...dto,
-                performBy: performerId
+                performBy: performerId,
             },
             include: {
                 department: true,
@@ -166,7 +169,10 @@ export class EmployeesService {
 
     async deleteAsync(id: string, performerId: string): Promise<Result<void>> {
         // Check if employee exists
-        const check = await this.prisma.employee.findFirst({ where: { id }, select: { id: true } });
+        const check = await this.prisma.employee.findFirst({
+            where: { id },
+            select: { id: true },
+        });
         if (!check) return Result.fail('Employee not found');
 
         // Optional: Check dependencies (e.g. payrolls) before delete
@@ -176,8 +182,8 @@ export class EmployeesService {
             data: {
                 isDeleted: true,
                 deletedAt: new Date(),
-                performer: { connect: { id: performerId } }
-            }
+                performer: { connect: { id: performerId } },
+            },
         });
         // Ideally we should also soft-delete the linked User, but that depends on requirements.
         return Result.ok();

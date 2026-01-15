@@ -8,7 +8,7 @@ export class DepartmentDto {
     id: string;
 
     @Expose({ name: 'department_name' })
-    @Transform(({ obj }) => obj.departmentName)
+    @Transform(({ obj }: { obj: Department }) => obj.departmentName)
     name: string;
 
     @Expose({ name: 'employees' })
@@ -43,5 +43,5 @@ export const DepartmentDtoField = {
     performer: true,
     isActive: true,
     createdAt: true,
-    updatedAt: true
+    updatedAt: true,
 } as const;

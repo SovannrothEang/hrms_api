@@ -18,7 +18,7 @@ import { RoleName } from 'src/common/enums/roles.enum';
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync() {
         this.logger.log('Getting all users');
@@ -50,7 +50,11 @@ export class UsersService {
         return Result.ok(plainToInstance(UserDto, user));
     }
 
-    async isExistAsync(username?: string, email?: string, excludeId?: string): Promise<boolean> {
+    async isExistAsync(
+        username?: string,
+        email?: string,
+        excludeId?: string,
+    ): Promise<boolean> {
         const conditions: Prisma.UserWhereInput[] = [];
 
         if (username) {
@@ -130,9 +134,15 @@ export class UsersService {
         }
 
         // Exclude current user from duplicate check (self-update scenario)
-        const existingUser = await this.isExistAsync(dto.username, dto.email, id);
+        const existingUser = await this.isExistAsync(
+            dto.username,
+            dto.email,
+            id,
+        );
         if (existingUser) {
-            this.logger.warn('Username or email already taken by another user!');
+            this.logger.warn(
+                'Username or email already taken by another user!',
+            );
             throw new BadRequestException('Username or Email already exists!');
         }
 

@@ -22,7 +22,7 @@ import { UserUpdateDto } from './dtos/user-update.dto';
 @Controller('users')
 @Auth(RoleName.ADMIN)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(private readonly usersService: UsersService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)

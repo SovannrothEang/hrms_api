@@ -22,7 +22,7 @@ export class TaxBracketDto {
     @ApiProperty({ example: 10000 })
     maxAmount: number;
 
-    @ApiProperty({ example: 0.10 })
+    @ApiProperty({ example: 0.1 })
     taxRate: number;
 
     @ApiProperty({ example: 0 })

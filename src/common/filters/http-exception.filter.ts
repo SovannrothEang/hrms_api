@@ -27,10 +27,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 ? exception.getResponse()
                 : 'Internal server error';
 
-        if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
+        if (status === (HttpStatus.INTERNAL_SERVER_ERROR as number)) {
             this.logger.error(
                 `Http Status: ${status} Error Message: ${JSON.stringify(message)}`,
-                exception instanceof Error ? exception.stack : String(exception),
+                exception instanceof Error
+                    ? exception.stack
+                    : String(exception),
             );
         } else {
             this.logger.error(

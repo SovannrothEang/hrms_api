@@ -15,7 +15,7 @@ export class LeavesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
-    ) { }
+    ) {}
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -28,12 +28,12 @@ export class LeavesService {
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -65,12 +65,12 @@ export class LeavesService {
                     approver: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
-                            include: {
-                                userRoles: {
-                                    include: { role: true },
-                                },
-                            },
-                        }
+                              include: {
+                                  userRoles: {
+                                      include: { role: true },
+                                  },
+                              },
+                          }
                         : false,
                 },
             }),
@@ -93,12 +93,12 @@ export class LeavesService {
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -219,7 +219,6 @@ export class LeavesService {
             this.emailService.sendLeaveRequestNotification(
                 'manager@company.com',
                 leave.id,
-                dto.leaveType,
             );
 
             return Result.ok(plainToInstance(LeaveRequestDto, leave));
@@ -242,7 +241,7 @@ export class LeavesService {
         });
 
         if (!leave) return Result.fail('Leave request not found');
-        if (leave.status !== LeaveStatus.PENDING) {
+        if (leave.status !== (LeaveStatus.PENDING as any)) {
             return Result.fail(
                 `Cannot update status from ${leave.status}. Only PENDING requests can be processed.`,
             );
@@ -257,7 +256,7 @@ export class LeavesService {
         try {
             const updatedLeave = await this.prisma.$transaction(async (tx) => {
                 // Update Balance based on Decision
-                if (dto.status === LeaveStatus.APPROVED) {
+                if (dto.status === (LeaveStatus.APPROVED as any)) {
                     // Move from Pending to Used
                     await tx.leaveBalance.updateMany({
                         where: {
@@ -270,7 +269,7 @@ export class LeavesService {
                             usedDays: { increment: requestedDays },
                         },
                     });
-                } else if (dto.status === LeaveStatus.REJECTED) {
+                } else if (dto.status === (LeaveStatus.REJECTED as any)) {
                     // Return from Pending (free up)
                     await tx.leaveBalance.updateMany({
                         where: {
@@ -316,7 +315,7 @@ export class LeavesService {
         });
 
         if (!leave) return Result.fail('Leave request not found');
-        if (leave.status !== LeaveStatus.PENDING)
+        if (leave.status !== (LeaveStatus.PENDING as any))
             return Result.fail('Cannot delete processed leave request');
 
         const startDate = new Date(leave.startDate);

@@ -14,4 +14,4 @@ export enum LeaveStatus {
 // Cancellation Pending: An employee has requested to cancel a previously approved leave, which now requires a second approval to be finalized.
 // Canceled: The request was withdrawn by the employee(if still pending) or the cancellation was approved.
 // Revoked: The approver has withdrawn their previous approval of a request.
-// On Hold: The request is being kept for further deliberation or requires more information before it can be approved or rejected. 
+// On Hold: The request is being kept for further deliberation or requires more information before it can be approved or rejected.

@@ -8,4 +8,4 @@ import { AuthModule } from '../auth/auth.module';
     providers: [LeavesService],
     controllers: [LeavesController],
 })
-export class LeavesModule { }
+export class LeavesModule {}

@@ -4,7 +4,11 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { DecimalNumber } from '../../../../config/decimal-number';
 
 // Transform Decimal/number/string to DecimalNumber (handles null/undefined gracefully)
-const toDecimalNumber = ({ value }: { value: Decimal | number | string | null | undefined }) => {
+const toDecimalNumber = ({
+    value,
+}: {
+    value: Decimal | number | string | null | undefined;
+}) => {
     if (value === null || value === undefined) return null;
     return new DecimalNumber(value);
 };
@@ -20,7 +24,10 @@ export class PayrollItemDto {
     payrollId: string;
 
     @Expose()
-    @ApiProperty({ example: 'EARNING', description: 'Item type: EARNING or DEDUCTION' })
+    @ApiProperty({
+        example: 'EARNING',
+        description: 'Item type: EARNING or DEDUCTION',
+    })
     itemType: string;
 
     @Expose()
@@ -28,7 +35,7 @@ export class PayrollItemDto {
     itemName: string;
 
     @Expose()
-    @ApiProperty({ example: 2500.00 })
+    @ApiProperty({ example: 2500.0 })
     @Type(() => DecimalNumber)
     @Transform(toDecimalNumber)
     amount: DecimalNumber | null;

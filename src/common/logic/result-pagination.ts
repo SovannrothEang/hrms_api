@@ -13,7 +13,12 @@ export class ResultPagination<T> {
         this.totalPages = Math.ceil(total / limit);
     }
 
-    public static of<U>(data: U[], total: number, page: number, limit: number): ResultPagination<U> {
+    public static of<U>(
+        data: U[],
+        total: number,
+        page: number,
+        limit: number,
+    ): ResultPagination<U> {
         return new ResultPagination<U>(data, total, page, limit);
     }
 }

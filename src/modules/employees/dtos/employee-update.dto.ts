@@ -1,5 +1,4 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { EmployeeCreateDto } from './employee-create.dto';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 // Omit user account details as they updated separately or not at all here

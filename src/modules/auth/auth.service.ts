@@ -16,7 +16,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly usersService: UsersService,
-    ) { }
+    ) {}
 
     async signInAsync(email: string, password: string) {
         this.logger.log('Signing in user with {email}.', email);
@@ -34,7 +34,8 @@ export class AuthService {
 
         // Timing attack prevention: always run bcrypt compare
         // Use a dummy hash when user not found to maintain consistent timing
-        const dummyHash = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtoG0f1CJ.fne';
+        const dummyHash =
+            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtoG0f1CJ.fne';
         const passwordToCompare = user?.password ?? dummyHash;
         const isMatch = await bcrypt.compare(password, passwordToCompare);
 

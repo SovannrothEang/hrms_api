@@ -12,12 +12,16 @@ export class ShiftDto {
 
     @ApiProperty()
     @Expose()
-    @Transform(({ value }) => value ? value.toISOString().substring(11, 16) : null) // Convert Date to HH:mm string if strictly needed, or keep as Date
+    @Transform(({ value }: { value: Date | null }) =>
+        value ? value.toISOString().substring(11, 16) : null,
+    ) // Convert Date to HH:mm string if strictly needed, or keep as Date
     startTime: Date;
 
     @ApiProperty()
     @Expose()
-    @Transform(({ value }) => value ? value.toISOString().substring(11, 16) : null)
+    @Transform(({ value }: { value: Date | null }) =>
+        value ? value.toISOString().substring(11, 16) : null,
+    )
     endTime: Date;
 
     @ApiProperty()

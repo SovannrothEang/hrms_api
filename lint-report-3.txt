@@ -1,0 +1,23 @@
+
+> hrms_api@0.0.1 lint
+> eslint "{src,apps,libs,test}/**/*.ts" --fix
+
+
+D:\sources\02APP\hrms_api\src\app.module.ts
+  69:29  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  69:37  error  Unsafe member access .id on an `any` value      @typescript-eslint/no-unsafe-member-access
+  70:29  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  70:41  error  Unsafe member access .method on an `any` value  @typescript-eslint/no-unsafe-member-access
+  71:29  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  71:38  error  Unsafe member access .url on an `any` value     @typescript-eslint/no-unsafe-member-access
+  72:29  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  72:40  error  Unsafe member access .query on an `any` value   @typescript-eslint/no-unsafe-member-access
+  73:29  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  73:41  error  Unsafe member access .params on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+D:\sources\02APP\hrms_api\src\common\decorators\current-user.decorator.ts
+  15:15  error  Unsafe assignment of an `any` value           @typescript-eslint/no-unsafe-assignment
+  16:30  error  Unsafe member access .user on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+Γ£û 12 problems (12 errors, 0 warnings)
+

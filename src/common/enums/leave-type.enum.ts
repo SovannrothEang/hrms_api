@@ -22,16 +22,16 @@ export enum LeaveType {
 // Public/Religious Holidays: Paid days off for national or religious observances.
 // Parental Leave: For new parents (maternity, paternity, adoption).
 // Bereavement Leave: Paid time for the death of a family member.
-// Casual Leave: Short-term, unplanned leave for personal reasons. 
+// Casual Leave: Short-term, unplanned leave for personal reasons.
 
 // Specialized & Legal Leave
 // Family and Medical Leave (FMLA): Unpaid, job-protected leave for family/medical reasons (US).
 // Sabbatical: Extended leave for personal development, travel, or volunteering.
 // Jury Duty/Military Leave: For civic duty or military service, often legally protected.
 // Study Leave: Time off for education or training.
-// Unpaid Leave (Leave Without Pay - LWP): Time off without salary for personal reasons. 
+// Unpaid Leave (Leave Without Pay - LWP): Time off without salary for personal reasons.
 
 // Other & Emerging Types
 // Time Off in Lieu (TOIL): Compensatory time off for working extra hours.
 // Volunteer Leave: Paid or unpaid time to volunteer for charitable causes.
-// Mental Health Days: Increasingly offered for well-being. 
+// Mental Health Days: Increasingly offered for well-being.

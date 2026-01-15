@@ -5,6 +5,7 @@ import { PayrollDto } from './dtos/payroll.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
+import { Prisma } from '@prisma/client';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -25,7 +26,7 @@ export enum PayrollItemType {
 export class PayrollsService {
     private readonly logger = new Logger(PayrollsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     /**
      * Creates a draft payroll with calculated values (Gross, Tax, Net).
@@ -158,7 +159,7 @@ export class PayrollsService {
                         itemType: PayrollItemType.EARNING,
                         itemName: 'Overtime',
                         amount: overtimePay,
-                        description: `${overtimeHours} hours @ ${overtimeRate.toFixed(2)}/hr`,
+                        description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
                         performBy,
                     });
                 }
@@ -246,7 +247,7 @@ export class PayrollsService {
                 return Result.fail('Payroll not found');
             }
 
-            if (payroll.status !== PayrollStatus.PENDING) {
+            if (payroll.status !== (PayrollStatus.PENDING as string)) {
                 return Result.fail(
                     `Cannot finalize payroll with status: ${payroll.status}`,
                 );
@@ -287,7 +288,11 @@ export class PayrollsService {
                 return Result.fail('Payroll not found');
             }
 
-            return Result.ok(plainToInstance(PayrollDto, payroll, { excludeExtraneousValues: true }));
+            return Result.ok(
+                plainToInstance(PayrollDto, payroll, {
+                    excludeExtraneousValues: true,
+                }),
+            );
         } catch (error) {
             this.logger.error('Failed to fetch payroll', error);
             return Result.fail('Failed to fetch payroll');
@@ -304,7 +309,7 @@ export class PayrollsService {
         month?: number;
     }): Promise<Result<PayrollDto[]>> {
         try {
-            const where: any = { isDeleted: false };
+            const where: Prisma.PayrollWhereInput = { isDeleted: false };
 
             if (params?.employeeId) {
                 where.employeeId = params.employeeId;
@@ -334,7 +339,11 @@ export class PayrollsService {
                 orderBy: { createdAt: 'desc' },
             });
 
-            return Result.ok(plainToInstance(PayrollDto, payrolls, { excludeExtraneousValues: true }));
+            return Result.ok(
+                plainToInstance(PayrollDto, payrolls, {
+                    excludeExtraneousValues: true,
+                }),
+            );
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
             return Result.fail('Failed to fetch payrolls');
@@ -354,7 +363,7 @@ export class PayrollsService {
                 return Result.fail('Payroll not found');
             }
 
-            if (payroll.status !== PayrollStatus.PENDING) {
+            if (payroll.status !== (PayrollStatus.PENDING as string)) {
                 return Result.fail('Only PENDING payrolls can be deleted');
             }
 

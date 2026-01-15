@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';
 import { Result } from '../../../common/logic/result';
@@ -9,21 +10,24 @@ import { plainToInstance } from 'class-transformer';
 export class TaxBracketsService {
     private readonly logger = new Logger(TaxBracketsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
-    async createAsync(dto: CreateTaxBracketDto, userId: string): Promise<Result<TaxBracketDto>> {
+    async createAsync(
+        dto: CreateTaxBracketDto,
+        userId: string,
+    ): Promise<Result<TaxBracketDto>> {
         try {
             // Validate Currency Existence
             const currency = await this.prisma.currency.findUnique({
-                where: { code: dto.currencyCode }
+                where: { code: dto.currencyCode },
             });
             if (!currency) return Result.fail('Invalid Currency Code');
 
             const newValue = await this.prisma.taxBracket.create({
                 data: {
                     ...dto,
-                    performBy: userId
-                }
+                    performBy: userId,
+                },
             });
 
             return Result.ok(plainToInstance(TaxBracketDto, newValue));
@@ -33,15 +37,20 @@ export class TaxBracketsService {
         }
     }
 
-    async findAllAsync(countryCode?: string, year?: number): Promise<Result<TaxBracketDto[]>> {
+    async findAllAsync(
+        countryCode?: string,
+        year?: number,
+    ): Promise<Result<TaxBracketDto[]>> {
         try {
-            const whereClause: any = { isDeleted: false };
+            const whereClause: Prisma.TaxBracketWhereInput = {
+                isDeleted: false,
+            };
             if (countryCode) whereClause.countryCode = countryCode;
             if (year) whereClause.taxYear = year;
 
             const values = await this.prisma.taxBracket.findMany({
                 where: whereClause,
-                orderBy: { minAmount: 'asc' }
+                orderBy: { minAmount: 'asc' },
             });
             return Result.ok(plainToInstance(TaxBracketDto, values));
         } catch (error) {
@@ -53,7 +62,7 @@ export class TaxBracketsService {
     async deleteAsync(id: string, userId: string): Promise<Result<void>> {
         try {
             const exists = await this.prisma.taxBracket.findUnique({
-                where: { id, isDeleted: false }
+                where: { id, isDeleted: false },
             });
             if (!exists) return Result.fail('Tax bracket not found');
 
@@ -61,8 +70,8 @@ export class TaxBracketsService {
                 where: { id },
                 data: {
                     isDeleted: true,
-                    performBy: userId
-                }
+                    performBy: userId,
+                },
             });
             return Result.ok();
         } catch (error) {

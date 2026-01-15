@@ -15,7 +15,13 @@ import {
 } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { RoleCreateDto } from './dtos/role-create.dto';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -25,7 +31,7 @@ import { RoleUpdateDto } from './dtos/role-update.dto';
 @ApiTags('Roles')
 @Auth(RoleName.ADMIN)
 export class RolesController {
-    constructor(private readonly rolesService: RolesService) { }
+    constructor(private readonly rolesService: RolesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -52,7 +58,10 @@ export class RolesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.rolesService.findOneByIdAsync(id, childIncluded);
+        const result = await this.rolesService.findOneByIdAsync(
+            id,
+            childIncluded,
+        );
         if (!result.isSuccess) {
             throw new NotFoundException(result.error);
         }
@@ -71,7 +80,10 @@ export class RolesController {
         @Body() dto: RoleCreateDto,
         @CurrentUser('sub') userId: string,
     ) {
-        const result = await this.rolesService.createAsync(dto.roleName, userId);
+        const result = await this.rolesService.createAsync(
+            dto.roleName,
+            userId,
+        );
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }

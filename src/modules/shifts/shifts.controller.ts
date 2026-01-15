@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    HttpCode,
+    HttpStatus,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShiftsService } from './shifts.service';
 import { CreateShiftDto } from './dtos/create-shift.dto';
@@ -10,16 +19,19 @@ import { RoleName } from 'src/common/enums/roles.enum';
 @Controller('shifts')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class ShiftsController {
-    constructor(private readonly shiftsService: ShiftsService) { }
+    constructor(private readonly shiftsService: ShiftsService) {}
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create a new shift' })
     @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST })
-    async create(@Body() dto: CreateShiftDto, @CurrentUser('sub') userId: string) {
+    async create(
+        @Body() dto: CreateShiftDto,
+        @CurrentUser('sub') userId: string,
+    ) {
         const result = await this.shiftsService.createAsync(dto, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
+        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -40,7 +52,7 @@ export class ShiftsController {
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async findOne(@Param('id') id: string) {
         const result = await this.shiftsService.findOneByIdAsync(id);
-        if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
+        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -52,7 +64,6 @@ export class ShiftsController {
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {
         const result = await this.shiftsService.deleteAsync(id, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? "Unknown Error");
+        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
     }
 }
-

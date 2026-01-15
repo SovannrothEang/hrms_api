@@ -9,7 +9,7 @@ export class EmployeePositionUpdateDto {
 
     @IsString()
     @MaxLength(255)
-    @ApiProperty({ example: 'Software Engineer\'s description' })
+    @ApiProperty({ example: "Software Engineer's description" })
     description?: string;
 
     @IsDecimal()

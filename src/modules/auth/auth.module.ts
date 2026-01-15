@@ -24,4 +24,4 @@ import { UsersService } from '../iam/users/users.service';
     controllers: [AuthController],
     exports: [AuthService, UserContextService],
 })
-export class AuthModule { }
+export class AuthModule {}

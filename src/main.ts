@@ -8,38 +8,40 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  app.useLogger(app.get(PinoLogger));
-  app.use(helmet());
+    app.useLogger(app.get(PinoLogger));
+    app.use(helmet());
 
-  app.enableCors({
-    origin: "*",
-    methods: "*",
-    allowedHeaders: "*",
-    credentials: true,
-  })
+    app.enableCors({
+        origin: '*',
+        methods: '*',
+        allowedHeaders: '*',
+        credentials: true,
+    });
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+    app.useGlobalPipes(
+        new ValidationPipe({ transform: true, whitelist: true }),
+    );
+    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new TransformInterceptor());
 
-  app.setGlobalPrefix('api');
+    app.setGlobalPrefix('api');
 
-  const config = new DocumentBuilder()
-    .setTitle('HRMS API')
-    .setDescription('The HRMS API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/swagger', app, document);
+    const config = new DocumentBuilder()
+        .setTitle('HRMS API')
+        .setDescription('The HRMS API description')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/swagger', app, document);
 
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
+    const port = process.env.PORT ?? 3000;
+    await app.listen(port);
 
-  const logger = new Logger('Bootstrap');
-  logger.log(`Application is running on: http://localhost:${port}`);
-  logger.log(`Swagger documentation: http://localhost:${port}/api`);
+    const logger = new Logger('Bootstrap');
+    logger.log(`Application is running on: http://localhost:${port}`);
+    logger.log(`Swagger documentation: http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap();

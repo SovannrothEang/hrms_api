@@ -1,4 +1,12 @@
-import { Controller, Get, Query, HttpCode, HttpStatus, ParseIntPipe, Res } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Query,
+    HttpCode,
+    HttpStatus,
+    ParseIntPipe,
+    Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery, ApiProduces } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
@@ -9,7 +17,7 @@ import { RoleName } from '../../common/enums/roles.enum';
 @ApiTags('Reports')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class ReportsController {
-    constructor(private readonly reportsService: ReportsService) { }
+    constructor(private readonly reportsService: ReportsService) {}
 
     @Get('attendance-summary')
     @HttpCode(HttpStatus.OK)
@@ -26,7 +34,10 @@ export class ReportsController {
     @Get('attendance-summary/export')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Export attendance summary (xlsx/csv)' })
-    @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv')
+    @ApiProduces(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
+    )
     @ApiQuery({ name: 'month', required: true, type: Number })
     @ApiQuery({ name: 'year', required: true, type: Number })
     @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
@@ -36,15 +47,27 @@ export class ReportsController {
         @Query('format') format: 'xlsx' | 'csv',
         @Res() res: Response,
     ) {
-        const workbook = await this.reportsService.exportAttendanceSummary(month, year);
+        const workbook = await this.reportsService.exportAttendanceSummary(
+            month,
+            year,
+        );
 
         if (format === 'csv') {
             res.header('Content-Type', 'text/csv');
-            res.header('Content-Disposition', 'attachment; filename=attendance_summary.csv');
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=attendance_summary.csv',
+            );
             await workbook.csv.write(res);
         } else {
-            res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.header('Content-Disposition', 'attachment; filename=attendance_summary.xlsx');
+            res.header(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=attendance_summary.xlsx',
+            );
             await workbook.xlsx.write(res);
         }
         res.end();
@@ -52,23 +75,39 @@ export class ReportsController {
 
     @Get('leave-utilization')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get leave balances for all employees (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
-    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 10' })
+    @ApiOperation({
+        summary: 'Get leave balances for all employees (Paginated)',
+    })
+    @ApiQuery({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Default 1',
+    })
+    @ApiQuery({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Default 10',
+    })
     async getLeaveUtilization(
         @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-        @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+        @Query('limit', new ParseIntPipe({ optional: true }))
+        limit: number = 10,
     ) {
         return await this.reportsService.getPaginatedLeaveUtilization(
             page || 1,
-            limit || 10
+            limit || 10,
         );
     }
 
     @Get('leave-utilization/export')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Export leave utilization (xlsx/csv)' })
-    @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv')
+    @ApiProduces(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
+    )
     @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
     async exportLeaveUtilization(
         @Query('format') format: 'xlsx' | 'csv',
@@ -78,11 +117,20 @@ export class ReportsController {
 
         if (format === 'csv') {
             res.header('Content-Type', 'text/csv');
-            res.header('Content-Disposition', 'attachment; filename=leave_utilization.csv');
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=leave_utilization.csv',
+            );
             await workbook.csv.write(res);
         } else {
-            res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            res.header('Content-Disposition', 'attachment; filename=leave_utilization.xlsx');
+            res.header(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=leave_utilization.xlsx',
+            );
             await workbook.xlsx.write(res);
         }
         res.end();

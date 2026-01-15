@@ -19,13 +19,19 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { DepartmentUpdateDto } from './dtos/department-update.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 
 @Controller('departments')
 @Auth(RoleName.ADMIN)
 @ApiTags('Departments')
 export class DepartmentsController {
-    constructor(private readonly departmentsService: DepartmentsService) { }
+    constructor(private readonly departmentsService: DepartmentsService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -36,7 +42,8 @@ export class DepartmentsController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.departmentsService.findAllAsync(childIncluded);
+        const result =
+            await this.departmentsService.findAllAsync(childIncluded);
         return result.getData();
     }
 
@@ -52,7 +59,10 @@ export class DepartmentsController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.departmentsService.findOneByIdAsync(id, childIncluded);
+        const result = await this.departmentsService.findOneByIdAsync(
+            id,
+            childIncluded,
+        );
         if (!result.isSuccess) {
             throw new NotFoundException(result.error);
         }

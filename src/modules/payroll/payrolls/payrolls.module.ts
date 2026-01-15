@@ -9,4 +9,4 @@ import { PayrollsService } from './payrolls.service';
     providers: [PayrollsService],
     exports: [PayrollsService],
 })
-export class PayrollsModule { }
+export class PayrollsModule {}

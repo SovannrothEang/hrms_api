@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+    IsDateString,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    MaxLength,
+} from 'class-validator';
 
 export class LeaveRequestCreateDto {
     @IsString()
@@ -27,6 +33,10 @@ export class LeaveRequestCreateDto {
     @IsString()
     @IsOptional()
     @MaxLength(1000)
-    @ApiProperty({ name: 'reason', required: false, example: 'Visiting family' })
+    @ApiProperty({
+        name: 'reason',
+        required: false,
+        example: 'Visiting family',
+    })
     reason?: string;
 }

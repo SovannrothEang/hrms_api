@@ -13,9 +13,15 @@ import {
     ParseBoolPipe,
     ParseIntPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
-import { LeaveRequestDto } from './dtos/leave-request.dto';
+
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
 import { Auth } from '../../common/decorators/auth.decorator';
@@ -25,27 +31,39 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Auth()
 @Controller('takeleave')
 export class LeavesController {
-    constructor(private readonly leavesService: LeavesService) { }
+    constructor(private readonly leavesService: LeavesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all leave requests (Paginated)' })
     @ApiResponse({ status: HttpStatus.OK })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
-    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Default 1' })
-    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Default 10' })
+    @ApiQuery({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Default 1',
+    })
+    @ApiQuery({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: 'Default 10',
+    })
     @ApiQuery({ name: 'employeeId', required: false, type: String })
     async findAll(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true })) childIncluded?: boolean,
+        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
+        childIncluded?: boolean,
         @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-        @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+        @Query('limit', new ParseIntPipe({ optional: true }))
+        limit: number = 10,
         @Query('employeeId') employeeId?: string,
     ) {
         return await this.leavesService.findAllPaginatedAsync(
             page || 1,
             limit || 10,
             childIncluded,
-            employeeId
+            employeeId,
         );
     }
 

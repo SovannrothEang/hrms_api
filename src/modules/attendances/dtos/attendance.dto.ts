@@ -42,10 +42,12 @@ export class AttendanceDto {
 
     @Expose({ name: 'employee' })
     @Type(() => EmployeeDto)
-    @Transform(({ obj }: { obj: Attendance & { employee?: Employee | null } }) => {
-        if (!obj.employee) return null;
-        return plainToInstance(EmployeeDto, obj.employee);
-    })
+    @Transform(
+        ({ obj }: { obj: Attendance & { employee?: Employee | null } }) => {
+            if (!obj.employee) return null;
+            return plainToInstance(EmployeeDto, obj.employee);
+        },
+    )
     employee: EmployeeDto;
 
     @Expose({ name: 'isActive' })

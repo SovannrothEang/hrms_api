@@ -14,7 +14,7 @@ import { PrismaService } from 'src/common/services/prisma/prisma.service';
 export class RolesService {
     private readonly logger = new Logger(RolesService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -24,14 +24,14 @@ export class RolesService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: {
-                                    role: true,
-                                },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: {
+                                      role: true,
+                                  },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -48,14 +48,14 @@ export class RolesService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: {
-                                    role: true,
-                                },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: {
+                                      role: true,
+                                  },
+                              },
+                          },
+                      }
                     : false,
             },
         });

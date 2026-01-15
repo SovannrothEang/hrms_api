@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDate, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+    IsBoolean,
+    IsDate,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+} from 'class-validator';
 
 export class CreatePublicHolidayDto {
     @ApiProperty({ example: 'New Year Day' })
