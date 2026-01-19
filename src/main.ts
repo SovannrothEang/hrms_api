@@ -7,16 +7,22 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
+const APP_URL = process.env.NEXT_APP_URL || 'http://localhost:3000' as string
+
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
     app.useLogger(app.get(PinoLogger));
-    app.use(helmet());
+    app.use(
+        helmet({
+            crossOriginResourcePolicy: { policy: 'cross-origin' },
+        }),
+    );
 
     app.enableCors({
-        origin: '*',
-        methods: '*',
-        allowedHeaders: '*',
+        origin: APP_URL,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
         credentials: true,
     });
 
@@ -37,7 +43,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/swagger', app, document);
 
-    const port = process.env.PORT ?? 3000;
+    const port = process.env.PORT ?? 3001;
     await app.listen(port);
 
     const logger = new Logger('Bootstrap');

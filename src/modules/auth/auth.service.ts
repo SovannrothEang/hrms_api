@@ -16,9 +16,9 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly usersService: UsersService,
-    ) {}
+    ) { }
 
-    async signInAsync(email: string, password: string) {
+    async signInAsync(email: string, password: string): Promise<Result<{ token: string }>> {
         this.logger.log('Signing in user with {email}.', email);
 
         const user = await this.prisma.user.findFirst({
@@ -55,9 +55,7 @@ export class AuthService {
             email: user.email,
             roles: roles,
         };
-        return {
-            access_token: this.jwtService.sign(payloads),
-        };
+        return Result.ok({ token: await this.jwtService.signAsync(payloads) });
     }
 
     async registerAsync(dto: RegisterDto): Promise<Result<UserDto>> {
@@ -102,7 +100,7 @@ export class AuthService {
         }
     }
 
-    async getMe(userId: string) {
+    async getMe(userId: string): Promise<Result<UserDto>> {
         this.logger.log('Getting current user');
         return await this.usersService.findOneByIdAsync(userId);
     }

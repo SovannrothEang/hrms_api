@@ -16,7 +16,7 @@ import { Auth } from 'src/common/decorators/auth.decorator';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+    constructor(private readonly authService: AuthService) { }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -27,10 +27,11 @@ export class AuthController {
         description: 'Invalid credentials',
     })
     async signIn(@Body() loginDto: LoginDto) {
-        return await this.authService.signInAsync(
+        var result = await this.authService.signInAsync(
             loginDto.email,
             loginDto.password,
         );
+        return result.getData();
     }
 
     // @Post('register')
@@ -58,6 +59,6 @@ export class AuthController {
         const result = await this.authService.getMe(userId);
         if (!result.isSuccess)
             throw new UnauthorizedException('User is not authenticated!'); // TODO: Maybe Im the one who wrong
-        return result;
+        return result.getData();
     }
 }

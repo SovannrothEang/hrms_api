@@ -149,6 +149,7 @@ export class EmployeesService {
     ): Promise<Result<EmployeeDto>> {
         const employee = await this.prisma.employee.findFirst({
             where: { id },
+            select: { id: true }
         });
         if (!employee) return Result.fail('Employee not found');
 
