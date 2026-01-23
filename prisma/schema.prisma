@@ -189,12 +189,13 @@ model Employee {
   employeeCode String   @unique @map("employee_code") @db.VarChar(15)
   hireDate     DateTime @map("hire_date") @db.Date
 
-  firstname String   @db.VarChar(70)
-  lastname  String   @db.VarChar(70)
-  gender    Int      @db.SmallInt
-  dob       DateTime @db.Date
-  address   String?  @db.Text
-  phone     String?  @db.VarChar(20)
+  firstname    String   @db.VarChar(70)
+  lastname     String   @db.VarChar(70)
+  gender       Int      @db.SmallInt
+  dob          DateTime @db.Date
+  address      String?  @db.Text
+  phone        String?  @db.VarChar(20)
+  profileImage String?  @map("profile_image") @db.Text
 
   user        User?             @relation(fields: [userId], references: [id])
   department  Department        @relation(fields: [departmentId], references: [id])

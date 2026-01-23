@@ -11,6 +11,7 @@ interface SoftDeleteCapable {
         updateMany: (args: any) => Promise<any>;
         findFirst: (args: any) => Promise<any>;
         findMany: (args: any) => Promise<any>;
+        findUnique: (args: any) => Promise<any>;
     };
 }
 
@@ -19,8 +20,7 @@ export class PrismaService
     extends PrismaClient
     implements OnModuleInit, OnModuleDestroy
 {
-    // This property will hold the logic-enriched client
-    private readonly _extendedClient: unknown;
+    private readonly _extendedClient: any;
 
     constructor() {
         const connectionString = process.env.DATABASE_URL || '';
@@ -30,7 +30,7 @@ export class PrismaService
         this._extendedClient = this.setupSoftDelete();
     }
 
-    get client() {
+    get client(): any {
         return this._extendedClient;
     }
 
@@ -42,12 +42,25 @@ export class PrismaService
         await this.$disconnect();
     }
 
-    private setupSoftDelete() {
+    private setupSoftDelete(): any {
         const softDeleteModels: string[] = [
             'User',
             'Employee',
             'Department',
             'Payroll',
+            'Role',
+            'EmployeePosition',
+            'Shift',
+            'PublicHoliday',
+            'Attendance',
+            'LeaveRequest',
+            'LeaveBalance',
+            'Currency',
+            'ExchangeRate',
+            'PayrollItems',
+            'TaxBracket',
+            'EmployeeTaxConfig',
+            'TaxCalculation',
         ];
 
         return this.$extends({
@@ -55,7 +68,6 @@ export class PrismaService
                 $allModels: {
                     async delete({ model, args }) {
                         if (softDeleteModels.includes(model)) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                             return (this as unknown as SoftDeleteCapable)[
                                 model
                             ].update({
@@ -66,14 +78,12 @@ export class PrismaService
                                 },
                             });
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                         return (this as unknown as SoftDeleteCapable)[
                             model
                         ].delete(args);
                     },
                     async deleteMany({ model, args }) {
                         if (softDeleteModels.includes(model)) {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                             return (this as unknown as SoftDeleteCapable)[
                                 model
                             ].updateMany({
@@ -84,7 +94,6 @@ export class PrismaService
                                 },
                             });
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                         return (this as unknown as SoftDeleteCapable)[
                             model
                         ].deleteMany(args);
@@ -96,6 +105,12 @@ export class PrismaService
                         return query(args);
                     },
                     async findFirst({ model, args, query }) {
+                        if (softDeleteModels.includes(model)) {
+                            args.where = { isDeleted: false, ...args.where };
+                        }
+                        return query(args);
+                    },
+                    async findUnique({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
                             args.where = { isDeleted: false, ...args.where };
                         }

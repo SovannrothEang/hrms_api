@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { RoleName } from './../../src/common/enums/roles.enum';
 
 export async function seedEmployees(prisma: PrismaClient) {
     console.log('--- Seeding Employees ---');
@@ -9,9 +10,10 @@ export async function seedEmployees(prisma: PrismaClient) {
     const departments = await prisma.department.findMany({ select: { id: true } });
     const positions = await prisma.employeePosition.findMany({ select: { id: true } });
     const shifts = await prisma.shift.findMany({ select: { id: true } });
+    const employeeRole = await prisma.role.findFirst({ where: { name: RoleName.EMPLOYEE }, select: { id: true } });
 
-    if (departments.length === 0 || positions.length === 0 || shifts.length === 0) {
-        console.warn('Missing dependencies for Employee seeding (Depts/Pos/Shifts). Skipping.');
+    if (departments.length === 0 || positions.length === 0 || shifts.length === 0 || !employeeRole) {
+        console.warn('Missing dependencies for Employee seeding (Depts/Pos/Shifts/Role). Skipping.');
         return;
     }
 
@@ -31,6 +33,9 @@ export async function seedEmployees(prisma: PrismaClient) {
                     username: `employee${i}`,
                     email,
                     password: hashedPassword,
+                    userRoles: {
+                        create: { roleId: employeeRole.id }
+                    }
                 },
                 select: { id: true }
             });

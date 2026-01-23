@@ -21,7 +21,7 @@ export class EmployeePositionsService {
         childIncluded?: boolean,
     ): Promise<Result<EmployeePositionDto[]>> {
         this._logger.log('Get all positions');
-        const positions = await this.prisma.employeePosition.findMany({
+        const positions = await this.prisma.client.employeePosition.findMany({
             include: {
                 employees: childIncluded ? true : false,
                 performer: childIncluded
@@ -30,6 +30,7 @@ export class EmployeePositionsService {
                       }
                     : false,
             },
+            orderBy: { title: 'asc' },
         });
         this._logger.log(`Positions: ${JSON.stringify(positions)}`);
 
@@ -42,7 +43,7 @@ export class EmployeePositionsService {
         id: string,
         childIncluded?: boolean,
     ): Promise<Result<EmployeePositionDto>> {
-        const position = await this.prisma.employeePosition.findFirst({
+        const position = await this.prisma.client.employeePosition.findFirst({
             where: { id },
             include: {
                 employees: childIncluded ? true : false,
@@ -63,7 +64,7 @@ export class EmployeePositionsService {
         dto: EmployeePositionCreateDto,
         performBy: string | null,
     ): Promise<Result<EmployeePositionDto>> {
-        const isExist = await this.prisma.employeePosition.findFirst({
+        const isExist = await this.prisma.client.employeePosition.findFirst({
             where: { title: dto.title },
             select: { id: true },
         });
@@ -73,7 +74,7 @@ export class EmployeePositionsService {
             );
         }
 
-        const position = await this.prisma.employeePosition.create({
+        const position = await this.prisma.client.employeePosition.create({
             data: {
                 ...dto,
                 performer: performBy
@@ -89,7 +90,7 @@ export class EmployeePositionsService {
         dto: EmployeePositionUpdateDto,
         performBy: string | null,
     ): Promise<void> {
-        const isExist = await this.prisma.employeePosition.findFirst({
+        const isExist = await this.prisma.client.employeePosition.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -97,7 +98,7 @@ export class EmployeePositionsService {
             throw new NotFoundException(`No position was found with id: ${id}`);
 
         if (dto.title) {
-            const isTitleExist = await this.prisma.employeePosition.findFirst({
+            const isTitleExist = await this.prisma.client.employeePosition.findFirst({
                 where: { title: dto.title, id: { not: id } },
                 select: { id: true },
             });
@@ -107,7 +108,7 @@ export class EmployeePositionsService {
                 );
         }
 
-        await this.prisma.employeePosition.update({
+        await this.prisma.client.employeePosition.update({
             where: { id },
             data: {
                 ...dto,
@@ -122,14 +123,14 @@ export class EmployeePositionsService {
         id: string,
         performBy: string,
     ): Promise<void> {
-        const isExist = await this.prisma.employeePosition.findFirst({
+        const isExist = await this.prisma.client.employeePosition.findFirst({
             where: { id },
             select: { id: true },
         });
         if (!isExist)
             throw new NotFoundException(`No position was found with id: ${id}`);
 
-        await this.prisma.employeePosition.update({
+        await this.prisma.client.employeePosition.update({
             where: { id, isDeleted: false },
             data: {
                 isDeleted: true,

@@ -16,7 +16,7 @@ export class DepartmentsService {
         childIncluded: boolean = false,
     ): Promise<Result<DepartmentDto[]>> {
         this.logger.log('Getting all departments');
-        const departments = await this.prisma.department.findMany({
+        const departments = await this.prisma.client.department.findMany({
             include: {
                 employees: childIncluded,
                 performer: childIncluded
@@ -27,6 +27,7 @@ export class DepartmentsService {
                       }
                     : false,
             },
+            orderBy: { departmentName: 'asc' },
         });
         return Result.ok(
             departments.map((d) => plainToInstance(DepartmentDto, d)),
@@ -38,7 +39,7 @@ export class DepartmentsService {
         childIncluded: boolean = false,
     ): Promise<Result<DepartmentDto>> {
         this.logger.log('Getting department by id {departmentId}', id);
-        const department = await this.prisma.department.findFirst({
+        const department = await this.prisma.client.department.findFirst({
             where: { id },
             include: {
                 employees: childIncluded,
@@ -62,14 +63,14 @@ export class DepartmentsService {
         performBy: string,
     ): Promise<Result<DepartmentDto>> {
         this.logger.log('Creating department by user: {performBy}', performBy);
-        const isExist = await this.prisma.department.findFirst({
+        const isExist = await this.prisma.client.department.findFirst({
             where: { departmentName: dto.name },
             select: { id: true },
         });
         if (isExist) {
             return Result.fail("Department's name already exists");
         }
-        const department = await this.prisma.department.create({
+        const department = await this.prisma.client.department.create({
             data: {
                 departmentName: dto.name,
                 performer: { connect: { id: performBy } },
@@ -89,7 +90,7 @@ export class DepartmentsService {
             id,
             performBy,
         );
-        await this.prisma.department.update({
+        await this.prisma.client.department.update({
             where: { id },
             data: {
                 departmentName: dto.name,
@@ -104,7 +105,7 @@ export class DepartmentsService {
             id,
             performBy,
         );
-        await this.prisma.department.update({
+        await this.prisma.client.department.update({
             where: { id, isDeleted: false },
             data: {
                 isDeleted: true,

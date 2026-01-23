@@ -20,7 +20,7 @@ export class RolesService {
         childIncluded: boolean = false,
     ): Promise<Result<RoleDto[]>> {
         this.logger.log('Getting all roles');
-        const roles = await this.prisma.role.findMany({
+        const roles = await this.prisma.client.role.findMany({
             include: {
                 performer: childIncluded
                     ? {
@@ -43,7 +43,7 @@ export class RolesService {
         childIncluded: boolean = false,
     ): Promise<Result<RoleDto>> {
         this.logger.log('Getting role with id: {id}.', id);
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: { id },
             include: {
                 performer: childIncluded
@@ -71,7 +71,7 @@ export class RolesService {
             'Checking if role exists with name: {roleName}.',
             roleName,
         );
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: {
                 name: roleName.toUpperCase(),
                 isDeleted: false,
@@ -93,7 +93,7 @@ export class RolesService {
             return Result.fail('Role already exists!');
         }
 
-        const role = await this.prisma.role.create({
+        const role = await this.prisma.client.role.create({
             data: {
                 name: roleName.toUpperCase(),
                 performer: {
@@ -108,7 +108,7 @@ export class RolesService {
 
     async updateAsync(id: string, roleName: string, userId: string) {
         this.logger.log('Updating role with id: {id}.', id);
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -123,7 +123,7 @@ export class RolesService {
             throw new BadRequestException('Role already exists!');
         }
 
-        await this.prisma.role.update({
+        await this.prisma.client.role.update({
             where: { id },
             data: {
                 name: roleName,
@@ -139,7 +139,7 @@ export class RolesService {
     // Soft delete
     async deleteAsync(id: string, userId: string) {
         this.logger.log('Deleting role with id: {id}.', id);
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -148,7 +148,7 @@ export class RolesService {
             throw new NotFoundException('Role not found!');
         }
 
-        await this.prisma.role.update({
+        await this.prisma.client.role.update({
             where: { id },
             data: {
                 isDeleted: true,

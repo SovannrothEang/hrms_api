@@ -20,6 +20,7 @@ services:
       - PORT=3001
       - DATABASE_URL=postgresql://postgres:admin123@db:5432/hrms_db
       - WATCHPACK_POLLING=true
+      - CHOKIDAR_POLLING=1000
     develop:
       watch:
         - action: rebuild

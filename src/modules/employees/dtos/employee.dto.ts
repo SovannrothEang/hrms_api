@@ -1,15 +1,16 @@
-import { Exclude, Expose, Transform, Type } from 'class-transformer';
-import { Employee } from '@prisma/client';
+import { Exclude, Expose, plainToInstance, Transform, Type } from 'class-transformer';
+import { Employee, User } from '@prisma/client';
 import { DepartmentDto } from '../../departments/dtos/department.dto';
 import { EmployeePositionDto } from '../../employee-positions/dtos/employee-position.dto';
+import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
 
 @Exclude()
 export class EmployeeDto {
     @Expose({ name: 'id' })
     id: string;
 
-    @Expose({ name: 'employee_code' })
-    code: string;
+    @Expose({ name: 'employeeCode' })
+    employeeCode: string;
 
     @Expose({ name: 'firstname' })
     firstname: string;
@@ -36,18 +37,37 @@ export class EmployeeDto {
     })
     dateOfBirth: string;
 
+    @Expose({ name: 'user_id' })
+    userId: string;
+
+    @Expose({ name: 'user' })
+    @Transform(({ value }: { value: User }) => {
+        if (!value) return null;
+        return plainToInstance(UserDto, value);
+    })
+    user: UserDto;
+
     @Expose({ name: 'address' })
     address: string;
 
     @Expose({ name: 'phone' })
     phoneNumber: string;
 
+    @Expose({ name: 'profile_image' })
+    profileImage: string | null;
+
     @Expose({ name: 'hire_date' })
     hireDate: Date;
+
+    @Expose({ name: 'position_id' })
+    positionId: string;
 
     @Expose({ name: 'position' })
     @Type(() => EmployeePositionDto)
     position: EmployeePositionDto;
+
+    @Expose({ name: 'department_id' })
+    departmentId: string;
 
     @Expose({ name: 'department' })
     @Type(() => DepartmentDto)

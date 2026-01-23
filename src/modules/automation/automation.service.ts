@@ -16,7 +16,7 @@ export class AutomationService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const activeAttendances = await this.prisma.attendance.findMany({
+        const activeAttendances = await this.prisma.client.attendance.findMany({
             where: {
                 date: today,
                 checkOutTime: null,
@@ -24,7 +24,7 @@ export class AutomationService {
         });
 
         for (const attendance of activeAttendances) {
-            await this.prisma.attendance.update({
+            await this.prisma.client.attendance.update({
                 where: { id: attendance.id },
                 data: {
                     status: AttendanceStatus.DID_NOT_CHECKOUT,
@@ -47,13 +47,13 @@ export class AutomationService {
         today.setHours(0, 0, 0, 0);
 
         // Find all active employees
-        const employees = await this.prisma.employee.findMany({
+        const employees = await this.prisma.client.employee.findMany({
             where: { isActive: true },
         });
 
         for (const employee of employees) {
             // Check if attendance exists
-            const attendance = await this.prisma.attendance.findFirst({
+            const attendance = await this.prisma.client.attendance.findFirst({
                 where: {
                     employeeId: employee.id,
                     date: today,
@@ -61,7 +61,7 @@ export class AutomationService {
             });
 
             // Check if on leave
-            const onLeave = await this.prisma.leaveRequest.findFirst({
+            const onLeave = await this.prisma.client.leaveRequest.findFirst({
                 where: {
                     employeeId: employee.id,
                     startDate: { lte: today },
@@ -71,7 +71,7 @@ export class AutomationService {
             });
 
             if (!attendance && !onLeave) {
-                await this.prisma.attendance.create({
+                await this.prisma.client.attendance.create({
                     data: {
                         employeeId: employee.id,
                         date: today,

@@ -18,12 +18,12 @@ export class TaxBracketsService {
     ): Promise<Result<TaxBracketDto>> {
         try {
             // Validate Currency Existence
-            const currency = await this.prisma.currency.findUnique({
+            const currency = await this.prisma.client.currency.findUnique({
                 where: { code: dto.currencyCode },
             });
             if (!currency) return Result.fail('Invalid Currency Code');
 
-            const newValue = await this.prisma.taxBracket.create({
+            const newValue = await this.prisma.client.taxBracket.create({
                 data: {
                     ...dto,
                     performBy: userId,
@@ -48,11 +48,13 @@ export class TaxBracketsService {
             if (countryCode) whereClause.countryCode = countryCode;
             if (year) whereClause.taxYear = year;
 
-            const values = await this.prisma.taxBracket.findMany({
+            const values = await this.prisma.client.taxBracket.findMany({
                 where: whereClause,
                 orderBy: { minAmount: 'asc' },
             });
-            return Result.ok(plainToInstance(TaxBracketDto, values));
+            return Result.ok(
+                values.map((v) => plainToInstance(TaxBracketDto, v)),
+            );
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch tax brackets');
@@ -61,12 +63,12 @@ export class TaxBracketsService {
 
     async deleteAsync(id: string, userId: string): Promise<Result<void>> {
         try {
-            const exists = await this.prisma.taxBracket.findUnique({
+            const exists = await this.prisma.client.taxBracket.findUnique({
                 where: { id, isDeleted: false },
             });
             if (!exists) return Result.fail('Tax bracket not found');
 
-            await this.prisma.taxBracket.update({
+            await this.prisma.client.taxBracket.update({
                 where: { id },
                 data: {
                     isDeleted: true,

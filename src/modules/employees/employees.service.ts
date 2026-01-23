@@ -12,14 +12,14 @@ import { Logger } from '@nestjs/common';
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService) { }
 
     async createAsync(
         dto: EmployeeCreateDto,
         performerId: string,
     ): Promise<Result<EmployeeDto>> {
         // Validate unqiue checks (username, email, code)
-        const check = await this.prisma.user.findFirst({
+        const check = await this.prisma.client.user.findFirst({
             where: {
                 OR: [{ username: dto.username }, { email: dto.email }],
             },
@@ -27,15 +27,16 @@ export class EmployeesService {
         });
         if (check) return Result.fail('Username or Email already exists');
 
-        const codeCheck = await this.prisma.employee.findUnique({
+        const codeCheck = await this.prisma.client.employee.findUnique({
             where: { employeeCode: dto.employeeCode },
             select: { id: true },
         });
         if (codeCheck) return Result.fail('Employee Code already exists');
 
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
+        const defaultPassword = "Employee123!";
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: {
                 name: dto.roleName.toUpperCase(),
                 isDeleted: false,
@@ -47,7 +48,7 @@ export class EmployeesService {
         if (!role) return Result.fail('Role not found');
 
         try {
-            const employee = await this.prisma.$transaction(async (tx) => {
+            const employee = await this.prisma.client.$transaction(async (tx) => {
                 // 1. Create User
                 const user = await tx.user.create({
                     data: {
@@ -99,20 +100,24 @@ export class EmployeesService {
         childIncluded?: boolean,
     ): Promise<Result<EmployeeDto[]>> {
         this.logger.log('Finding all employees');
-        const employees = await this.prisma.employee.findMany({
+        const employees = await this.prisma.client.employee.findMany({
             include: {
                 department: true,
                 position: true,
+                user: {
+                    include: { userRoles: { include: { role: true } } }
+                },
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
+            orderBy: { employeeCode: 'asc' },
         });
         return Result.ok(employees.map((e) => plainToInstance(EmployeeDto, e)));
     }
@@ -121,20 +126,21 @@ export class EmployeesService {
         id: string,
         childIncluded?: boolean,
     ): Promise<Result<EmployeeDto>> {
-        const employee = await this.prisma.employee.findFirst({
+        const employee = await this.prisma.client.employee.findFirst({
             where: { id },
             include: {
                 department: true,
                 position: true,
+                user: { include: { userRoles: { include: { role: true } } } },
                 manager: true,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });
@@ -147,13 +153,13 @@ export class EmployeesService {
         dto: EmployeeUpdateDto,
         performerId: string,
     ): Promise<Result<EmployeeDto>> {
-        const employee = await this.prisma.employee.findFirst({
+        const employee = await this.prisma.client.employee.findFirst({
             where: { id },
             select: { id: true }
         });
         if (!employee) return Result.fail('Employee not found');
 
-        const updated = await this.prisma.employee.update({
+        const updated = await this.prisma.client.employee.update({
             where: { id },
             data: {
                 ...dto,
@@ -170,7 +176,7 @@ export class EmployeesService {
 
     async deleteAsync(id: string, performerId: string): Promise<Result<void>> {
         // Check if employee exists
-        const check = await this.prisma.employee.findFirst({
+        const check = await this.prisma.client.employee.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -178,7 +184,7 @@ export class EmployeesService {
 
         // Optional: Check dependencies (e.g. payrolls) before delete
 
-        await this.prisma.employee.update({
+        await this.prisma.client.employee.update({
             where: { id, isDeleted: false },
             data: {
                 isDeleted: true,

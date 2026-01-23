@@ -20,7 +20,7 @@ export class LeavesService {
     async findAllAsync(
         childIncluded?: boolean,
     ): Promise<Result<LeaveRequestDto[]>> {
-        const leaves = await this.prisma.leaveRequest.findMany({
+        const leaves = await this.prisma.client.leaveRequest.findMany({
             include: {
                 requester: childIncluded
                     ? { include: { department: true } }
@@ -52,8 +52,8 @@ export class LeavesService {
         const whereClause = employeeId ? { employeeId } : {};
 
         const [total, leaves] = await Promise.all([
-            this.prisma.leaveRequest.count({ where: whereClause }),
-            this.prisma.leaveRequest.findMany({
+            this.prisma.client.leaveRequest.count({ where: whereClause }),
+            this.prisma.client.leaveRequest.findMany({
                 where: whereClause,
                 skip,
                 take: limit,
@@ -84,7 +84,7 @@ export class LeavesService {
         id: string,
         childIncluded?: boolean,
     ): Promise<Result<LeaveRequestDto>> {
-        const leave = await this.prisma.leaveRequest.findFirst({
+        const leave = await this.prisma.client.leaveRequest.findFirst({
             where: { id },
             include: {
                 requester: childIncluded
@@ -127,7 +127,7 @@ export class LeavesService {
         const year = startDate.getFullYear();
 
         // 1. Check overlap
-        const overlaps = await this.prisma.leaveRequest.findFirst({
+        const overlaps = await this.prisma.client.leaveRequest.findFirst({
             where: {
                 employeeId: dto.employeeId,
                 status: { not: LeaveStatus.REJECTED },
@@ -152,7 +152,7 @@ export class LeavesService {
 
         // 3. Transaction: Check Balance & Create Request
         try {
-            const leave = await this.prisma.$transaction(async (tx) => {
+            const leave = await this.prisma.client.$transaction(async (tx) => {
                 // Find or Create Balance Record
                 let balance = await tx.leaveBalance.findUnique({
                     where: {
@@ -236,7 +236,7 @@ export class LeavesService {
         dto: LeaveRequestStatusUpdateDto,
         performerId?: string,
     ): Promise<Result<LeaveRequestDto>> {
-        const leave = await this.prisma.leaveRequest.findUnique({
+        const leave = await this.prisma.client.leaveRequest.findUnique({
             where: { id },
         });
 
@@ -254,7 +254,7 @@ export class LeavesService {
         const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
         try {
-            const updatedLeave = await this.prisma.$transaction(async (tx) => {
+            const updatedLeave = await this.prisma.client.$transaction(async (tx) => {
                 // Update Balance based on Decision
                 if (dto.status === (LeaveStatus.APPROVED as any)) {
                     // Move from Pending to Used
@@ -310,7 +310,7 @@ export class LeavesService {
     }
 
     async deleteAsync(id: string): Promise<Result<void>> {
-        const leave = await this.prisma.leaveRequest.findUnique({
+        const leave = await this.prisma.client.leaveRequest.findUnique({
             where: { id },
         });
 
@@ -325,7 +325,7 @@ export class LeavesService {
         const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
         try {
-            await this.prisma.$transaction(async (tx) => {
+            await this.prisma.client.$transaction(async (tx) => {
                 // Restore Pending Balance
                 await tx.leaveBalance.updateMany({
                     where: {

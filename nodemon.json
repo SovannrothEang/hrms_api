@@ -1,0 +1,11 @@
+{
+  "watch": ["src"],
+  "ext": "ts",
+  "ignore": ["src/**/*.spec.ts"],
+  "exec": "nest start",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "legacy-watch": true,
+  "polling": 1000
+}

@@ -11,6 +11,7 @@ import {
     Post,
     Query,
     BadRequestException,
+    NotFoundException,
 } from '@nestjs/common';
 import {
     ApiOperation,
@@ -41,7 +42,8 @@ export class EmployeesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.employeesService.findAllAsync(childIncluded);
+        const result = await this.employeesService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')
@@ -55,7 +57,10 @@ export class EmployeesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.employeesService.findOneByIdAsync(id, childIncluded);
+        const result = await this.employeesService.findOneByIdAsync(id, childIncluded);
+        if (!result.isSuccess)
+            throw new NotFoundException(result.error);
+        return result.getData();
     }
 
     @Post()
@@ -95,9 +100,8 @@ export class EmployeesController {
             performerId,
         );
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new NotFoundException(result.error);
         }
-        return result.getData();
     }
 
     @Delete(':id')
@@ -112,7 +116,7 @@ export class EmployeesController {
     ) {
         const result = await this.employeesService.deleteAsync(id, performerId);
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new NotFoundException(result.error);
         }
     }
 }

@@ -1,6 +1,7 @@
 .idea
 .vs
 .pnpm-store
+docs/
 
 # compiled output
 /dist

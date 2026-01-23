@@ -13,7 +13,7 @@ export class PublicHolidaysService {
         dto: CreatePublicHolidayDto,
         performBy: string,
     ): Promise<Result<PublicHolidayDto>> {
-        const holiday = await this.prisma.publicHoliday.create({
+        const holiday = await this.prisma.client.publicHoliday.create({
             data: {
                 name: dto.name,
                 date: dto.date,
@@ -25,7 +25,7 @@ export class PublicHolidaysService {
     }
 
     async findAllAsync(): Promise<Result<PublicHolidayDto[]>> {
-        const holidays = await this.prisma.publicHoliday.findMany({
+        const holidays = await this.prisma.client.publicHoliday.findMany({
             where: { isDeleted: false },
             orderBy: { date: 'asc' },
         });
@@ -35,7 +35,7 @@ export class PublicHolidaysService {
     }
 
     async findOneByIdAsync(id: string): Promise<Result<PublicHolidayDto>> {
-        const holiday = await this.prisma.publicHoliday.findUnique({
+        const holiday = await this.prisma.client.publicHoliday.findUnique({
             where: { id },
         });
         if (!holiday || holiday.isDeleted)
@@ -44,13 +44,13 @@ export class PublicHolidaysService {
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {
-        const holiday = await this.prisma.publicHoliday.findUnique({
+        const holiday = await this.prisma.client.publicHoliday.findUnique({
             where: { id },
         });
         if (!holiday || holiday.isDeleted)
             return Result.fail('Holiday not found');
 
-        await this.prisma.publicHoliday.update({
+        await this.prisma.client.publicHoliday.update({
             where: { id },
             data: { isDeleted: true, performBy },
         });

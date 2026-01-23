@@ -12,7 +12,7 @@ export class AttendancesService {
     async findAllAsync(
         childIncluded?: boolean,
     ): Promise<Result<AttendanceDto[]>> {
-        const attendances = await this.prisma.attendance.findMany({
+        const attendances = await this.prisma.client.attendance.findMany({
             include: {
                 performer: childIncluded
                     ? {
@@ -42,7 +42,7 @@ export class AttendancesService {
         id: string,
         childIncluded?: boolean,
     ): Promise<Result<AttendanceDto>> {
-        const attendance = await this.prisma.attendance.findFirst({
+        const attendance = await this.prisma.client.attendance.findFirst({
             where: { id },
             include: {
                 performer: childIncluded
@@ -75,7 +75,7 @@ export class AttendancesService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const existingAttendance = await this.prisma.attendance.findFirst({
+        const existingAttendance = await this.prisma.client.attendance.findFirst({
             where: {
                 employeeId: dto.employeeId,
                 date: today,
@@ -87,7 +87,7 @@ export class AttendancesService {
         }
 
         // Fetch employee to get shift details
-        const employee = await this.prisma.employee.findFirst({
+        const employee = await this.prisma.client.employee.findFirst({
             where: { id: dto.employeeId },
             include: { shift: true },
         });
@@ -126,7 +126,7 @@ export class AttendancesService {
             if (now > startWorkTime) status = AttendanceStatus.LATE;
         }
 
-        const attendance = await this.prisma.attendance.create({
+        const attendance = await this.prisma.client.attendance.create({
             data: {
                 employeeId: dto.employeeId,
                 date: today,
@@ -147,7 +147,7 @@ export class AttendancesService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const attendance = await this.prisma.attendance.findFirst({
+        const attendance = await this.prisma.client.attendance.findFirst({
             where: {
                 employeeId: dto.employeeId,
                 date: today,
@@ -164,7 +164,7 @@ export class AttendancesService {
             return Result.fail('Employee has already checked out for today.');
         }
 
-        const updatedAttendance = await this.prisma.attendance.update({
+        const updatedAttendance = await this.prisma.client.attendance.update({
             where: { id: attendance.id },
             data: {
                 checkOutTime: new Date(),

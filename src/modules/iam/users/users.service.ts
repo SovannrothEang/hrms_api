@@ -22,7 +22,7 @@ export class UsersService {
 
     async findAllAsync() {
         this.logger.log('Getting all users');
-        const users = await this.prisma.user.findMany({
+        const users = await this.prisma.client.user.findMany({
             include: {
                 userRoles: {
                     include: {
@@ -36,7 +36,7 @@ export class UsersService {
 
     async findOneByIdAsync(userId: string): Promise<Result<UserDto>> {
         this.logger.log('Getting user with {id}.', userId);
-        const user = await this.prisma.user.findFirst({
+        const user = await this.prisma.client.user.findFirst({
             where: { id: userId },
             include: {
                 userRoles: { include: { role: true } },
@@ -68,7 +68,7 @@ export class UsersService {
             return false;
         }
 
-        const user = await this.prisma.user.findFirst({
+        const user = await this.prisma.client.user.findFirst({
             where: {
                 OR: conditions,
                 ...(excludeId ? { id: { not: excludeId } } : {}),
@@ -88,7 +88,7 @@ export class UsersService {
             dto.username,
             dto.email,
         );
-        const role = await this.prisma.role.findFirst({
+        const role = await this.prisma.client.role.findFirst({
             where: { name: roleName.toUpperCase(), isActive: true },
         });
         if (!role) {
@@ -103,7 +103,7 @@ export class UsersService {
         }
 
         const hashedPassword = await bcrypt.hash(dto.password, 12);
-        const user = await this.prisma.user.create({
+        const user = await this.prisma.client.user.create({
             data: {
                 email: dto.email,
                 username: dto.username,
@@ -124,7 +124,7 @@ export class UsersService {
 
     async updateAsync(id: string, dto: UserUpdateDto): Promise<void> {
         this.logger.log('Update user with id: {id}.', id);
-        const user = await this.prisma.user.findFirst({
+        const user = await this.prisma.client.user.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -146,7 +146,7 @@ export class UsersService {
             throw new BadRequestException('Username or Email already exists!');
         }
 
-        await this.prisma.user.update({
+        await this.prisma.client.user.update({
             where: { id, isDeleted: false },
             data: {
                 email: dto.email,
@@ -156,7 +156,7 @@ export class UsersService {
     }
 
     async deleteAsync(id: string): Promise<void> {
-        const user = await this.prisma.user.findFirst({
+        const user = await this.prisma.client.user.findFirst({
             where: { id },
             select: { id: true },
         });
@@ -164,7 +164,7 @@ export class UsersService {
             throw new NotFoundException('User not found!');
         }
 
-        await this.prisma.user.update({
+        await this.prisma.client.user.update({
             where: { id, isDeleted: false },
             data: {
                 isDeleted: true,

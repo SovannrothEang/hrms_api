@@ -11,7 +11,7 @@ export class ReportsService {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59);
 
-        const summary = await this.prisma.attendance.groupBy({
+        const summary = await this.prisma.client.attendance.groupBy({
             by: ['status'],
             where: {
                 date: { gte: startDate, lte: endDate },
@@ -26,7 +26,7 @@ export class ReportsService {
     }
 
     async getLeaveUtilizationData() {
-        const balances = await this.prisma.leaveBalance.findMany({
+        const balances = await this.prisma.client.leaveBalance.findMany({
             include: {
                 employee: {
                     select: {
@@ -58,8 +58,8 @@ export class ReportsService {
     async getPaginatedLeaveUtilization(page: number, limit: number) {
         const skip = (page - 1) * limit;
         const [total, balances] = await Promise.all([
-            this.prisma.leaveBalance.count(),
-            this.prisma.leaveBalance.findMany({
+            this.prisma.client.leaveBalance.count(),
+            this.prisma.client.leaveBalance.findMany({
                 skip,
                 take: limit,
                 include: {

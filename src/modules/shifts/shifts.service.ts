@@ -18,7 +18,7 @@ export class ShiftsService {
         // Best practice: Store as Date object with fixed date part.
         const baseDate = '1970-01-01T';
 
-        const shift = await this.prisma.shift.create({
+        const shift = await this.prisma.client.shift.create({
             data: {
                 name: dto.name,
                 startTime: new Date(`${baseDate}${dto.startTime}:00Z`), // UTC? Or ISO
@@ -33,14 +33,14 @@ export class ShiftsService {
     }
 
     async findAllAsync(): Promise<Result<ShiftDto[]>> {
-        const shifts = await this.prisma.shift.findMany({
+        const shifts = await this.prisma.client.shift.findMany({
             where: { isDeleted: false },
         });
         return Result.ok(shifts.map((s) => plainToInstance(ShiftDto, s)));
     }
 
     async findOneByIdAsync(id: string): Promise<Result<ShiftDto>> {
-        const shift = await this.prisma.shift.findUnique({
+        const shift = await this.prisma.client.shift.findUnique({
             where: { id },
         });
         if (!shift || shift.isDeleted) return Result.fail('Shift not found');
@@ -48,10 +48,10 @@ export class ShiftsService {
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {
-        const shift = await this.prisma.shift.findUnique({ where: { id } });
+        const shift = await this.prisma.client.shift.findUnique({ where: { id } });
         if (!shift || shift.isDeleted) return Result.fail('Shift not found');
 
-        await this.prisma.shift.update({
+        await this.prisma.client.shift.update({
             where: { id },
             data: { isDeleted: true, performBy },
         });

@@ -21,7 +21,7 @@ export class AuthService {
     async signInAsync(email: string, password: string): Promise<Result<{ token: string }>> {
         this.logger.log('Signing in user with {email}.', email);
 
-        const user = await this.prisma.user.findFirst({
+        const user = await this.prisma.client.user.findFirst({
             where: { email, isActive: true },
             include: {
                 userRoles: {
@@ -61,7 +61,7 @@ export class AuthService {
     async registerAsync(dto: RegisterDto): Promise<Result<UserDto>> {
         this.logger.log('Registering user with {email}.', dto.email);
 
-        const isEmailExist = await this.prisma.user.findFirst({
+        const isEmailExist = await this.prisma.client.user.findFirst({
             where: { email: dto.email },
         });
         if (isEmailExist) {
@@ -69,7 +69,7 @@ export class AuthService {
             return Result.fail('Credentials is already registered!');
         }
 
-        const isUserNameExist = await this.prisma.user.findFirst({
+        const isUserNameExist = await this.prisma.client.user.findFirst({
             where: { username: dto.username },
         });
         if (isUserNameExist) {

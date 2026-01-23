@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsOptional, IsString } from 'class-validator';
 
 // Omit user account details as they updated separately or not at all here
@@ -15,11 +16,17 @@ export class EmployeeUpdateDto {
 
     @ApiProperty({ required: false })
     @IsOptional()
+    @IsString()
+    profileImage?: string | null;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
     gender?: number;
 
     @ApiProperty({ required: false })
     @IsOptional()
-    dob?: string;
+    @Type(() => Date)
+    dob?: Date;
 
     @ApiProperty({ required: false })
     @IsOptional()

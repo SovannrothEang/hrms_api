@@ -44,7 +44,7 @@ export class PayrollsService {
             }
 
             // 2. Fetch Employee with position and tax config
-            const employee = await this.prisma.employee.findUnique({
+            const employee = await this.prisma.client.employee.findUnique({
                 where: { id: dto.employeeId, isDeleted: false },
                 include: {
                     position: true,
@@ -57,7 +57,7 @@ export class PayrollsService {
             }
 
             // 3. Validate currency
-            const currency = await this.prisma.currency.findUnique({
+            const currency = await this.prisma.client.currency.findUnique({
                 where: { code: dto.currencyCode, isDeleted: false },
             });
             if (!currency) {
@@ -90,7 +90,7 @@ export class PayrollsService {
                 const currentYear = new Date().getFullYear();
                 const taxCountry = taxConfig?.taxCountry ?? 'KH'; // Default to Cambodia
 
-                const bracket = await this.prisma.taxBracket.findFirst({
+                const bracket = await this.prisma.client.taxBracket.findFirst({
                     where: {
                         countryCode: taxCountry,
                         taxYear: currentYear,
@@ -121,107 +121,109 @@ export class PayrollsService {
             const netSalary = grossIncome.minus(totalDeductions);
 
             // 7. Create Payroll record with items using transaction
-            const payroll = await this.prisma.$transaction(async (tx) => {
-                const newPayroll = await tx.payroll.create({
-                    data: {
-                        employeeId: dto.employeeId,
-                        currencyCode: dto.currencyCode,
-                        payPeriodStart: periodStart,
-                        payPeriodEnd: periodEnd,
-                        basicSalary: basicSalary,
-                        overtimeHrs: overtimeHours,
-                        overtimeRate: overtimeRate,
-                        bonus: bonus,
-                        deductions: deductions,
-                        netSalary: netSalary,
-                        status: PayrollStatus.PENDING,
-                        performBy,
-                    },
-                });
-
-                // Create PayrollItems
-                const itemsData = [
-                    {
-                        payrollId: newPayroll.id,
-                        currencyCode: dto.currencyCode,
-                        itemType: PayrollItemType.EARNING,
-                        itemName: 'Basic Salary',
-                        amount: basicSalary,
-                        description: 'Monthly base salary',
-                        performBy,
-                    },
-                ];
-
-                if (overtimePay.greaterThan(0)) {
-                    itemsData.push({
-                        payrollId: newPayroll.id,
-                        currencyCode: dto.currencyCode,
-                        itemType: PayrollItemType.EARNING,
-                        itemName: 'Overtime',
-                        amount: overtimePay,
-                        description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
-                        performBy,
-                    });
-                }
-
-                if (bonus.greaterThan(0)) {
-                    itemsData.push({
-                        payrollId: newPayroll.id,
-                        currencyCode: dto.currencyCode,
-                        itemType: PayrollItemType.EARNING,
-                        itemName: 'Bonus',
-                        amount: bonus,
-                        description: 'Performance bonus',
-                        performBy,
-                    });
-                }
-
-                if (taxAmount.greaterThan(0)) {
-                    itemsData.push({
-                        payrollId: newPayroll.id,
-                        currencyCode: dto.currencyCode,
-                        itemType: PayrollItemType.DEDUCTION,
-                        itemName: 'Tax',
-                        amount: taxAmount,
-                        description: `Tax rate: ${taxRateUsed.times(100).toFixed(2)}%`,
-                        performBy,
-                    });
-                }
-
-                if (deductions.greaterThan(0)) {
-                    itemsData.push({
-                        payrollId: newPayroll.id,
-                        currencyCode: dto.currencyCode,
-                        itemType: PayrollItemType.DEDUCTION,
-                        itemName: 'Other Deductions',
-                        amount: deductions,
-                        description: 'Additional deductions',
-                        performBy,
-                    });
-                }
-
-                await tx.payrollItems.createMany({ data: itemsData });
-
-                // Create TaxCalculation snapshot if tax was applied
-                if (taxBracketId) {
-                    await tx.taxCalculation.create({
+            const payroll = await this.prisma.client.$transaction(
+                async (tx) => {
+                    const newPayroll = await tx.payroll.create({
                         data: {
-                            payrollId: newPayroll.id,
                             employeeId: dto.employeeId,
-                            taxBracketId: taxBracketId,
-                            taxPeriodStart: periodStart,
-                            taxPeriodEnd: periodEnd,
-                            grossIncome: grossIncome,
-                            taxableIncome: grossIncome, // Simplified: taxable = gross
-                            taxAmount: taxAmount,
-                            taxRateUsed: taxRateUsed,
+                            currencyCode: dto.currencyCode,
+                            payPeriodStart: periodStart,
+                            payPeriodEnd: periodEnd,
+                            basicSalary: basicSalary,
+                            overtimeHrs: overtimeHours,
+                            overtimeRate: overtimeRate,
+                            bonus: bonus,
+                            deductions: deductions,
+                            netSalary: netSalary,
+                            status: PayrollStatus.PENDING,
                             performBy,
                         },
                     });
-                }
 
-                return newPayroll;
-            });
+                    // Create PayrollItems
+                    const itemsData = [
+                        {
+                            payrollId: newPayroll.id,
+                            currencyCode: dto.currencyCode,
+                            itemType: PayrollItemType.EARNING,
+                            itemName: 'Basic Salary',
+                            amount: basicSalary,
+                            description: 'Monthly base salary',
+                            performBy,
+                        },
+                    ];
+
+                    if (overtimePay.greaterThan(0)) {
+                        itemsData.push({
+                            payrollId: newPayroll.id,
+                            currencyCode: dto.currencyCode,
+                            itemType: PayrollItemType.EARNING,
+                            itemName: 'Overtime',
+                            amount: overtimePay,
+                            description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
+                            performBy,
+                        });
+                    }
+
+                    if (bonus.greaterThan(0)) {
+                        itemsData.push({
+                            payrollId: newPayroll.id,
+                            currencyCode: dto.currencyCode,
+                            itemType: PayrollItemType.EARNING,
+                            itemName: 'Bonus',
+                            amount: bonus,
+                            description: 'Performance bonus',
+                            performBy,
+                        });
+                    }
+
+                    if (taxAmount.greaterThan(0)) {
+                        itemsData.push({
+                            payrollId: newPayroll.id,
+                            currencyCode: dto.currencyCode,
+                            itemType: PayrollItemType.DEDUCTION,
+                            itemName: 'Tax',
+                            amount: taxAmount,
+                            description: `Tax rate: ${taxRateUsed.times(100).toFixed(2)}%`,
+                            performBy,
+                        });
+                    }
+
+                    if (deductions.greaterThan(0)) {
+                        itemsData.push({
+                            payrollId: newPayroll.id,
+                            currencyCode: dto.currencyCode,
+                            itemType: PayrollItemType.DEDUCTION,
+                            itemName: 'Other Deductions',
+                            amount: deductions,
+                            description: 'Additional deductions',
+                            performBy,
+                        });
+                    }
+
+                    await tx.payrollItems.createMany({ data: itemsData });
+
+                    // Create TaxCalculation snapshot if tax was applied
+                    if (taxBracketId) {
+                        await tx.taxCalculation.create({
+                            data: {
+                                payrollId: newPayroll.id,
+                                employeeId: dto.employeeId,
+                                taxBracketId: taxBracketId,
+                                taxPeriodStart: periodStart,
+                                taxPeriodEnd: periodEnd,
+                                grossIncome: grossIncome,
+                                taxableIncome: grossIncome, // Simplified: taxable = gross
+                                taxAmount: taxAmount,
+                                taxRateUsed: taxRateUsed,
+                                performBy,
+                            },
+                        });
+                    }
+
+                    return newPayroll;
+                },
+            );
 
             // Fetch complete payroll with relations
             return this.findByIdAsync(payroll.id);
@@ -239,7 +241,7 @@ export class PayrollsService {
         performBy: string,
     ): Promise<Result<PayrollDto>> {
         try {
-            const payroll = await this.prisma.payroll.findUnique({
+            const payroll = await this.prisma.client.payroll.findUnique({
                 where: { id, isDeleted: false },
             });
 
@@ -253,7 +255,7 @@ export class PayrollsService {
                 );
             }
 
-            await this.prisma.payroll.update({
+            await this.prisma.client.payroll.update({
                 where: { id },
                 data: {
                     status: PayrollStatus.PROCESSED,
@@ -274,7 +276,7 @@ export class PayrollsService {
      */
     async findByIdAsync(id: string): Promise<Result<PayrollDto>> {
         try {
-            const payroll = await this.prisma.payroll.findUnique({
+            const payroll = await this.prisma.client.payroll.findUnique({
                 where: { id, isDeleted: false },
                 include: {
                     items: {
@@ -328,7 +330,7 @@ export class PayrollsService {
                 };
             }
 
-            const payrolls = await this.prisma.payroll.findMany({
+            const payrolls = await this.prisma.client.payroll.findMany({
                 where,
                 include: {
                     items: {
@@ -340,9 +342,11 @@ export class PayrollsService {
             });
 
             return Result.ok(
-                plainToInstance(PayrollDto, payrolls, {
-                    excludeExtraneousValues: true,
-                }),
+                payrolls.map((p) =>
+                    plainToInstance(PayrollDto, p, {
+                        excludeExtraneousValues: true,
+                    }),
+                ),
             );
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
@@ -355,7 +359,7 @@ export class PayrollsService {
      */
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {
         try {
-            const payroll = await this.prisma.payroll.findUnique({
+            const payroll = await this.prisma.client.payroll.findUnique({
                 where: { id, isDeleted: false },
             });
 
@@ -367,7 +371,7 @@ export class PayrollsService {
                 return Result.fail('Only PENDING payrolls can be deleted');
             }
 
-            await this.prisma.payroll.update({
+            await this.prisma.client.payroll.update({
                 where: { id },
                 data: {
                     isDeleted: true,
