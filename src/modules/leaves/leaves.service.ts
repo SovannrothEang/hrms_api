@@ -254,45 +254,47 @@ export class LeavesService {
         const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
         try {
-            const updatedLeave = await this.prisma.client.$transaction(async (tx) => {
-                // Update Balance based on Decision
-                if (dto.status === (LeaveStatus.APPROVED as any)) {
-                    // Move from Pending to Used
-                    await tx.leaveBalance.updateMany({
-                        where: {
-                            employeeId: leave.employeeId,
-                            leaveType: leave.leaveType,
-                            year: year,
-                        },
-                        data: {
-                            pendingDays: { decrement: requestedDays },
-                            usedDays: { increment: requestedDays },
-                        },
-                    });
-                } else if (dto.status === (LeaveStatus.REJECTED as any)) {
-                    // Return from Pending (free up)
-                    await tx.leaveBalance.updateMany({
-                        where: {
-                            employeeId: leave.employeeId,
-                            leaveType: leave.leaveType,
-                            year: year,
-                        },
-                        data: {
-                            pendingDays: { decrement: requestedDays },
-                        },
-                    });
-                }
+            const updatedLeave = await this.prisma.client.$transaction(
+                async (tx) => {
+                    // Update Balance based on Decision
+                    if (dto.status === (LeaveStatus.APPROVED as any)) {
+                        // Move from Pending to Used
+                        await tx.leaveBalance.updateMany({
+                            where: {
+                                employeeId: leave.employeeId,
+                                leaveType: leave.leaveType,
+                                year: year,
+                            },
+                            data: {
+                                pendingDays: { decrement: requestedDays },
+                                usedDays: { increment: requestedDays },
+                            },
+                        });
+                    } else if (dto.status === (LeaveStatus.REJECTED as any)) {
+                        // Return from Pending (free up)
+                        await tx.leaveBalance.updateMany({
+                            where: {
+                                employeeId: leave.employeeId,
+                                leaveType: leave.leaveType,
+                                year: year,
+                            },
+                            data: {
+                                pendingDays: { decrement: requestedDays },
+                            },
+                        });
+                    }
 
-                return await tx.leaveRequest.update({
-                    where: { id },
-                    data: {
-                        status: dto.status,
-                        approvedBy: dto.approverId,
-                        performBy: performerId,
-                    },
-                    include: { requester: true, approver: true },
-                });
-            });
+                    return await tx.leaveRequest.update({
+                        where: { id },
+                        data: {
+                            status: dto.status,
+                            approvedBy: dto.approverId,
+                            performBy: performerId,
+                        },
+                        include: { requester: true, approver: true },
+                    });
+                },
+            );
 
             // Notify Employee of decision
             this.emailService.sendLeaveStatusUpdateNotification(

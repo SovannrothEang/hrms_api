@@ -366,7 +366,19 @@ export class PayrollsService {
             year?: number;
             month?: number;
         },
-    ): Promise<Result<any>> {
+    ): Promise<
+        Result<{
+            data: PayrollDto[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+                hasNext: boolean;
+                hasPrevious: boolean;
+            };
+        }>
+    > {
         try {
             const skip = (page - 1) * limit;
             const where: Prisma.PayrollWhereInput = { isDeleted: false };

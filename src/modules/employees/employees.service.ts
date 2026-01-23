@@ -129,7 +129,19 @@ export class EmployeesService {
         page: number,
         limit: number,
         childIncluded?: boolean,
-    ): Promise<Result<any>> {
+    ): Promise<
+        Result<{
+            data: EmployeeDto[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+                hasNext: boolean;
+                hasPrevious: boolean;
+            };
+        }>
+    > {
         const skip = (page - 1) * limit;
 
         const [employees, total] = await this.prisma.$transaction([

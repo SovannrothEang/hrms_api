@@ -98,10 +98,11 @@ export class EmployeePositionsService {
             throw new NotFoundException(`No position was found with id: ${id}`);
 
         if (dto.title) {
-            const isTitleExist = await this.prisma.client.employeePosition.findFirst({
-                where: { title: dto.title, id: { not: id } },
-                select: { id: true },
-            });
+            const isTitleExist =
+                await this.prisma.client.employeePosition.findFirst({
+                    where: { title: dto.title, id: { not: id } },
+                    select: { id: true },
+                });
             if (isTitleExist)
                 throw new BadRequestException(
                     `Position with title: ${dto.title} already exists.`,

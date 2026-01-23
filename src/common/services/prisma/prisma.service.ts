@@ -5,22 +5,24 @@ import { PrismaPg } from '@prisma/adapter-pg';
 
 interface SoftDeleteCapable {
     [model: string]: {
-        delete: (args: any) => Promise<any>;
-        deleteMany: (args: any) => Promise<any>;
-        update: (args: any) => Promise<any>;
-        updateMany: (args: any) => Promise<any>;
-        findFirst: (args: any) => Promise<any>;
-        findMany: (args: any) => Promise<any>;
-        findUnique: (args: any) => Promise<any>;
+        delete: (args: unknown) => Promise<unknown>;
+        deleteMany: (args: unknown) => Promise<unknown>;
+        update: (args: unknown) => Promise<unknown>;
+        updateMany: (args: unknown) => Promise<unknown>;
+        findFirst: (args: unknown) => Promise<unknown>;
+        findMany: (args: unknown) => Promise<unknown>;
+        findUnique: (args: unknown) => Promise<unknown>;
     };
 }
+
+type ExtendedPrismaClient = ReturnType<PrismaService['setupSoftDelete']>;
 
 @Injectable()
 export class PrismaService
     extends PrismaClient
     implements OnModuleInit, OnModuleDestroy
 {
-    private readonly _extendedClient: any;
+    private readonly _extendedClient: ExtendedPrismaClient;
 
     constructor() {
         const connectionString = process.env.DATABASE_URL || '';
@@ -30,7 +32,7 @@ export class PrismaService
         this._extendedClient = this.setupSoftDelete();
     }
 
-    get client(): any {
+    get client(): ExtendedPrismaClient {
         return this._extendedClient;
     }
 
@@ -42,7 +44,7 @@ export class PrismaService
         await this.$disconnect();
     }
 
-    private setupSoftDelete(): any {
+    private setupSoftDelete() {
         const softDeleteModels: string[] = [
             'User',
             'Employee',

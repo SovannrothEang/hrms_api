@@ -48,7 +48,9 @@ export class ShiftsService {
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {
-        const shift = await this.prisma.client.shift.findUnique({ where: { id } });
+        const shift = await this.prisma.client.shift.findUnique({
+            where: { id },
+        });
         if (!shift || shift.isDeleted) return Result.fail('Shift not found');
 
         await this.prisma.client.shift.update({

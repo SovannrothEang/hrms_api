@@ -38,7 +38,7 @@ export class AuthController {
         description: 'Too many login attempts',
     })
     async signIn(@Body() loginDto: LoginDto) {
-        var result = await this.authService.signInAsync(
+        const result = await this.authService.signInAsync(
             loginDto.email,
             loginDto.password,
         );

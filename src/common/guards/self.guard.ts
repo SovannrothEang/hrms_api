@@ -6,12 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../services/prisma/prisma.service';
 
+interface RequestWithUser {
+    user?: { sub?: string };
+    params: { id?: string };
+}
+
 @Injectable()
 export class SelfGuard implements CanActivate {
     constructor(private prisma: PrismaService) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
+        const request = context.switchToHttp().getRequest<RequestWithUser>();
         const userId = request.user?.sub;
 
         if (!userId) {

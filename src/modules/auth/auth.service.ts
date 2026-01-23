@@ -1,9 +1,4 @@
-import {
-    Injectable,
-    Logger,
-    UnauthorizedException,
-    BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -151,7 +146,7 @@ export class AuthService {
             return Result.ok({
                 token: await this.jwtService.signAsync(payloads),
             });
-        } catch (error) {
+        } catch {
             this.logger.warn('Invalid refresh token');
             throw new UnauthorizedException('Invalid refresh token');
         }
