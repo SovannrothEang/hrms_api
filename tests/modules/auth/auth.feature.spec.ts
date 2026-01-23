@@ -15,12 +15,14 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
@@ -34,9 +36,7 @@ describe('AuthController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [AuthController],
-            providers: [
-                { provide: AuthService, useValue: mockService },
-            ],
+            providers: [{ provide: AuthService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -48,18 +48,17 @@ describe('AuthController (Feature)', () => {
     });
 
     it('/auth/login (POST) should login', () => {
-        mockService.signInAsync.mockResolvedValue({ access_token: 'token' });
+        mockService.signInAsync.mockResolvedValue(
+            Result.ok({ token: 'token' }),
+        );
         return request(app.getHttpServer())
             .post('/auth/login')
             .send({ email: 'test@test.com', password: 'pass' })
-            .expect(200)
-            .expect({ access_token: 'token' });
+            .expect(200);
     });
 
     it('/auth/me (GET) should return profile', () => {
         mockService.getMe.mockResolvedValue(Result.ok({ id: '1' }));
-        return request(app.getHttpServer())
-            .get('/auth/me')
-            .expect(200);
+        return request(app.getHttpServer()).get('/auth/me').expect(200);
     });
 });

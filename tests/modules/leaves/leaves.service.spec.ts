@@ -4,7 +4,7 @@ import { PrismaService } from '../../../src/common/services/prisma/prisma.servic
 import { EmailService } from '../../../src/modules/notifications/email.service';
 import { LeaveStatus } from '../../../src/common/enums/leave-status.enum';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     leaveBalance: {
         findUnique: jest.fn(),
         create: jest.fn(),
@@ -20,7 +20,11 @@ const mockPrismaService = {
         delete: jest.fn(),
         count: jest.fn(),
     },
-    $transaction: jest.fn((callback) => callback(mockPrismaService)),
+    $transaction: jest.fn((callback) => callback(mockPrismaClient)),
+};
+
+const mockPrismaService = {
+    client: mockPrismaClient,
 };
 
 const mockEmailService = {
@@ -30,7 +34,7 @@ const mockEmailService = {
 
 describe('LeavesService', () => {
     let service: LeavesService;
-    let prisma: PrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -42,7 +46,7 @@ describe('LeavesService', () => {
         }).compile();
 
         service = module.get<LeavesService>(LeavesService);
-        prisma = module.get<PrismaService>(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -66,23 +70,40 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: dayAfter.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
-            const created = { id: '1', ...dto, startDate: tomorrow, endDate: dayAfter, status: LeaveStatus.PENDING };
-            const balance = { id: 'b-1', totalDays: 10, usedDays: 0, pendingDays: 0 };
+            const created = {
+                id: '1',
+                ...dto,
+                startDate: tomorrow,
+                endDate: dayAfter,
+                status: LeaveStatus.PENDING,
+            };
+            const balance = {
+                id: 'b-1',
+                totalDays: 10,
+                usedDays: 0,
+                pendingDays: 0,
+            };
 
             // Mock no overlap
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue(null);
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(null);
 
             // Mock transaction flow
-            (prisma.leaveBalance.findUnique as jest.Mock).mockResolvedValue(balance);
-            (prisma.leaveRequest.create as jest.Mock).mockResolvedValue(created);
+            (
+                prismaClient.leaveBalance.findUnique as jest.Mock
+            ).mockResolvedValue(balance);
+            (prismaClient.leaveRequest.create as jest.Mock).mockResolvedValue(
+                created,
+            );
 
             const result = await service.createAsync(dto as any, 'admin-id');
             if (!result.isSuccess) console.error(result.error);
             expect(result.isSuccess).toBe(true);
-            expect(prisma.leaveBalance.update).toHaveBeenCalled(); // Should increment pending
+            expect(prismaClient.leaveBalance.update).toHaveBeenCalled(); // Should increment pending
         });
 
         it('should create leave request with auto check balance (no balance record)', async () => {
@@ -97,20 +118,32 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: dayAfter.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
             // Mock no overlap
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue(null);
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(null);
             // Mock no balance
-            (prisma.leaveBalance.findUnique as jest.Mock).mockResolvedValue(null);
+            (
+                prismaClient.leaveBalance.findUnique as jest.Mock
+            ).mockResolvedValue(null);
             // Mock create request return
-            const created = { id: '1', ...dto, startDate: tomorrow, endDate: dayAfter, status: LeaveStatus.PENDING };
-            (prisma.leaveRequest.create as jest.Mock).mockResolvedValue(created);
+            const created = {
+                id: '1',
+                ...dto,
+                startDate: tomorrow,
+                endDate: dayAfter,
+                status: LeaveStatus.PENDING,
+            };
+            (prismaClient.leaveRequest.create as jest.Mock).mockResolvedValue(
+                created,
+            );
 
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(true);
-            expect(prisma.leaveBalance.create).toHaveBeenCalled();
+            expect(prismaClient.leaveBalance.create).toHaveBeenCalled();
         });
 
         it('should fail when end date is before start date', async () => {
@@ -124,12 +157,14 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: dayAfter.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(false);
-            expect(result.error).toContain('End date must be on or after start date');
+            expect(result.error).toContain(
+                'End date must be on or after start date',
+            );
         });
 
         it('should fail when start date is in the past', async () => {
@@ -143,7 +178,7 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: yesterday.toISOString().split('T')[0],
                 endDate: tomorrow.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
             const result = await service.createAsync(dto as any, 'admin-id');
@@ -162,10 +197,12 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: dayAfter.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue({ id: 'existing' });
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue({ id: 'existing' });
 
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(false);
@@ -183,12 +220,19 @@ describe('LeavesService', () => {
                 leaveType: 'ANNUAL',
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: nextWeek.toISOString().split('T')[0],
-                reason: 'Vacation'
+                reason: 'Vacation',
             };
 
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue(null);
-            (prisma.leaveBalance.findUnique as jest.Mock).mockResolvedValue({
-                id: 'b-1', totalDays: 5, usedDays: 3, pendingDays: 1
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(null);
+            (
+                prismaClient.leaveBalance.findUnique as jest.Mock
+            ).mockResolvedValue({
+                id: 'b-1',
+                totalDays: 5,
+                usedDays: 3,
+                pendingDays: 1,
             });
 
             const result = await service.createAsync(dto as any, 'admin-id');
@@ -200,7 +244,9 @@ describe('LeavesService', () => {
     describe('findAllAsync', () => {
         it('should return list of leaves', async () => {
             const leaves = [{ id: '1' }, { id: '2' }];
-            (prisma.leaveRequest.findMany as jest.Mock).mockResolvedValue(leaves);
+            (prismaClient.leaveRequest.findMany as jest.Mock).mockResolvedValue(
+                leaves,
+            );
             const result = await service.findAllAsync();
             expect(result.isSuccess).toBe(true);
             expect(result.getData()).toHaveLength(2);
@@ -210,13 +256,17 @@ describe('LeavesService', () => {
     describe('findOneByIdAsync', () => {
         it('should return leave when found', async () => {
             const leave = { id: '1', status: LeaveStatus.PENDING };
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue(leave);
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(leave);
             const result = await service.findOneByIdAsync('1');
             expect(result.isSuccess).toBe(true);
         });
 
         it('should fail when not found', async () => {
-            (prisma.leaveRequest.findFirst as jest.Mock).mockResolvedValue(null);
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(null);
             const result = await service.findOneByIdAsync('non-existent');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
@@ -230,53 +280,88 @@ describe('LeavesService', () => {
             leaveType: 'ANNUAL',
             startDate: new Date(),
             endDate: new Date(),
-            status: LeaveStatus.PENDING
+            status: LeaveStatus.PENDING,
         };
 
         it('should approve pending leave', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue(mockLeave);
-            (prisma.leaveBalance.updateMany as jest.Mock).mockResolvedValue({});
-            (prisma.leaveRequest.update as jest.Mock).mockResolvedValue({
-                ...mockLeave, status: LeaveStatus.APPROVED
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue(mockLeave);
+            (
+                prismaClient.leaveBalance.updateMany as jest.Mock
+            ).mockResolvedValue({});
+            (prismaClient.leaveRequest.update as jest.Mock).mockResolvedValue({
+                ...mockLeave,
+                status: LeaveStatus.APPROVED,
             });
 
-            const result = await service.updateStatusAsync('1', {
-                status: LeaveStatus.APPROVED, approverId: 'admin'
-            }, 'admin');
+            const result = await service.updateStatusAsync(
+                '1',
+                {
+                    status: LeaveStatus.APPROVED,
+                    approverId: 'admin',
+                },
+                'admin',
+            );
             expect(result.isSuccess).toBe(true);
-            expect(prisma.leaveBalance.updateMany).toHaveBeenCalled();
+            expect(prismaClient.leaveBalance.updateMany).toHaveBeenCalled();
         });
 
         it('should reject pending leave', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue(mockLeave);
-            (prisma.leaveBalance.updateMany as jest.Mock).mockResolvedValue({});
-            (prisma.leaveRequest.update as jest.Mock).mockResolvedValue({
-                ...mockLeave, status: LeaveStatus.REJECTED
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue(mockLeave);
+            (
+                prismaClient.leaveBalance.updateMany as jest.Mock
+            ).mockResolvedValue({});
+            (prismaClient.leaveRequest.update as jest.Mock).mockResolvedValue({
+                ...mockLeave,
+                status: LeaveStatus.REJECTED,
             });
 
-            const result = await service.updateStatusAsync('1', {
-                status: LeaveStatus.REJECTED, approverId: 'admin'
-            }, 'admin');
+            const result = await service.updateStatusAsync(
+                '1',
+                {
+                    status: LeaveStatus.REJECTED,
+                    approverId: 'admin',
+                },
+                'admin',
+            );
             expect(result.isSuccess).toBe(true);
         });
 
         it('should fail on non-pending leave', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue({
-                ...mockLeave, status: LeaveStatus.APPROVED
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue({
+                ...mockLeave,
+                status: LeaveStatus.APPROVED,
             });
 
-            const result = await service.updateStatusAsync('1', {
-                status: LeaveStatus.REJECTED, approverId: 'admin'
-            }, 'admin');
+            const result = await service.updateStatusAsync(
+                '1',
+                {
+                    status: LeaveStatus.REJECTED,
+                    approverId: 'admin',
+                },
+                'admin',
+            );
             expect(result.isSuccess).toBe(false);
             expect(result.error).toContain('Only PENDING');
         });
 
         it('should fail when not found', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue(null);
-            const result = await service.updateStatusAsync('non-existent', {
-                status: LeaveStatus.APPROVED, approverId: 'admin'
-            }, 'admin');
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue(null);
+            const result = await service.updateStatusAsync(
+                'non-existent',
+                {
+                    status: LeaveStatus.APPROVED,
+                    approverId: 'admin',
+                },
+                'admin',
+            );
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
         });
@@ -289,29 +374,40 @@ describe('LeavesService', () => {
             leaveType: 'ANNUAL',
             startDate: new Date(),
             endDate: new Date(),
-            status: LeaveStatus.PENDING
+            status: LeaveStatus.PENDING,
         };
 
         it('should delete pending leave', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue(mockLeave);
-            (prisma.leaveBalance.updateMany as jest.Mock).mockResolvedValue({});
-            (prisma.leaveRequest.delete as jest.Mock).mockResolvedValue({});
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue(mockLeave);
+            (
+                prismaClient.leaveBalance.updateMany as jest.Mock
+            ).mockResolvedValue({});
+            (prismaClient.leaveRequest.delete as jest.Mock).mockResolvedValue(
+                {},
+            );
 
             const result = await service.deleteAsync('1');
             expect(result.isSuccess).toBe(true);
-            expect(prisma.leaveRequest.delete).toHaveBeenCalled();
+            expect(prismaClient.leaveRequest.delete).toHaveBeenCalled();
         });
 
         it('should fail when not found', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue(null);
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue(null);
             const result = await service.deleteAsync('non-existent');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
         });
 
         it('should fail when leave is not pending', async () => {
-            (prisma.leaveRequest.findUnique as jest.Mock).mockResolvedValue({
-                ...mockLeave, status: LeaveStatus.APPROVED
+            (
+                prismaClient.leaveRequest.findUnique as jest.Mock
+            ).mockResolvedValue({
+                ...mockLeave,
+                status: LeaveStatus.APPROVED,
             });
             const result = await service.deleteAsync('1');
             expect(result.isSuccess).toBe(false);

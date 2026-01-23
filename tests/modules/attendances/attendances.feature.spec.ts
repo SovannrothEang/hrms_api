@@ -15,18 +15,21 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
     checkIn: jest.fn(),
     checkOut: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllPaginatedAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
 };
 
@@ -36,9 +39,7 @@ describe('AttendancesController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [AttendancesController],
-            providers: [
-                { provide: AttendancesService, useValue: mockService },
-            ],
+            providers: [{ provide: AttendancesService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -70,21 +71,21 @@ describe('AttendancesController (Feature)', () => {
     });
 
     it('/attendances (GET) should list', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.ok([]));
-        return request(app.getHttpServer())
-            .get('/attendances')
-            .expect(200);
+        mockService.findAllPaginatedAsync.mockResolvedValue(
+            Result.ok({ data: [], totalPages: 0, totalCount: 0, page: 1 }),
+        );
+        return request(app.getHttpServer()).get('/attendances').expect(200);
     });
 
     it('/attendances/:id (GET) should return single attendance', () => {
         mockService.findOneByIdAsync.mockResolvedValue(Result.ok({ id: '1' }));
-        return request(app.getHttpServer())
-            .get('/attendances/1')
-            .expect(200);
+        return request(app.getHttpServer()).get('/attendances/1').expect(200);
     });
 
     it('/attendances/:id (GET) not found returns Result with isSuccess false', () => {
-        mockService.findOneByIdAsync.mockResolvedValue(Result.fail('Attendance not found'));
+        mockService.findOneByIdAsync.mockResolvedValue(
+            Result.fail('Attendance not found'),
+        );
         return request(app.getHttpServer())
             .get('/attendances/non-existent')
             .expect(200)
@@ -94,7 +95,9 @@ describe('AttendancesController (Feature)', () => {
     });
 
     it('/attendances/check-in (POST) should return 400 on service failure', () => {
-        mockService.checkIn.mockResolvedValue(Result.fail('Already checked in'));
+        mockService.checkIn.mockResolvedValue(
+            Result.fail('Already checked in'),
+        );
         return request(app.getHttpServer())
             .post('/attendances/check-in')
             .send({ employeeId: 'emp-1' })
@@ -102,7 +105,9 @@ describe('AttendancesController (Feature)', () => {
     });
 
     it('/attendances/check-out (POST) should return 400 on service failure', () => {
-        mockService.checkOut.mockResolvedValue(Result.fail('No check in record'));
+        mockService.checkOut.mockResolvedValue(
+            Result.fail('No check in record'),
+        );
         return request(app.getHttpServer())
             .post('/attendances/check-out')
             .send({ employeeId: 'emp-1' })

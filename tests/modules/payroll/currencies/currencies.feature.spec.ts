@@ -15,12 +15,14 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
@@ -36,9 +38,7 @@ describe('CurrenciesController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [CurrenciesController],
-            providers: [
-                { provide: CurrenciesService, useValue: mockService },
-            ],
+            providers: [{ provide: CurrenciesService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -51,7 +51,9 @@ describe('CurrenciesController (Feature)', () => {
 
     it('/currencies (POST) should create currency', () => {
         const dto = { code: 'EUR', name: 'Euro', symbol: '€', country: 'EU' };
-        mockService.createAsync.mockResolvedValue(Result.ok({ id: '1', ...dto }));
+        mockService.createAsync.mockResolvedValue(
+            Result.ok({ id: '1', ...dto }),
+        );
 
         return request(app.getHttpServer())
             .post('/currencies')
@@ -71,7 +73,9 @@ describe('CurrenciesController (Feature)', () => {
     });
 
     it('/currencies/:id (GET) should return single currency', () => {
-        mockService.findOneByIdAsync.mockResolvedValue(Result.ok({ id: '1', code: 'EUR' }));
+        mockService.findOneByIdAsync.mockResolvedValue(
+            Result.ok({ id: '1', code: 'EUR' }),
+        );
         return request(app.getHttpServer())
             .get('/currencies/1')
             .expect(200)
@@ -81,32 +85,41 @@ describe('CurrenciesController (Feature)', () => {
     });
 
     it('/currencies/:id (GET) should throw on not found', () => {
-        mockService.findOneByIdAsync.mockResolvedValue(Result.fail('Currency not found'));
+        mockService.findOneByIdAsync.mockResolvedValue(
+            Result.fail('Currency not found'),
+        );
         return request(app.getHttpServer())
             .get('/currencies/non-existent')
-            .expect(500);
+            .expect(404);
     });
 
     it('/currencies/:id (DELETE) should delete currency', () => {
         mockService.deleteAsync.mockResolvedValue(Result.ok());
-        return request(app.getHttpServer())
-            .delete('/currencies/1')
-            .expect(204);
+        return request(app.getHttpServer()).delete('/currencies/1').expect(204);
     });
 
     it('/currencies/:id (DELETE) should throw on service failure', () => {
-        mockService.deleteAsync.mockResolvedValue(Result.fail('Currency not found'));
+        mockService.deleteAsync.mockResolvedValue(
+            Result.fail('Currency not found'),
+        );
         return request(app.getHttpServer())
             .delete('/currencies/non-existent')
-            .expect(500);
+            .expect(404);
     });
 
     it('/currencies (POST) should throw on service failure', () => {
-        const dto = { code: 'USD', name: 'US Dollar', symbol: '$', country: 'USA' };
-        mockService.createAsync.mockResolvedValue(Result.fail('Currency code already exists'));
+        const dto = {
+            code: 'USD',
+            name: 'US Dollar',
+            symbol: '$',
+            country: 'USA',
+        };
+        mockService.createAsync.mockResolvedValue(
+            Result.fail('Currency code already exists'),
+        );
         return request(app.getHttpServer())
             .post('/currencies')
             .send(dto)
-            .expect(500);
+            .expect(400);
     });
 });

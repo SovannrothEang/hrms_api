@@ -8,14 +8,19 @@ import { UnauthorizedException } from '@nestjs/common';
 
 jest.mock('bcrypt');
 
-const mockPrismaService = {
+const mockPrismaClient = {
     user: {
         findFirst: jest.fn(),
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 const mockJwtService = {
     sign: jest.fn(),
+    signAsync: jest.fn(),
     verify: jest.fn(),
 };
 
@@ -26,7 +31,7 @@ const mockUsersService = {
 
 describe('AuthService', () => {
     let service: AuthService;
-    let prisma: PrismaService;
+    let prismaClient: typeof mockPrismaClient;
     let jwt: JwtService;
 
     beforeEach(async () => {
@@ -40,7 +45,7 @@ describe('AuthService', () => {
         }).compile();
 
         service = module.get<AuthService>(AuthService);
-        prisma = module.get<PrismaService>(PrismaService);
+        prismaClient = mockPrismaClient;
         jwt = module.get<JwtService>(JwtService);
     });
 
@@ -55,27 +60,34 @@ describe('AuthService', () => {
     describe('signInAsync', () => {
         it('should return access token', async () => {
             const user = {
-                id: '1', email: 'test@test.com', password: 'hashed',
-                userRoles: [{ role: { name: 'ADMIN' } }]
+                id: '1',
+                email: 'test@test.com',
+                password: 'hashed',
+                userRoles: [{ role: { name: 'ADMIN' } }],
             };
-            (prisma.user.findFirst as jest.Mock).mockResolvedValue(user);
+            (prismaClient.user.findFirst as jest.Mock).mockResolvedValue(user);
             (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-            (jwt.sign as jest.Mock).mockReturnValue('token');
+            (mockJwtService.signAsync as jest.Mock).mockResolvedValue('token');
 
             const result = await service.signInAsync('test@test.com', 'pass');
-            expect(result).toHaveProperty('access_token', 'token');
+            expect(result.isSuccess).toBe(true);
+            expect(result.getData().token).toBe('token');
         });
 
         it('should throw if user not found', async () => {
-            (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
-            await expect(service.signInAsync('a', 'b')).rejects.toThrow(UnauthorizedException);
+            (prismaClient.user.findFirst as jest.Mock).mockResolvedValue(null);
+            await expect(service.signInAsync('a', 'b')).rejects.toThrow(
+                UnauthorizedException,
+            );
         });
 
         it('should throw if password mismatch', async () => {
             const user = { id: '1', password: 'hashed' };
-            (prisma.user.findFirst as jest.Mock).mockResolvedValue(user);
+            (prismaClient.user.findFirst as jest.Mock).mockResolvedValue(user);
             (bcrypt.compare as jest.Mock).mockResolvedValue(false);
-            await expect(service.signInAsync('a', 'b')).rejects.toThrow(UnauthorizedException);
+            await expect(service.signInAsync('a', 'b')).rejects.toThrow(
+                UnauthorizedException,
+            );
         });
     });
 });

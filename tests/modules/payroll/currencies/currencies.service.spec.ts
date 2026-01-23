@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CurrenciesService } from '../../../../src/modules/payroll/currencies/currencies.service';
 import { PrismaService } from '../../../../src/common/services/prisma/prisma.service';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     currency: {
         create: jest.fn(),
         findUnique: jest.fn(),
@@ -12,9 +12,13 @@ const mockPrismaService = {
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 describe('CurrenciesService', () => {
     let service: CurrenciesService;
-    let prisma: PrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +29,7 @@ describe('CurrenciesService', () => {
         }).compile();
 
         service = module.get<CurrenciesService>(CurrenciesService);
-        prisma = module.get<PrismaService>(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -38,11 +42,25 @@ describe('CurrenciesService', () => {
 
     describe('createAsync', () => {
         it('should create a currency successfully', async () => {
-            const dto = { code: 'USD', name: 'US Dollar', symbol: '$', country: 'USA' };
-            const created = { id: '1', ...dto, isDeleted: false, isActive: true };
+            const dto = {
+                code: 'USD',
+                name: 'US Dollar',
+                symbol: '$',
+                country: 'USA',
+            };
+            const created = {
+                id: '1',
+                ...dto,
+                isDeleted: false,
+                isActive: true,
+            };
 
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue(null);
-            (prisma.currency.create as jest.Mock).mockResolvedValue(created);
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue(
+                null,
+            );
+            (prismaClient.currency.create as jest.Mock).mockResolvedValue(
+                created,
+            );
 
             const result = await service.createAsync(dto, 'user-id');
             expect(result.isSuccess).toBe(true);
@@ -50,8 +68,17 @@ describe('CurrenciesService', () => {
         });
 
         it('should fail if currency code exists', async () => {
-            const dto = { code: 'USD', name: 'US Dollar', symbol: '$', country: 'USA' };
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue({ id: '1', ...dto, isDeleted: false });
+            const dto = {
+                code: 'USD',
+                name: 'US Dollar',
+                symbol: '$',
+                country: 'USA',
+            };
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue({
+                id: '1',
+                ...dto,
+                isDeleted: false,
+            });
 
             const result = await service.createAsync(dto, 'user-id');
             expect(result.isSuccess).toBe(false);
@@ -59,12 +86,21 @@ describe('CurrenciesService', () => {
         });
 
         it('should reactivate if currency code exists but is deleted', async () => {
-            const dto = { code: 'USD', name: 'US Dollar', symbol: '$', country: 'USA' };
+            const dto = {
+                code: 'USD',
+                name: 'US Dollar',
+                symbol: '$',
+                country: 'USA',
+            };
             const deleted = { id: '1', ...dto, isDeleted: true };
             const restored = { ...deleted, isDeleted: false, isActive: true };
 
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue(deleted);
-            (prisma.currency.update as jest.Mock).mockResolvedValue(restored);
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue(
+                deleted,
+            );
+            (prismaClient.currency.update as jest.Mock).mockResolvedValue(
+                restored,
+            );
 
             const result = await service.createAsync(dto, 'user-id');
             expect(result.isSuccess).toBe(true);
@@ -75,7 +111,9 @@ describe('CurrenciesService', () => {
     describe('findAllAsync', () => {
         it('should return all currencies', async () => {
             const list = [{ id: '1', code: 'USD' }];
-            (prisma.currency.findMany as jest.Mock).mockResolvedValue(list);
+            (prismaClient.currency.findMany as jest.Mock).mockResolvedValue(
+                list,
+            );
 
             const result = await service.findAllAsync();
             expect(result.isSuccess).toBe(true);
@@ -83,7 +121,9 @@ describe('CurrenciesService', () => {
         });
 
         it('should handle Prisma error', async () => {
-            (prisma.currency.findMany as jest.Mock).mockRejectedValue(new Error('DB error'));
+            (prismaClient.currency.findMany as jest.Mock).mockRejectedValue(
+                new Error('DB error'),
+            );
             const result = await service.findAllAsync();
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Failed to fetch currencies');
@@ -92,22 +132,33 @@ describe('CurrenciesService', () => {
 
     describe('findOneByIdAsync', () => {
         it('should return currency when found', async () => {
-            const currency = { id: '1', code: 'USD', name: 'US Dollar', isDeleted: false };
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue(currency);
+            const currency = {
+                id: '1',
+                code: 'USD',
+                name: 'US Dollar',
+                isDeleted: false,
+            };
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue(
+                currency,
+            );
             const result = await service.findOneByIdAsync('1');
             expect(result.isSuccess).toBe(true);
             expect(result.getData().code).toBe('USD');
         });
 
         it('should fail when currency not found', async () => {
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue(null);
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue(
+                null,
+            );
             const result = await service.findOneByIdAsync('non-existent');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Currency not found');
         });
 
         it('should handle Prisma error', async () => {
-            (prisma.currency.findUnique as jest.Mock).mockRejectedValue(new Error('DB error'));
+            (prismaClient.currency.findUnique as jest.Mock).mockRejectedValue(
+                new Error('DB error'),
+            );
             const result = await service.findOneByIdAsync('1');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Failed to fetch currency');
@@ -116,26 +167,37 @@ describe('CurrenciesService', () => {
 
     describe('deleteAsync', () => {
         it('should soft-delete existing currency', async () => {
-            (prisma.currency.findFirst as jest.Mock).mockResolvedValue({ id: '1' });
-            (prisma.currency.update as jest.Mock).mockResolvedValue({});
+            (prismaClient.currency.findFirst as jest.Mock).mockResolvedValue({
+                id: '1',
+            });
+            (prismaClient.currency.update as jest.Mock).mockResolvedValue({});
             const result = await service.deleteAsync('1', 'user-id');
             expect(result.isSuccess).toBe(true);
-            expect(prisma.currency.update).toHaveBeenCalledWith({
+            expect(prismaClient.currency.update).toHaveBeenCalledWith({
                 where: { id: '1' },
-                data: expect.objectContaining({ isDeleted: true, performBy: 'user-id' })
+                data: expect.objectContaining({
+                    isDeleted: true,
+                    performBy: 'user-id',
+                }),
             });
         });
 
         it('should fail when currency not found', async () => {
-            (prisma.currency.findFirst as jest.Mock).mockResolvedValue(null);
+            (prismaClient.currency.findFirst as jest.Mock).mockResolvedValue(
+                null,
+            );
             const result = await service.deleteAsync('non-existent', 'user-id');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Currency not found');
         });
 
         it('should handle Prisma error during delete', async () => {
-            (prisma.currency.findFirst as jest.Mock).mockResolvedValue({ id: '1' });
-            (prisma.currency.update as jest.Mock).mockRejectedValue(new Error('DB error'));
+            (prismaClient.currency.findFirst as jest.Mock).mockResolvedValue({
+                id: '1',
+            });
+            (prismaClient.currency.update as jest.Mock).mockRejectedValue(
+                new Error('DB error'),
+            );
             const result = await service.deleteAsync('1', 'user-id');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Failed to delete currency');
@@ -144,9 +206,18 @@ describe('CurrenciesService', () => {
 
     describe('createAsync - error handling', () => {
         it('should handle Prisma error during creation', async () => {
-            const dto = { code: 'USD', name: 'US Dollar', symbol: '$', country: 'USA' };
-            (prisma.currency.findUnique as jest.Mock).mockResolvedValue(null);
-            (prisma.currency.create as jest.Mock).mockRejectedValue(new Error('DB error'));
+            const dto = {
+                code: 'USD',
+                name: 'US Dollar',
+                symbol: '$',
+                country: 'USA',
+            };
+            (prismaClient.currency.findUnique as jest.Mock).mockResolvedValue(
+                null,
+            );
+            (prismaClient.currency.create as jest.Mock).mockRejectedValue(
+                new Error('DB error'),
+            );
             const result = await service.createAsync(dto, 'user-id');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Failed to create currency');

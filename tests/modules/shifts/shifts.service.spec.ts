@@ -3,7 +3,7 @@ import { ShiftsService } from '../../../src/modules/shifts/shifts.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { CreateShiftDto } from '../../../src/modules/shifts/dtos/create-shift.dto';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     shift: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -12,9 +12,13 @@ const mockPrismaService = {
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 describe('ShiftsService', () => {
     let service: ShiftsService;
-    let prisma: typeof mockPrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -28,7 +32,7 @@ describe('ShiftsService', () => {
         }).compile();
 
         service = module.get<ShiftsService>(ShiftsService);
-        prisma = module.get(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -58,13 +62,13 @@ describe('ShiftsService', () => {
                 deletedAt: null,
             };
 
-            prisma.shift.create.mockResolvedValue(mockShift);
+            prismaClient.shift.create.mockResolvedValue(mockShift);
 
             const result = await service.createAsync(dto, 'admin');
 
             expect(result.isSuccess).toBe(true);
             expect(result.getData().name).toBe(dto.name);
-            expect(prisma.shift.create).toHaveBeenCalled();
+            expect(prismaClient.shift.create).toHaveBeenCalled();
         });
     });
 
@@ -74,7 +78,7 @@ describe('ShiftsService', () => {
                 { id: '1', name: 'Shift 1', isDeleted: false },
                 { id: '2', name: 'Shift 2', isDeleted: false },
             ];
-            prisma.shift.findMany.mockResolvedValue(mockShifts);
+            prismaClient.shift.findMany.mockResolvedValue(mockShifts);
 
             const result = await service.findAllAsync();
 
@@ -86,7 +90,7 @@ describe('ShiftsService', () => {
     describe('findOneByIdAsync', () => {
         it('should return a shift if found', async () => {
             const mockShift = { id: '1', name: 'Shift 1', isDeleted: false };
-            prisma.shift.findUnique.mockResolvedValue(mockShift);
+            prismaClient.shift.findUnique.mockResolvedValue(mockShift);
 
             const result = await service.findOneByIdAsync('1');
 
@@ -95,7 +99,7 @@ describe('ShiftsService', () => {
         });
 
         it('should fail if not found', async () => {
-            prisma.shift.findUnique.mockResolvedValue(null);
+            prismaClient.shift.findUnique.mockResolvedValue(null);
 
             const result = await service.findOneByIdAsync('999');
 
@@ -104,7 +108,11 @@ describe('ShiftsService', () => {
         });
 
         it('should fail if shift is deleted', async () => {
-            prisma.shift.findUnique.mockResolvedValue({ id: '1', name: 'Shift 1', isDeleted: true });
+            prismaClient.shift.findUnique.mockResolvedValue({
+                id: '1',
+                name: 'Shift 1',
+                isDeleted: true,
+            });
 
             const result = await service.findOneByIdAsync('1');
 
@@ -115,20 +123,23 @@ describe('ShiftsService', () => {
 
     describe('deleteAsync', () => {
         it('should soft-delete existing shift', async () => {
-            prisma.shift.findUnique.mockResolvedValue({ id: '1', isDeleted: false });
-            prisma.shift.update.mockResolvedValue({});
+            prismaClient.shift.findUnique.mockResolvedValue({
+                id: '1',
+                isDeleted: false,
+            });
+            prismaClient.shift.update.mockResolvedValue({});
 
             const result = await service.deleteAsync('1', 'admin');
 
             expect(result.isSuccess).toBe(true);
-            expect(prisma.shift.update).toHaveBeenCalledWith({
+            expect(prismaClient.shift.update).toHaveBeenCalledWith({
                 where: { id: '1' },
-                data: { isDeleted: true, performBy: 'admin' }
+                data: { isDeleted: true, performBy: 'admin' },
             });
         });
 
         it('should fail when shift not found', async () => {
-            prisma.shift.findUnique.mockResolvedValue(null);
+            prismaClient.shift.findUnique.mockResolvedValue(null);
 
             const result = await service.deleteAsync('non-existent', 'admin');
 
@@ -137,7 +148,10 @@ describe('ShiftsService', () => {
         });
 
         it('should fail when shift already deleted', async () => {
-            prisma.shift.findUnique.mockResolvedValue({ id: '1', isDeleted: true });
+            prismaClient.shift.findUnique.mockResolvedValue({
+                id: '1',
+                isDeleted: true,
+            });
 
             const result = await service.deleteAsync('1', 'admin');
 

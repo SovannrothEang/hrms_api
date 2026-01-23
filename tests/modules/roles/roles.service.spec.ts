@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { RolesService } from 'src/modules/iam/roles/roles.service';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     role: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
@@ -11,9 +11,13 @@ const mockPrismaService = {
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 describe('RolesService', () => {
     let service: RolesService;
-    let prisma: PrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +28,7 @@ describe('RolesService', () => {
         }).compile();
 
         service = module.get<RolesService>(RolesService);
-        prisma = module.get<PrismaService>(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -40,8 +44,8 @@ describe('RolesService', () => {
             const roleName = 'MANAGER';
             const created = { id: '1', name: 'MANAGER', isActive: true };
 
-            (prisma.role.findFirst as jest.Mock).mockResolvedValue(null);
-            (prisma.role.create as jest.Mock).mockResolvedValue(created);
+            (prismaClient.role.findFirst as jest.Mock).mockResolvedValue(null);
+            (prismaClient.role.create as jest.Mock).mockResolvedValue(created);
 
             const result = await service.createAsync(roleName, 'user-id');
             expect(result.isSuccess).toBe(true);
@@ -50,7 +54,9 @@ describe('RolesService', () => {
 
         it('should fail if role exists', async () => {
             const roleName = 'MANAGER';
-            (prisma.role.findFirst as jest.Mock).mockResolvedValue({ id: '1' });
+            (prismaClient.role.findFirst as jest.Mock).mockResolvedValue({
+                id: '1',
+            });
 
             const result = await service.createAsync(roleName, 'user-id');
             expect(result.isSuccess).toBe(false);
@@ -60,7 +66,9 @@ describe('RolesService', () => {
 
     describe('findAllAsync', () => {
         it('should return roles', async () => {
-            (prisma.role.findMany as jest.Mock).mockResolvedValue([{ id: '1', name: 'ADMIN' }]);
+            (prismaClient.role.findMany as jest.Mock).mockResolvedValue([
+                { id: '1', name: 'ADMIN' },
+            ]);
             const result = await service.findAllAsync();
             expect(result.isSuccess).toBe(true);
             expect(result.getData()).toHaveLength(1);

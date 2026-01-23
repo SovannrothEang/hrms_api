@@ -15,17 +15,20 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllPaginatedAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     updateAsync: jest.fn(),
     deleteAsync: jest.fn(),
@@ -37,9 +40,7 @@ describe('EmployeesController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [EmployeesController],
-            providers: [
-                { provide: EmployeesService, useValue: mockService },
-            ],
+            providers: [{ provide: EmployeesService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -52,10 +53,18 @@ describe('EmployeesController (Feature)', () => {
 
     it('/employees (POST) should create employee', () => {
         const dto = {
-            username: 'john', email: 'john@example.com', password: 'pass',
-            employeeCode: 'EMP001', firstname: 'John', lastname: 'Doe',
-            gender: 1, dob: '1990-01-01', hireDate: '2020-01-01',
-            departmentId: 'dep-1', positionId: 'pos-1', roleId: 'role-1'
+            username: 'john',
+            email: 'john@example.com',
+            password: 'pass',
+            employeeCode: 'EMP001',
+            firstname: 'John',
+            lastname: 'Doe',
+            gender: 1,
+            dob: '1990-01-01',
+            hireDate: '2020-01-01',
+            departmentId: 'dep-1',
+            positionId: 'pos-1',
+            roleId: 'role-1',
         };
         mockService.createAsync.mockResolvedValue(Result.ok({ id: '1' }));
 
@@ -66,9 +75,9 @@ describe('EmployeesController (Feature)', () => {
     });
 
     it('/employees (GET) should return list', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.ok([]));
-        return request(app.getHttpServer())
-            .get('/employees')
-            .expect(200);
+        mockService.findAllPaginatedAsync.mockResolvedValue(
+            Result.ok({ data: [], totalPages: 0, totalCount: 0, page: 1 }),
+        );
+        return request(app.getHttpServer()).get('/employees').expect(200);
     });
 });

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsService } from '../../../src/modules/reports/reports.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     attendance: {
         groupBy: jest.fn(),
     },
@@ -12,9 +12,13 @@ const mockPrismaService = {
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 describe('ReportsService', () => {
     let service: ReportsService;
-    let prisma: PrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +29,7 @@ describe('ReportsService', () => {
         }).compile();
 
         service = module.get<ReportsService>(ReportsService);
-        prisma = module.get<PrismaService>(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -33,14 +37,16 @@ describe('ReportsService', () => {
     });
 
     it('should get attendance summary', async () => {
-        (prisma.attendance.groupBy as jest.Mock).mockResolvedValue([{ status: 'PRESENT', _count: { id: 5 } }]);
+        (prismaClient.attendance.groupBy as jest.Mock).mockResolvedValue([
+            { status: 'PRESENT', _count: { id: 5 } },
+        ]);
         const result = await service.getAttendanceSummaryData(1, 2023);
         expect(result).toHaveLength(1);
         expect(result[0].count).toBe(5);
     });
 
     it('should get leave utilization', async () => {
-        (prisma.leaveBalance.findMany as jest.Mock).mockResolvedValue([]);
+        (prismaClient.leaveBalance.findMany as jest.Mock).mockResolvedValue([]);
         const result = await service.getLeaveUtilizationData();
         expect(result).toBeDefined();
     });

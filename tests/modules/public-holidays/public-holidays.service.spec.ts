@@ -3,7 +3,7 @@ import { PublicHolidaysService } from '../../../src/modules/public-holidays/publ
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { CreatePublicHolidayDto } from '../../../src/modules/public-holidays/dtos/create-public-holiday.dto';
 
-const mockPrismaService = {
+const mockPrismaClient = {
     publicHoliday: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -12,9 +12,13 @@ const mockPrismaService = {
     },
 };
 
+const mockPrismaService = {
+    client: mockPrismaClient,
+};
+
 describe('PublicHolidaysService', () => {
     let service: PublicHolidaysService;
-    let prisma: typeof mockPrismaService;
+    let prismaClient: typeof mockPrismaClient;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -28,7 +32,7 @@ describe('PublicHolidaysService', () => {
         }).compile();
 
         service = module.get<PublicHolidaysService>(PublicHolidaysService);
-        prisma = module.get(PrismaService);
+        prismaClient = mockPrismaClient;
     });
 
     afterEach(() => {
@@ -54,7 +58,7 @@ describe('PublicHolidaysService', () => {
                 deletedAt: null,
             };
 
-            prisma.publicHoliday.create.mockResolvedValue(mockHoliday);
+            prismaClient.publicHoliday.create.mockResolvedValue(mockHoliday);
 
             const result = await service.createAsync(dto, 'admin');
 
@@ -65,8 +69,11 @@ describe('PublicHolidaysService', () => {
 
     describe('findAllAsync', () => {
         it('should return all holidays', async () => {
-            const mockHolidays = [{ id: '1', name: 'H1' }, { id: '2', name: 'H2' }];
-            prisma.publicHoliday.findMany.mockResolvedValue(mockHolidays);
+            const mockHolidays = [
+                { id: '1', name: 'H1' },
+                { id: '2', name: 'H2' },
+            ];
+            prismaClient.publicHoliday.findMany.mockResolvedValue(mockHolidays);
 
             const result = await service.findAllAsync();
 
@@ -78,13 +85,18 @@ describe('PublicHolidaysService', () => {
     describe('deleteAsync', () => {
         it('should delete existing holiday', async () => {
             const mockHoliday = { id: '1', isDeleted: false };
-            prisma.publicHoliday.findUnique.mockResolvedValue(mockHoliday);
-            prisma.publicHoliday.update.mockResolvedValue({ ...mockHoliday, isDeleted: true });
+            prismaClient.publicHoliday.findUnique.mockResolvedValue(
+                mockHoliday,
+            );
+            prismaClient.publicHoliday.update.mockResolvedValue({
+                ...mockHoliday,
+                isDeleted: true,
+            });
 
             const result = await service.deleteAsync('1', 'admin');
 
             expect(result.isSuccess).toBe(true);
-            expect(prisma.publicHoliday.update).toHaveBeenCalled();
+            expect(prismaClient.publicHoliday.update).toHaveBeenCalled();
         });
     });
 });

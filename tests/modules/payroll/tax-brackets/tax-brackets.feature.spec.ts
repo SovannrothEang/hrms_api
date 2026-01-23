@@ -15,12 +15,14 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
@@ -35,9 +37,7 @@ describe('TaxBracketsController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [TaxBracketsController],
-            providers: [
-                { provide: TaxBracketsService, useValue: mockService },
-            ],
+            providers: [{ provide: TaxBracketsService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -50,11 +50,18 @@ describe('TaxBracketsController (Feature)', () => {
 
     it('/tax-brackets (POST) should create bracket', () => {
         const dto = {
-            currencyCode: 'USD', countryCode: 'US', taxYear: 2026,
-            bracketName: 'Tier 1', minAmount: 0, maxAmount: 10000,
-            taxRate: 0.1, fixedAmount: 0
+            currencyCode: 'USD',
+            countryCode: 'US',
+            taxYear: 2026,
+            bracketName: 'Tier 1',
+            minAmount: 0,
+            maxAmount: 10000,
+            taxRate: 0.1,
+            fixedAmount: 0,
         };
-        mockService.createAsync.mockResolvedValue(Result.ok({ id: '1', ...dto }));
+        mockService.createAsync.mockResolvedValue(
+            Result.ok({ id: '1', ...dto }),
+        );
 
         return request(app.getHttpServer())
             .post('/tax-brackets')
@@ -78,28 +85,35 @@ describe('TaxBracketsController (Feature)', () => {
 
     it('/tax-brackets (POST) should throw on service failure', () => {
         const dto = {
-            currencyCode: 'XXX', countryCode: 'US', taxYear: 2026,
-            bracketName: 'Tier 1', minAmount: 0, maxAmount: 10000,
-            taxRate: 0.1, fixedAmount: 0
+            currencyCode: 'XXX',
+            countryCode: 'US',
+            taxYear: 2026,
+            bracketName: 'Tier 1',
+            minAmount: 0,
+            maxAmount: 10000,
+            taxRate: 0.1,
+            fixedAmount: 0,
         };
-        mockService.createAsync.mockResolvedValue(Result.fail('Invalid Currency Code'));
+        mockService.createAsync.mockResolvedValue(
+            Result.fail('Invalid Currency Code'),
+        );
         return request(app.getHttpServer())
             .post('/tax-brackets')
             .send(dto)
-            .expect(500);
+            .expect(400);
     });
 
     it('/tax-brackets (GET) should throw on service failure', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.fail('Failed to fetch'));
-        return request(app.getHttpServer())
-            .get('/tax-brackets')
-            .expect(500);
+        mockService.findAllAsync.mockResolvedValue(
+            Result.fail('Failed to fetch'),
+        );
+        return request(app.getHttpServer()).get('/tax-brackets').expect(400);
     });
 
     it('/tax-brackets/:id (DELETE) should throw on service failure', () => {
         mockService.deleteAsync.mockResolvedValue(Result.fail('Not found'));
         return request(app.getHttpServer())
             .delete('/tax-brackets/non-existent')
-            .expect(500);
+            .expect(404);
     });
 });
