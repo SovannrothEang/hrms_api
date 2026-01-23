@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './common/services/prisma/prisma.module';
 import { UsersModule } from './modules/iam/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -27,6 +28,12 @@ import { DepartmentsModule } from './modules/departments/departments.module';
         ConfigModule.forRoot({
             isGlobal: true,
         }),
+        ThrottlerModule.forRoot([
+            {
+                ttl: 60000, // 1 minute
+                limit: 10, // 10 requests per minute
+            },
+        ]),
         LoggerModule.forRootAsync({
             imports: [ConfigModule],
             useFactory: () => ({

@@ -13,6 +13,7 @@ export class AttendancesService {
         childIncluded?: boolean,
     ): Promise<Result<AttendanceDto[]>> {
         const attendances = await this.prisma.client.attendance.findMany({
+            where: { isDeleted: false },
             include: {
                 performer: childIncluded
                     ? {
@@ -36,6 +37,60 @@ export class AttendancesService {
         return Result.ok(
             attendances.map((a) => plainToInstance(AttendanceDto, a)),
         );
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        childIncluded?: boolean,
+    ): Promise<Result<any>> {
+        const skip = (page - 1) * limit;
+
+        const [attendances, total] = await this.prisma.$transaction([
+            this.prisma.client.attendance.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                include: {
+                    performer: childIncluded
+                        ? {
+                              include: {
+                                  userRoles: {
+                                      include: { role: true },
+                                  },
+                              },
+                          }
+                        : false,
+                    employee: childIncluded
+                        ? {
+                              include: {
+                                  department: true,
+                                  position: true,
+                              },
+                          }
+                        : false,
+                },
+                orderBy: { date: 'desc' },
+            }),
+            this.prisma.client.attendance.count({
+                where: { isDeleted: false },
+            }),
+        ]);
+
+        const data = attendances.map((a) => plainToInstance(AttendanceDto, a));
+        const totalPages = Math.ceil(total / limit);
+
+        return Result.ok({
+            data,
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: skip + limit < total,
+                hasPrevious: skip > 0,
+            },
+        });
     }
 
     async findOneByIdAsync(
@@ -75,12 +130,13 @@ export class AttendancesService {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const existingAttendance = await this.prisma.client.attendance.findFirst({
-            where: {
-                employeeId: dto.employeeId,
-                date: today,
-            },
-        });
+        const existingAttendance =
+            await this.prisma.client.attendance.findFirst({
+                where: {
+                    employeeId: dto.employeeId,
+                    date: today,
+                },
+            });
 
         if (existingAttendance) {
             return Result.fail('Employee has already checked in for today.');

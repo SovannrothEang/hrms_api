@@ -26,6 +26,7 @@ import { EmployeeUpdateDto } from './dtos/employee-update.dto';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @Controller('employees')
 @ApiTags('Employees')
@@ -35,14 +36,21 @@ export class EmployeesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'childIncluded', required: false })
-    @ApiOperation({ summary: 'Get all employees' })
+    @ApiOperation({ summary: 'Get all employees (Paginated)' })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
+        @Query() pagination: PaginationDto,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.employeesService.findAllAsync(childIncluded);
+        const result = await this.employeesService.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+            childIncluded,
+        );
         return result.getData();
     }
 
@@ -57,9 +65,11 @@ export class EmployeesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.employeesService.findOneByIdAsync(id, childIncluded);
-        if (!result.isSuccess)
-            throw new NotFoundException(result.error);
+        const result = await this.employeesService.findOneByIdAsync(
+            id,
+            childIncluded,
+        );
+        if (!result.isSuccess) throw new NotFoundException(result.error);
         return result.getData();
     }
 

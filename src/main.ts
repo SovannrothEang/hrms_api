@@ -5,9 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { PrismaExceptionFilter } from './filters/prisma-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
-const APP_URL = process.env.NEXT_APP_URL || 'http://localhost:3000' as string
+const APP_URL = process.env.NEXT_APP_URL || ('http://localhost:3000' as string);
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -29,7 +30,10 @@ async function bootstrap() {
     app.useGlobalPipes(
         new ValidationPipe({ transform: true, whitelist: true }),
     );
-    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalFilters(
+        new PrismaExceptionFilter(),
+        new HttpExceptionFilter(),
+    );
     app.useGlobalInterceptors(new TransformInterceptor());
 
     app.setGlobalPrefix('api');

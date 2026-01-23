@@ -7,6 +7,8 @@ import {
     Post,
     HttpCode,
     HttpStatus,
+    BadRequestException,
+    NotFoundException,
 } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
@@ -31,7 +33,8 @@ export class CurrenciesController {
         @CurrentUser('sub') userId: string,
     ) {
         const result = await this.service.createAsync(dto, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -41,7 +44,8 @@ export class CurrenciesController {
     @ApiResponse({ status: HttpStatus.OK })
     async findAll() {
         const result = await this.service.findAllAsync();
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -53,7 +57,8 @@ export class CurrenciesController {
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async findOne(@Param('id') id: string) {
         const result = await this.service.findOneByIdAsync(id);
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new NotFoundException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -65,6 +70,7 @@ export class CurrenciesController {
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {
         const result = await this.service.deleteAsync(id, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new NotFoundException(result.error ?? 'Unknown Error');
     }
 }

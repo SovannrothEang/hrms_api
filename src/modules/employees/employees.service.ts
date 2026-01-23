@@ -12,7 +12,7 @@ import { Logger } from '@nestjs/common';
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -33,7 +33,7 @@ export class EmployeesService {
         });
         if (codeCheck) return Result.fail('Employee Code already exists');
 
-        const defaultPassword = "Employee123!";
+        const defaultPassword = 'Employee123!';
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         const role = await this.prisma.client.role.findFirst({
@@ -48,45 +48,47 @@ export class EmployeesService {
         if (!role) return Result.fail('Role not found');
 
         try {
-            const employee = await this.prisma.client.$transaction(async (tx) => {
-                // 1. Create User
-                const user = await tx.user.create({
-                    data: {
-                        username: dto.username,
-                        email: dto.email,
-                        password: hashedPassword,
-                        userRoles: {
-                            create: {
-                                roleId: role.id,
-                                performBy: performerId,
+            const employee = await this.prisma.client.$transaction(
+                async (tx) => {
+                    // 1. Create User
+                    const user = await tx.user.create({
+                        data: {
+                            username: dto.username,
+                            email: dto.email,
+                            password: hashedPassword,
+                            userRoles: {
+                                create: {
+                                    roleId: role.id,
+                                    performBy: performerId,
+                                },
                             },
                         },
-                    },
-                });
+                    });
 
-                // 2. Create Employee Profile linked to user
-                return await tx.employee.create({
-                    data: {
-                        userId: user.id,
-                        employeeCode: dto.employeeCode,
-                        firstname: dto.firstname,
-                        lastname: dto.lastname,
-                        gender: dto.gender,
-                        dob: new Date(dto.dob),
-                        address: dto.address,
-                        phone: dto.phone,
-                        hireDate: new Date(dto.hireDate),
-                        departmentId: dto.departmentId,
-                        positionId: dto.positionId,
-                        managerId: dto.managerId,
-                        performBy: performerId,
-                    },
-                    include: {
-                        department: true,
-                        position: true,
-                    },
-                });
-            });
+                    // 2. Create Employee Profile linked to user
+                    return await tx.employee.create({
+                        data: {
+                            userId: user.id,
+                            employeeCode: dto.employeeCode,
+                            firstname: dto.firstname,
+                            lastname: dto.lastname,
+                            gender: dto.gender,
+                            dob: new Date(dto.dob),
+                            address: dto.address,
+                            phone: dto.phone,
+                            hireDate: new Date(dto.hireDate),
+                            departmentId: dto.departmentId,
+                            positionId: dto.positionId,
+                            managerId: dto.managerId,
+                            performBy: performerId,
+                        },
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    });
+                },
+            );
 
             return Result.ok(plainToInstance(EmployeeDto, employee));
         } catch (e) {
@@ -101,25 +103,75 @@ export class EmployeesService {
     ): Promise<Result<EmployeeDto[]>> {
         this.logger.log('Finding all employees');
         const employees = await this.prisma.client.employee.findMany({
+            where: { isDeleted: false },
             include: {
                 department: true,
                 position: true,
                 user: {
-                    include: { userRoles: { include: { role: true } } }
+                    include: { userRoles: { include: { role: true } } },
                 },
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
             orderBy: { employeeCode: 'asc' },
         });
         return Result.ok(employees.map((e) => plainToInstance(EmployeeDto, e)));
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        childIncluded?: boolean,
+    ): Promise<Result<any>> {
+        const skip = (page - 1) * limit;
+
+        const [employees, total] = await this.prisma.$transaction([
+            this.prisma.client.employee.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                include: {
+                    department: true,
+                    position: true,
+                    user: {
+                        include: { userRoles: { include: { role: true } } },
+                    },
+                    performer: childIncluded
+                        ? {
+                              include: {
+                                  userRoles: {
+                                      include: { role: true },
+                                  },
+                              },
+                          }
+                        : false,
+                },
+                orderBy: { employeeCode: 'asc' },
+            }),
+            this.prisma.client.employee.count({ where: { isDeleted: false } }),
+        ]);
+
+        const data = employees.map((e) => plainToInstance(EmployeeDto, e));
+        const totalPages = Math.ceil(total / limit);
+
+        return Result.ok({
+            data,
+            meta: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: skip + limit < total,
+                hasPrevious: skip > 0,
+            },
+        });
     }
 
     async findOneByIdAsync(
@@ -135,12 +187,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
@@ -155,7 +207,7 @@ export class EmployeesService {
     ): Promise<Result<EmployeeDto>> {
         const employee = await this.prisma.client.employee.findFirst({
             where: { id },
-            select: { id: true }
+            select: { id: true },
         });
         if (!employee) return Result.fail('Employee not found');
 

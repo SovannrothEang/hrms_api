@@ -23,6 +23,7 @@ import { CheckOutDto } from './dtos/check-out.dto';
 
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('Attendances')
 @Auth()
@@ -32,14 +33,21 @@ export class AttendancesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
-    @ApiOperation({ summary: 'Get all attendances' })
+    @ApiOperation({ summary: 'Get all attendances (Paginated)' })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
+        @Query() pagination: PaginationDto,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.attendancesService.findAllAsync(childIncluded);
+        return await this.attendancesService.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+            childIncluded,
+        );
     }
 
     @Get(':id')

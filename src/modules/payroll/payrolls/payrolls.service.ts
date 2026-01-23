@@ -355,6 +355,80 @@ export class PayrollsService {
     }
 
     /**
+     * Lists payrolls with optional filters (Paginated).
+     */
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        params?: {
+            employeeId?: string;
+            status?: string;
+            year?: number;
+            month?: number;
+        },
+    ): Promise<Result<any>> {
+        try {
+            const skip = (page - 1) * limit;
+            const where: Prisma.PayrollWhereInput = { isDeleted: false };
+
+            if (params?.employeeId) {
+                where.employeeId = params.employeeId;
+            }
+
+            if (params?.status) {
+                where.status = params.status;
+            }
+
+            if (params?.year && params?.month) {
+                const startOfMonth = new Date(params.year, params.month - 1, 1);
+                const endOfMonth = new Date(params.year, params.month, 0);
+                where.payPeriodStart = {
+                    gte: startOfMonth,
+                    lte: endOfMonth,
+                };
+            }
+
+            const [payrolls, total] = await this.prisma.$transaction([
+                this.prisma.client.payroll.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    include: {
+                        items: {
+                            where: { isDeleted: false },
+                        },
+                        taxCalculation: true,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                }),
+                this.prisma.client.payroll.count({ where }),
+            ]);
+
+            const data = payrolls.map((p) =>
+                plainToInstance(PayrollDto, p, {
+                    excludeExtraneousValues: true,
+                }),
+            );
+            const totalPages = Math.ceil(total / limit);
+
+            return Result.ok({
+                data,
+                meta: {
+                    page,
+                    limit,
+                    total,
+                    totalPages,
+                    hasNext: skip + limit < total,
+                    hasPrevious: skip > 0,
+                },
+            });
+        } catch (error) {
+            this.logger.error('Failed to fetch payrolls', error);
+            return Result.fail('Failed to fetch payrolls');
+        }
+    }
+
+    /**
      * Soft deletes a payroll (only if PENDING).
      */
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {

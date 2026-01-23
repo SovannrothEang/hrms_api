@@ -15,10 +15,15 @@ datasource db {
 // --------------------------------------
 
 model User {
-  id           String  @id @default(uuid()) @db.VarChar(36)
-  username     String  @db.VarChar(25)
-  email        String  @db.VarChar(100)
-  password     String  @db.VarChar(255)
+  id                 String   @id @default(uuid()) @db.VarChar(36)
+  username           String   @db.VarChar(25)
+  email              String   @db.VarChar(100)
+  password           String   @db.VarChar(255)
+  resetToken         String?  @db.VarChar(36)
+  resetTokenExpiry   DateTime? @db.Timestamptz
+  failedAttempts     Int      @default(0) @db.SmallInt
+  isLocked           Boolean  @default(false)
+  lockUntil          DateTime? @db.Timestamptz
 
   userRoles    UserRole[]
   employee     Employee?
@@ -55,6 +60,7 @@ model User {
   @@index([id])
   @@index([email])
   @@index([isDeleted, isActive])
+  @@index([resetToken])
 }
 
 model Role {
@@ -115,6 +121,10 @@ model Department {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("departments")
+  @@index([departmentName])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EmployeePosition {
@@ -136,6 +146,10 @@ model EmployeePosition {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("employee_positions")
+  @@index([title])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Shift {
@@ -158,6 +172,10 @@ model Shift {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("shifts")
+  @@index([name])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model PublicHoliday {
@@ -177,6 +195,9 @@ model PublicHoliday {
 
   @@map("public_holidays")
   @@index([date])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Employee {
@@ -225,7 +246,12 @@ model Employee {
   @@index([departmentId])
   @@index([positionId])
   @@index([managerId])
+  @@index([shiftId])
   @@index([lastname])
+  @@index([employeeCode])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Attendance {
@@ -251,6 +277,10 @@ model Attendance {
   @@index([employeeId])
   @@index([date]) // Optimize date range reports
   @@index([employeeId, date]) // Optimize specific employee attendance lookup
+  @@index([status])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model LeaveRequest {
@@ -281,6 +311,9 @@ model LeaveRequest {
   @@index([approvedBy])
   @@index([status]) // Filter Pending vs Approved
   @@index([startDate, endDate]) // Overlap checks
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model LeaveBalance {
@@ -306,6 +339,12 @@ model LeaveBalance {
 
   @@map("leave_balances")
   @@unique([employeeId, leaveType, year]) // One balance record per type per year
+  @@index([employeeId])
+  @@index([leaveType])
+  @@index([year])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 // --------------------------------------
@@ -337,6 +376,10 @@ model Currency {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("currencies")
+  @@index([code])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model ExchangeRate {
@@ -361,6 +404,9 @@ model ExchangeRate {
 
   @@map("exchange_rates")
   @@index([fromCurrencyCode, toCurrencyCode, date]) // Optimize rate lookup by date
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Payroll {
@@ -406,6 +452,9 @@ model Payroll {
   @@index([payPeriodStart, payPeriodEnd]) // Reporting by period
   @@index([status]) // Find pending payrolls
   @@index([currencyCode])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model PayrollItems {
@@ -431,6 +480,9 @@ model PayrollItems {
 
   @@map("payroll_items")
   @@index([payrollId]) // Vital for loading items with payroll
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 // --------------------------------------
@@ -462,6 +514,11 @@ model TaxBracket {
 
   @@map("tax_brackets")
   @@index([countryCode, taxYear]) // Lookup relevant brackets
+  @@index([currencyCode])
+  @@index([taxYear])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EmployeeTaxConfig {
@@ -483,6 +540,9 @@ model EmployeeTaxConfig {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("employee_tax_configs")
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model TaxCalculation {
@@ -516,6 +576,9 @@ model TaxCalculation {
   @@index([employeeId])
   @@index([taxBracketId])
   @@index([taxPeriodStart, taxPeriodEnd])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 // --------------------------------------
@@ -561,6 +624,9 @@ model CompanySettings {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   @@map("company_settings")
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model Slug {
@@ -584,4 +650,7 @@ model Slug {
 
   @@map("slugs")
   @@index([status])
+  @@index([isActive, isDeleted])
+  @@index([createdAt])
+  @@index([updatedAt])
 }

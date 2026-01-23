@@ -8,6 +8,8 @@ import {
     Query,
     HttpCode,
     HttpStatus,
+    BadRequestException,
+    NotFoundException,
 } from '@nestjs/common';
 import {
     ApiOperation,
@@ -38,7 +40,8 @@ export class TaxBracketsController {
         @CurrentUser('sub') userId: string,
     ) {
         const result = await this.service.createAsync(dto, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -65,7 +68,8 @@ export class TaxBracketsController {
             country,
             year ? Number(year) : undefined,
         );
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 
@@ -77,6 +81,7 @@ export class TaxBracketsController {
     @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async delete(@Param('id') id: string, @CurrentUser('sub') userId: string) {
         const result = await this.service.deleteAsync(id, userId);
-        if (!result.isSuccess) throw new Error(result.error ?? 'Unknown Error');
+        if (!result.isSuccess)
+            throw new NotFoundException(result.error ?? 'Unknown Error');
     }
 }
