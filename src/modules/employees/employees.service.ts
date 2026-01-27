@@ -7,6 +7,7 @@ import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import * as bcrypt from 'bcrypt';
 import { Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class EmployeesService {
@@ -80,6 +81,17 @@ export class EmployeesService {
                             departmentId: dto.departmentId,
                             positionId: dto.positionId,
                             managerId: dto.managerId,
+                            employmentType:
+                                (dto.employmentType as Prisma.EmployeeCreateInput['employmentType']) ??
+                                'FULL_TIME',
+                            status:
+                                (dto.status as Prisma.EmployeeCreateInput['status']) ??
+                                'ACTIVE',
+                            salary: dto.salary,
+                            emergencyContact:
+                                dto.emergencyContact as Prisma.InputJsonValue,
+                            bankDetails:
+                                dto.bankDetails as Prisma.InputJsonValue,
                             performBy: performerId,
                         },
                         include: {
@@ -223,10 +235,31 @@ export class EmployeesService {
         });
         if (!employee) return Result.fail('Employee not found');
 
+        const {
+            employmentType,
+            status,
+            emergencyContact,
+            bankDetails,
+            ...rest
+        } = dto;
+
         const updated = await this.prisma.client.employee.update({
             where: { id },
             data: {
-                ...dto,
+                ...rest,
+                ...(employmentType && {
+                    employmentType:
+                        employmentType as Prisma.EmployeeUpdateInput['employmentType'],
+                }),
+                ...(status && {
+                    status: status as Prisma.EmployeeUpdateInput['status'],
+                }),
+                ...(emergencyContact !== undefined && {
+                    emergencyContact: emergencyContact as Prisma.InputJsonValue,
+                }),
+                ...(bankDetails !== undefined && {
+                    bankDetails: bankDetails as Prisma.InputJsonValue,
+                }),
                 performBy: performerId,
             },
             include: {

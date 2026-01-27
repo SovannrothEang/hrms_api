@@ -25,6 +25,11 @@ import { RoleName } from 'src/common/enums/roles.enum';
 import { PayrollsService } from './payrolls.service';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
 import { PayrollDto } from './dtos/payroll.dto';
+import { PayrollSummaryDto } from './dtos/payroll-summary.dto';
+import {
+    GeneratePayrollDto,
+    GeneratePayrollResultDto,
+} from './dtos/generate-payroll.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Payroll - Payrolls')
@@ -49,6 +54,68 @@ export class PayrollsController {
         if (!result.isSuccess) {
             throw new BadRequestException(
                 result.error ?? 'Failed to process payroll',
+            );
+        }
+        return result.getData();
+    }
+
+    @Get('summary')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get payroll summary with totals and breakdowns' })
+    @ApiQuery({
+        name: 'year',
+        required: false,
+        type: Number,
+        description: 'Filter by year',
+    })
+    @ApiQuery({
+        name: 'month',
+        required: false,
+        type: Number,
+        description: 'Filter by month (1-12)',
+    })
+    @ApiQuery({
+        name: 'departmentId',
+        required: false,
+        description: 'Filter by department',
+    })
+    @ApiResponse({ status: HttpStatus.OK, type: PayrollSummaryDto })
+    async getSummary(
+        @Query('year') year?: string,
+        @Query('month') month?: string,
+        @Query('departmentId') departmentId?: string,
+    ) {
+        const result = await this.service.getSummaryAsync({
+            year: year ? parseInt(year, 10) : undefined,
+            month: month ? parseInt(month, 10) : undefined,
+            departmentId,
+        });
+        if (!result.isSuccess) {
+            throw new BadRequestException(
+                result.error ?? 'Failed to get payroll summary',
+            );
+        }
+        return result.getData();
+    }
+
+    @Post('generate')
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({
+        summary: 'Bulk generate payrolls for multiple employees',
+    })
+    @ApiResponse({ status: HttpStatus.CREATED, type: GeneratePayrollResultDto })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Validation error',
+    })
+    async generate(
+        @Body() dto: GeneratePayrollDto,
+        @CurrentUser('sub') userId: string,
+    ) {
+        const result = await this.service.generateBulkAsync(dto, userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(
+                result.error ?? 'Failed to generate payrolls',
             );
         }
         return result.getData();

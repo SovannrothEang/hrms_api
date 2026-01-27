@@ -2,6 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
 import { PayrollDto } from './dtos/payroll.dto';
+import {
+    PayrollSummaryDto,
+    PayrollSummaryByStatusDto,
+    PayrollSummaryByDepartmentDto,
+} from './dtos/payroll-summary.dto';
+import {
+    GeneratePayrollDto,
+    GeneratePayrollResultDto,
+} from './dtos/generate-payroll.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
@@ -470,6 +479,289 @@ export class PayrollsService {
         } catch (error) {
             this.logger.error('Failed to delete payroll', error);
             return Result.fail('Failed to delete payroll');
+        }
+    }
+
+    /**
+     * Gets payroll summary with totals and breakdowns.
+     */
+    async getSummaryAsync(params?: {
+        year?: number;
+        month?: number;
+        departmentId?: string;
+    }): Promise<Result<PayrollSummaryDto>> {
+        try {
+            const where: Prisma.PayrollWhereInput = { isDeleted: false };
+
+            if (params?.year && params?.month) {
+                const startOfMonth = new Date(params.year, params.month - 1, 1);
+                const endOfMonth = new Date(params.year, params.month, 0);
+                where.payPeriodStart = {
+                    gte: startOfMonth,
+                    lte: endOfMonth,
+                };
+            } else if (params?.year) {
+                const startOfYear = new Date(params.year, 0, 1);
+                const endOfYear = new Date(params.year, 11, 31);
+                where.payPeriodStart = {
+                    gte: startOfYear,
+                    lte: endOfYear,
+                };
+            }
+
+            if (params?.departmentId) {
+                where.employee = { departmentId: params.departmentId };
+            }
+
+            const payrolls = await this.prisma.client.payroll.findMany({
+                where,
+                include: {
+                    employee: {
+                        include: { department: true },
+                    },
+                    items: { where: { isDeleted: false } },
+                },
+            });
+
+            let totalGrossSalary = new Decimal(0);
+            let totalDeductions = new Decimal(0);
+            let totalNetSalary = new Decimal(0);
+            let totalTax = new Decimal(0);
+            let totalOvertimePay = new Decimal(0);
+            let totalBonus = new Decimal(0);
+
+            const statusCounts: Record<
+                string,
+                { count: number; totalAmount: Decimal }
+            > = {};
+            const departmentData: Record<
+                string,
+                {
+                    employeeIds: Set<string>;
+                    totalSalary: Decimal;
+                    totalDeductions: Decimal;
+                    totalNetSalary: Decimal;
+                }
+            > = {};
+
+            for (const payroll of payrolls) {
+                const gross = payroll.basicSalary
+                    .plus(payroll.overtimeRate.times(payroll.overtimeHrs))
+                    .plus(payroll.bonus);
+
+                totalGrossSalary = totalGrossSalary.plus(gross);
+                totalDeductions = totalDeductions.plus(payroll.deductions);
+                totalNetSalary = totalNetSalary.plus(payroll.netSalary);
+                totalOvertimePay = totalOvertimePay.plus(
+                    payroll.overtimeRate.times(payroll.overtimeHrs),
+                );
+                totalBonus = totalBonus.plus(payroll.bonus);
+
+                // Tax from items
+                for (const item of payroll.items) {
+                    if (item.itemName === 'Tax') {
+                        totalTax = totalTax.plus(item.amount);
+                    }
+                }
+
+                // Status breakdown
+                if (!statusCounts[payroll.status]) {
+                    statusCounts[payroll.status] = {
+                        count: 0,
+                        totalAmount: new Decimal(0),
+                    };
+                }
+                statusCounts[payroll.status].count++;
+                statusCounts[payroll.status].totalAmount = statusCounts[
+                    payroll.status
+                ].totalAmount.plus(payroll.netSalary);
+
+                // Department breakdown
+                const deptName =
+                    payroll.employee?.department?.departmentName ?? 'Unknown';
+                if (!departmentData[deptName]) {
+                    departmentData[deptName] = {
+                        employeeIds: new Set(),
+                        totalSalary: new Decimal(0),
+                        totalDeductions: new Decimal(0),
+                        totalNetSalary: new Decimal(0),
+                    };
+                }
+                departmentData[deptName].employeeIds.add(payroll.employeeId);
+                departmentData[deptName].totalSalary =
+                    departmentData[deptName].totalSalary.plus(gross);
+                departmentData[deptName].totalDeductions = departmentData[
+                    deptName
+                ].totalDeductions.plus(payroll.deductions);
+                departmentData[deptName].totalNetSalary = departmentData[
+                    deptName
+                ].totalNetSalary.plus(payroll.netSalary);
+            }
+
+            const byStatus: PayrollSummaryByStatusDto[] = Object.entries(
+                statusCounts,
+            ).map(([status, data]) => ({
+                status,
+                count: data.count,
+                totalAmount: Number(data.totalAmount),
+            }));
+
+            const byDepartment: PayrollSummaryByDepartmentDto[] =
+                Object.entries(departmentData).map(([department, data]) => ({
+                    department,
+                    employeeCount: data.employeeIds.size,
+                    totalSalary: Number(data.totalSalary),
+                    totalDeductions: Number(data.totalDeductions),
+                    totalNetSalary: Number(data.totalNetSalary),
+                }));
+
+            const summary: PayrollSummaryDto = {
+                totalPayrolls: payrolls.length,
+                totalGrossSalary: Number(totalGrossSalary),
+                totalDeductions: Number(totalDeductions),
+                totalNetSalary: Number(totalNetSalary),
+                totalTax: Number(totalTax),
+                totalOvertimePay: Number(totalOvertimePay),
+                totalBonus: Number(totalBonus),
+                byStatus,
+                byDepartment,
+            };
+
+            return Result.ok(summary);
+        } catch (error) {
+            this.logger.error('Failed to get payroll summary', error);
+            return Result.fail('Failed to get payroll summary');
+        }
+    }
+
+    /**
+     * Bulk generate payrolls for multiple employees.
+     */
+    async generateBulkAsync(
+        dto: GeneratePayrollDto,
+        performBy: string,
+    ): Promise<Result<GeneratePayrollResultDto>> {
+        try {
+            const periodStart = new Date(dto.payPeriodStart);
+            const periodEnd = new Date(dto.payPeriodEnd);
+
+            if (periodEnd <= periodStart) {
+                return Result.fail('Pay period end must be after start date');
+            }
+
+            // Validate currency
+            const currency = await this.prisma.client.currency.findUnique({
+                where: { code: dto.currencyCode, isDeleted: false },
+            });
+            if (!currency) {
+                return Result.fail('Invalid currency code');
+            }
+
+            // Get list of employees to generate payroll for
+            const employeeWhere: Prisma.EmployeeWhereInput = {
+                isDeleted: false,
+                isActive: true,
+                status: 'ACTIVE' as Prisma.EmployeeWhereInput['status'],
+            };
+
+            if (dto.employeeIds && dto.employeeIds.length > 0) {
+                employeeWhere.id = { in: dto.employeeIds };
+            } else if (dto.departmentId) {
+                employeeWhere.departmentId = dto.departmentId;
+            }
+
+            const employees = await this.prisma.client.employee.findMany({
+                where: employeeWhere,
+                include: {
+                    position: true,
+                    taxConfig: true,
+                    department: true,
+                },
+            });
+
+            if (employees.length === 0) {
+                return Result.fail(
+                    'No active employees found matching criteria',
+                );
+            }
+
+            const result: GeneratePayrollResultDto = {
+                totalGenerated: 0,
+                totalSkipped: 0,
+                totalFailed: 0,
+                generatedPayrollIds: [],
+                skippedEmployees: [],
+                failedEmployees: [],
+            };
+
+            for (const employee of employees) {
+                try {
+                    // Check if payroll already exists for this period
+                    const existingPayroll =
+                        await this.prisma.client.payroll.findFirst({
+                            where: {
+                                employeeId: employee.id,
+                                payPeriodStart: periodStart,
+                                payPeriodEnd: periodEnd,
+                                isDeleted: false,
+                            },
+                        });
+
+                    if (existingPayroll) {
+                        result.totalSkipped++;
+                        result.skippedEmployees.push({
+                            employeeId: employee.id,
+                            employeeName: `${employee.firstname} ${employee.lastname}`,
+                            reason: 'Payroll already exists for this period',
+                        });
+                        continue;
+                    }
+
+                    // Create payroll using existing method logic
+                    const createResult = await this.createDraftAsync(
+                        {
+                            employeeId: employee.id,
+                            payPeriodStart: dto.payPeriodStart,
+                            payPeriodEnd: dto.payPeriodEnd,
+                            currencyCode: dto.currencyCode,
+                            overtimeHours: 0,
+                            bonus: 0,
+                            deductions: 0,
+                        },
+                        performBy,
+                    );
+
+                    if (createResult.isSuccess) {
+                        result.totalGenerated++;
+                        const payroll = createResult.getData();
+                        if (payroll) {
+                            result.generatedPayrollIds.push(payroll.id);
+                        }
+                    } else {
+                        result.totalFailed++;
+                        result.failedEmployees.push({
+                            employeeId: employee.id,
+                            employeeName: `${employee.firstname} ${employee.lastname}`,
+                            error: createResult.error ?? 'Unknown error',
+                        });
+                    }
+                } catch (error) {
+                    result.totalFailed++;
+                    result.failedEmployees.push({
+                        employeeId: employee.id,
+                        employeeName: `${employee.firstname} ${employee.lastname}`,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : 'Unknown error',
+                    });
+                }
+            }
+
+            return Result.ok(result);
+        } catch (error) {
+            this.logger.error('Failed to generate bulk payrolls', error);
+            return Result.fail('Failed to generate payrolls');
         }
     }
 }

@@ -105,6 +105,21 @@ model UserRole {
 // HR Core
 // --------------------------------------
 
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  PROBATION
+  TERMINATED
+}
+
 model Department {
   id             String @id @default(uuid()) @db.VarChar(36)
   departmentName String @map("department_name") @db.VarChar(150)
@@ -210,13 +225,18 @@ model Employee {
   employeeCode String   @unique @map("employee_code") @db.VarChar(15)
   hireDate     DateTime @map("hire_date") @db.Date
 
-  firstname    String   @db.VarChar(70)
-  lastname     String   @db.VarChar(70)
-  gender       Int      @db.SmallInt
-  dob          DateTime @db.Date
-  address      String?  @db.Text
-  phone        String?  @db.VarChar(20)
-  profileImage String?  @map("profile_image") @db.Text
+  firstname        String          @db.VarChar(70)
+  lastname         String          @db.VarChar(70)
+  gender           Int             @db.SmallInt
+  dob              DateTime        @db.Date
+  address          String?         @db.Text
+  phone            String?         @db.VarChar(20)
+  profileImage     String?         @map("profile_image") @db.Text
+  employmentType   EmploymentType  @default(FULL_TIME) @map("employment_type")
+  status           EmployeeStatus  @default(ACTIVE)
+  salary           Decimal?        @db.Decimal(12, 2)
+  emergencyContact Json?           @map("emergency_contact")
+  bankDetails      Json?           @map("bank_details")
 
   user         User?              @relation(fields: [userId], references: [id])
   department   Department         @relation(fields: [departmentId], references: [id])
@@ -261,6 +281,9 @@ model Attendance {
   date         DateTime  @db.Date
   checkInTime  DateTime? @map("check_in_time") @db.Time
   checkOutTime DateTime? @map("check_out_time") @db.Time
+  workHours    Decimal?  @map("work_hours") @db.Decimal(5, 2)
+  overtime     Decimal?  @default(0) @map("overtime") @db.Decimal(5, 2)
+  notes        String?   @db.Text
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
@@ -585,6 +608,13 @@ model TaxCalculation {
 // System Config & Audit
 // --------------------------------------
 
+enum AuditSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
 model AuditLog {
   id        String   @id @default(uuid()) @db.VarChar(36)
   userId    String?  @map("user_id") @db.VarChar(36)
@@ -594,6 +624,10 @@ model AuditLog {
   oldValue  Json?    @map("old_value")
   newValue  Json?    @map("new_value")
   timestamp DateTime @default(now()) @db.Timestamptz
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(500)
+  severity  AuditSeverity @default(INFO)
+  success   Boolean  @default(true)
 
   user User? @relation(fields: [userId], references: [id])
 
@@ -603,6 +637,7 @@ model AuditLog {
   @@index([userId])
   @@index([tableName, recordId]) // Find history for specific record
   @@index([timestamp]) // Order logs chronologically
+  @@index([severity])
   @@map("audit_logs")
 }
 

@@ -5,10 +5,22 @@ import {
     Transform,
     Type,
 } from 'class-transformer';
-import { Employee, User } from '@prisma/client';
+import { Employee, User, Prisma } from '@prisma/client';
 import { DepartmentDto } from '../../departments/dtos/department.dto';
 import { EmployeePositionDto } from '../../employee-positions/dtos/employee-position.dto';
 import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
+
+export class EmergencyContactDto {
+    name?: string;
+    phone?: string;
+    relationship?: string;
+}
+
+export class BankDetailsDto {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+}
 
 @Exclude()
 export class EmployeeDto {
@@ -78,6 +90,25 @@ export class EmployeeDto {
     @Expose({ name: 'department' })
     @Type(() => DepartmentDto)
     department: DepartmentDto;
+
+    @Expose({ name: 'employmentType' })
+    employmentType: string;
+
+    @Expose({ name: 'status' })
+    status: string;
+
+    @Expose({ name: 'salary' })
+    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
+        if (!value) return null;
+        return Number(value);
+    })
+    salary: number | null;
+
+    @Expose({ name: 'emergencyContact' })
+    emergencyContact: EmergencyContactDto | null;
+
+    @Expose({ name: 'bankDetails' })
+    bankDetails: BankDetailsDto | null;
 
     @Expose({ name: 'isActive' })
     isActive: boolean;

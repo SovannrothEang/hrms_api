@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
     IsOptional,
     IsString,
@@ -7,6 +7,8 @@ import {
     Min,
     Max,
     IsDateString,
+    IsIn,
+    IsBoolean,
 } from 'class-validator';
 
 export class AuditLogQueryDto {
@@ -69,6 +71,24 @@ export class AuditLogQueryDto {
     @IsOptional()
     @IsDateString()
     endDate?: string;
+
+    @ApiPropertyOptional({
+        description: 'Filter by severity',
+        example: 'INFO',
+        enum: ['INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+    })
+    @IsOptional()
+    @IsIn(['INFO', 'WARNING', 'ERROR', 'CRITICAL'])
+    severity?: string;
+
+    @ApiPropertyOptional({
+        description: 'Filter by success status',
+        example: true,
+    })
+    @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    @IsBoolean()
+    success?: boolean;
 
     get skip(): number {
         return ((this.page || 1) - 1) * (this.limit || 10);

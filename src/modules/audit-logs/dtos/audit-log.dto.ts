@@ -39,6 +39,23 @@ export class AuditLogDto {
     @ApiProperty({ example: '2024-01-15T10:30:00Z' })
     timestamp: Date;
 
+    @ApiPropertyOptional({ example: '192.168.1.100' })
+    ipAddress?: string;
+
+    @ApiPropertyOptional({
+        example: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    })
+    userAgent?: string;
+
+    @ApiProperty({
+        example: 'INFO',
+        enum: ['INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+    })
+    severity: string;
+
+    @ApiProperty({ example: true })
+    success: boolean;
+
     @ApiPropertyOptional({ type: AuditLogUserDto })
     user?: AuditLogUserDto;
 }

@@ -1,8 +1,18 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsOptional, IsString } from 'class-validator';
+import {
+    IsIn,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    ValidateNested,
+} from 'class-validator';
+import {
+    EmergencyContactCreateDto,
+    BankDetailsCreateDto,
+} from './employee-create.dto';
 
-// Omit user account details as they updated separately or not at all here
 export class EmployeeUpdateDto {
     @ApiProperty({ required: false })
     @IsOptional()
@@ -51,4 +61,39 @@ export class EmployeeUpdateDto {
     @ApiProperty({ required: false })
     @IsOptional()
     managerId?: string;
+
+    @ApiPropertyOptional({
+        example: 'FULL_TIME',
+        enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'],
+    })
+    @IsOptional()
+    @IsIn(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'])
+    employmentType?: string;
+
+    @ApiPropertyOptional({
+        example: 'ACTIVE',
+        enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
+    })
+    @IsOptional()
+    @IsIn(['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'])
+    status?: string;
+
+    @ApiPropertyOptional({ example: 50000.0 })
+    @IsOptional()
+    @IsNumber()
+    salary?: number;
+
+    @ApiPropertyOptional({ type: EmergencyContactCreateDto })
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => EmergencyContactCreateDto)
+    emergencyContact?: EmergencyContactCreateDto;
+
+    @ApiPropertyOptional({ type: BankDetailsCreateDto })
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => BankDetailsCreateDto)
+    bankDetails?: BankDetailsCreateDto;
 }

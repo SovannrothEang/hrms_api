@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AuditSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { AuditLogQueryDto } from './dtos/audit-log-query.dto';
@@ -23,6 +23,8 @@ export class AuditLogsService {
             recordId,
             startDate,
             endDate,
+            severity,
+            success,
         } = query;
 
         const where: Prisma.AuditLogWhereInput = {
@@ -56,6 +58,14 @@ export class AuditLogsService {
                 end.setHours(23, 59, 59, 999);
                 where.timestamp.lte = end;
             }
+        }
+
+        if (severity) {
+            where.severity = severity as AuditSeverity;
+        }
+
+        if (success !== undefined) {
+            where.success = success;
         }
 
         try {
@@ -93,6 +103,10 @@ export class AuditLogsService {
                 oldValue: log.oldValue as Record<string, unknown> | undefined,
                 newValue: log.newValue as Record<string, unknown> | undefined,
                 timestamp: log.timestamp,
+                ipAddress: log.ipAddress ?? undefined,
+                userAgent: log.userAgent ?? undefined,
+                severity: log.severity,
+                success: log.success,
                 user: log.user
                     ? {
                           id: log.user.id,
@@ -144,6 +158,10 @@ export class AuditLogsService {
                 oldValue: log.oldValue as Record<string, unknown> | undefined,
                 newValue: log.newValue as Record<string, unknown> | undefined,
                 timestamp: log.timestamp,
+                ipAddress: log.ipAddress ?? undefined,
+                userAgent: log.userAgent ?? undefined,
+                severity: log.severity,
+                success: log.success,
                 user: log.user
                     ? {
                           id: log.user.id,
@@ -177,5 +195,9 @@ export class AuditLogsService {
             orderBy: { tableName: 'asc' },
         });
         return results.map((r) => r.tableName);
+    }
+
+    getDistinctSeveritiesAsync(): string[] {
+        return ['INFO', 'WARNING', 'ERROR', 'CRITICAL'];
     }
 }

@@ -197,7 +197,7 @@ export class AttendancesService {
     }
 
     async checkOut(
-        dto: { employeeId: string },
+        dto: { employeeId: string; notes?: string },
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
         const today = new Date();
@@ -208,6 +208,7 @@ export class AttendancesService {
                 employeeId: dto.employeeId,
                 date: today,
             },
+            include: { employee: { include: { shift: true } } },
         });
 
         if (!attendance) {
@@ -220,10 +221,31 @@ export class AttendancesService {
             return Result.fail('Employee has already checked out for today.');
         }
 
+        const checkOutTime = new Date();
+        const checkInTime = attendance.checkInTime;
+
+        let workHours = 0;
+        let overtime = 0;
+
+        if (checkInTime) {
+            const diffMs = checkOutTime.getTime() - checkInTime.getTime();
+            workHours = diffMs / (1000 * 60 * 60); // Convert to hours
+
+            // Calculate overtime (hours beyond standard 8-hour workday)
+            const standardWorkHours = attendance.employee?.shift ? 8 : 8; // Default 8 hours
+            if (workHours > standardWorkHours) {
+                overtime = workHours - standardWorkHours;
+                workHours = standardWorkHours;
+            }
+        }
+
         const updatedAttendance = await this.prisma.client.attendance.update({
             where: { id: attendance.id },
             data: {
-                checkOutTime: new Date(),
+                checkOutTime,
+                workHours: Math.round(workHours * 100) / 100,
+                overtime: Math.round(overtime * 100) / 100,
+                notes: dto.notes,
                 performBy: performerId,
             },
             include: { employee: true },

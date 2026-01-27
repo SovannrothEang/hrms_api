@@ -7,7 +7,7 @@ import {
 } from 'class-transformer';
 import { UserDto } from '../../iam/users/dtos/user.dto';
 import { EmployeeDto } from '../../employees/dtos/employee.dto';
-import { Attendance, Employee, User } from '@prisma/client';
+import { Attendance, Employee, User, Prisma } from '@prisma/client';
 
 @Exclude()
 export class AttendanceDto {
@@ -28,6 +28,23 @@ export class AttendanceDto {
 
     @Expose({ name: 'checkOutTime' })
     checkOutTime: Date;
+
+    @Expose({ name: 'workHours' })
+    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
+        if (!value) return null;
+        return Number(value);
+    })
+    workHours: number | null;
+
+    @Expose({ name: 'overtime' })
+    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
+        if (!value) return null;
+        return Number(value);
+    })
+    overtime: number | null;
+
+    @Expose({ name: 'notes' })
+    notes: string | null;
 
     @Expose({ name: 'perform_by' })
     performBy: string;

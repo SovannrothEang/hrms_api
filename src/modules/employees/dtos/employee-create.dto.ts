@@ -1,14 +1,52 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     IsDateString,
     IsEmail,
     IsEnum,
     IsIn,
     IsNotEmpty,
+    IsNumber,
+    IsObject,
     IsOptional,
     IsString,
     MaxLength,
+    ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class EmergencyContactCreateDto {
+    @ApiPropertyOptional({ example: 'Jane Doe' })
+    @IsOptional()
+    @IsString()
+    name?: string;
+
+    @ApiPropertyOptional({ example: '+1234567890' })
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @ApiPropertyOptional({ example: 'Spouse' })
+    @IsOptional()
+    @IsString()
+    relationship?: string;
+}
+
+export class BankDetailsCreateDto {
+    @ApiPropertyOptional({ example: 'Chase Bank' })
+    @IsOptional()
+    @IsString()
+    bankName?: string;
+
+    @ApiPropertyOptional({ example: '1234567890' })
+    @IsOptional()
+    @IsString()
+    accountNumber?: string;
+
+    @ApiPropertyOptional({ example: 'John Doe' })
+    @IsOptional()
+    @IsString()
+    accountName?: string;
+}
 
 export class EmployeeCreateDto {
     @ApiProperty({ example: 'John' })
@@ -74,6 +112,41 @@ export class EmployeeCreateDto {
     @IsOptional()
     @IsString()
     managerId?: string;
+
+    @ApiPropertyOptional({
+        example: 'FULL_TIME',
+        enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'],
+    })
+    @IsOptional()
+    @IsIn(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'])
+    employmentType?: string;
+
+    @ApiPropertyOptional({
+        example: 'ACTIVE',
+        enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
+    })
+    @IsOptional()
+    @IsIn(['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'])
+    status?: string;
+
+    @ApiPropertyOptional({ example: 50000.0 })
+    @IsOptional()
+    @IsNumber()
+    salary?: number;
+
+    @ApiPropertyOptional({ type: EmergencyContactCreateDto })
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => EmergencyContactCreateDto)
+    emergencyContact?: EmergencyContactCreateDto;
+
+    @ApiPropertyOptional({ type: BankDetailsCreateDto })
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => BankDetailsCreateDto)
+    bankDetails?: BankDetailsCreateDto;
 
     // User Account Details
     @ApiProperty({ example: 'johndoe' })
