@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './common/services/prisma/prisma.module';
+import { RedisModule } from './common/redis/redis.module';
 import { SecurityModule } from './common/security/security.module';
 import { UsersModule } from './modules/iam/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -23,6 +24,7 @@ import { CurrenciesModule } from './modules/payroll/currencies/currencies.module
 import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.module';
 import { PayrollsModule } from './modules/payroll/payrolls/payrolls.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 
 @Module({
     imports: [
@@ -91,6 +93,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
             }),
         }),
         AttendancesModule,
+        AuditLogsModule,
         AuthModule,
         AutomationModule,
         CurrenciesModule,
@@ -102,6 +105,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
         PayrollsModule,
         PrismaModule,
         PublicHolidaysModule,
+        RedisModule,
         ReportsModule,
         RolesModule,
         SecurityModule,

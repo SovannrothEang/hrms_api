@@ -28,7 +28,7 @@ import { PayrollDto } from './dtos/payroll.dto';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 @ApiTags('Payroll - Payrolls')
-@Controller('payrolls')
+@Controller(['payrolls', 'payroll'])
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class PayrollsController {
     constructor(private readonly service: PayrollsService) {}

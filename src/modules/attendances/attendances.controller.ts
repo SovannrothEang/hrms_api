@@ -27,7 +27,7 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 
 @ApiTags('Attendances')
 @Auth()
-@Controller('attendances')
+@Controller(['attendances', 'attendance'])
 export class AttendancesController {
     constructor(private readonly attendancesService: AttendancesService) {}
 
@@ -67,7 +67,7 @@ export class AttendancesController {
         );
     }
 
-    @Post('check-in')
+    @Post(['check-in', 'clock-in'])
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Check in an employee' })
     @ApiResponse({ status: HttpStatus.CREATED })
@@ -83,7 +83,7 @@ export class AttendancesController {
         return result.getData();
     }
 
-    @Post('check-out')
+    @Post(['check-out', 'clock-out'])
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Check out an employee' })
     @ApiResponse({ status: HttpStatus.OK })

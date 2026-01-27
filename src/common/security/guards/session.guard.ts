@@ -54,7 +54,10 @@ export class SessionGuard implements CanActivate {
         }
 
         const ip = this.getClientIp(request);
-        const validation = this.sessionService.validateSession(sessionId, ip);
+        const validation = await this.sessionService.validateSession(
+            sessionId,
+            ip,
+        );
 
         if (!validation.valid) {
             const userAgent = request.headers['user-agent'] || 'Unknown';

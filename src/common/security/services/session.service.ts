@@ -5,16 +5,71 @@ import {
     SessionValidationResult,
 } from '../interfaces/security.interfaces';
 import { SECURITY_CONFIG } from '../constants/security.constants';
-import { PrismaService } from 'src/common/services/prisma/prisma.service';
+import { RedisService } from 'src/common/redis/redis.service';
+
+const SESSION_KEY_PREFIX = 'session:';
+const USER_SESSIONS_KEY_PREFIX = 'user_sessions:';
 
 @Injectable()
 export class SessionService {
     private readonly logger = new Logger(SessionService.name);
-    private readonly sessionStore = new Map<string, SessionData>();
+    private readonly memoryStore = new Map<string, SessionData>();
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly redis: RedisService) {}
 
-    createSession(userId: string, ip: string, userAgent: string): SessionData {
+    private useRedis(): boolean {
+        return this.redis.isAvailable();
+    }
+
+    private getSessionKey(sessionId: string): string {
+        return `${SESSION_KEY_PREFIX}${sessionId}`;
+    }
+
+    private getUserSessionsKey(userId: string): string {
+        return `${USER_SESSIONS_KEY_PREFIX}${userId}`;
+    }
+
+    private getTtlSeconds(): number {
+        return Math.floor(SECURITY_CONFIG.session.sessionTtl / 1000);
+    }
+
+    private serializeSession(session: SessionData): string {
+        return JSON.stringify({
+            ...session,
+            createdAt: session.createdAt.toISOString(),
+            lastAccessedAt: session.lastAccessedAt.toISOString(),
+            expiresAt: session.expiresAt.toISOString(),
+        });
+    }
+
+    private deserializeSession(data: string): SessionData {
+        const parsed = JSON.parse(data) as {
+            id: string;
+            userId: string;
+            ip: string;
+            userAgent: string;
+            createdAt: string;
+            lastAccessedAt: string;
+            expiresAt: string;
+            isValid: boolean;
+        };
+        return {
+            id: parsed.id,
+            userId: parsed.userId,
+            ip: parsed.ip,
+            userAgent: parsed.userAgent,
+            createdAt: new Date(parsed.createdAt),
+            lastAccessedAt: new Date(parsed.lastAccessedAt),
+            expiresAt: new Date(parsed.expiresAt),
+            isValid: parsed.isValid,
+        };
+    }
+
+    async createSession(
+        userId: string,
+        ip: string,
+        userAgent: string,
+    ): Promise<SessionData> {
         const sessionId = crypto.randomBytes(32).toString('hex');
         const now = new Date();
         const expiresAt = new Date(
@@ -32,9 +87,22 @@ export class SessionService {
             isValid: true,
         };
 
-        this.sessionStore.set(sessionId, sessionData);
+        if (this.useRedis()) {
+            await this.redis.set(
+                this.getSessionKey(sessionId),
+                this.serializeSession(sessionData),
+                this.getTtlSeconds(),
+            );
+            await this.redis.sadd(this.getUserSessionsKey(userId), sessionId);
+            await this.redis.expire(
+                this.getUserSessionsKey(userId),
+                this.getTtlSeconds(),
+            );
+        } else {
+            this.memoryStore.set(sessionId, sessionData);
+        }
 
-        this.enforceMaxSessions(userId);
+        await this.enforceMaxSessions(userId);
 
         this.logger.log(
             `Session created for user: ${userId.substring(0, 8)}..., IP: ${ip}`,
@@ -43,12 +111,15 @@ export class SessionService {
         return sessionData;
     }
 
-    validateSession(sessionId: string, ip?: string): SessionValidationResult {
+    async validateSession(
+        sessionId: string,
+        ip?: string,
+    ): Promise<SessionValidationResult> {
         if (!sessionId) {
             return { valid: false, reason: 'No session ID provided' };
         }
 
-        const session = this.sessionStore.get(sessionId);
+        const session = await this.getSession(sessionId);
 
         if (!session) {
             return { valid: false, reason: 'Session not found' };
@@ -60,7 +131,7 @@ export class SessionService {
 
         const now = new Date();
         if (now > session.expiresAt) {
-            this.sessionStore.delete(sessionId);
+            await this.invalidateSession(sessionId);
             this.logger.warn(
                 `Session expired: ${sessionId.substring(0, 8)}...`,
             );
@@ -75,55 +146,133 @@ export class SessionService {
         }
 
         session.lastAccessedAt = now;
-        this.sessionStore.set(sessionId, session);
+        if (this.useRedis()) {
+            const remainingTtl = Math.floor(
+                (session.expiresAt.getTime() - now.getTime()) / 1000,
+            );
+            if (remainingTtl > 0) {
+                await this.redis.set(
+                    this.getSessionKey(sessionId),
+                    this.serializeSession(session),
+                    remainingTtl,
+                );
+            }
+        } else {
+            this.memoryStore.set(sessionId, session);
+        }
 
         return { valid: true, session };
     }
 
-    invalidateSession(sessionId: string): void {
-        const session = this.sessionStore.get(sessionId);
+    async invalidateSession(sessionId: string): Promise<void> {
+        const session = await this.getSession(sessionId);
         if (session) {
-            session.isValid = false;
-            this.sessionStore.delete(sessionId);
+            if (this.useRedis()) {
+                await this.redis.del(this.getSessionKey(sessionId));
+                await this.redis.srem(
+                    this.getUserSessionsKey(session.userId),
+                    sessionId,
+                );
+            } else {
+                this.memoryStore.delete(sessionId);
+            }
             this.logger.log(
                 `Session invalidated: ${sessionId.substring(0, 8)}...`,
             );
         }
     }
 
-    invalidateAllUserSessions(userId: string): number {
+    async invalidateAllUserSessions(userId: string): Promise<number> {
+        const sessions = await this.getUserSessions(userId);
         let count = 0;
-        for (const [sessionId, session] of this.sessionStore.entries()) {
-            if (session.userId === userId) {
-                session.isValid = false;
-                this.sessionStore.delete(sessionId);
-                count++;
-            }
+
+        for (const session of sessions) {
+            await this.invalidateSession(session.id);
+            count++;
         }
+
+        if (this.useRedis()) {
+            await this.redis.del(this.getUserSessionsKey(userId));
+        }
+
         this.logger.log(
             `Invalidated ${count} sessions for user: ${userId.substring(0, 8)}...`,
         );
         return count;
     }
 
-    getUserSessions(userId: string): SessionData[] {
-        const sessions: SessionData[] = [];
-        for (const session of this.sessionStore.values()) {
-            if (session.userId === userId && session.isValid) {
-                sessions.push(session);
+    async getUserSessions(userId: string): Promise<SessionData[]> {
+        if (this.useRedis()) {
+            const sessionIds = await this.redis.smembers(
+                this.getUserSessionsKey(userId),
+            );
+            if (sessionIds.length === 0) return [];
+
+            const sessionKeys = sessionIds.map((id) => this.getSessionKey(id));
+            const sessionDataList = await this.redis.mget(...sessionKeys);
+
+            const sessions: SessionData[] = [];
+            const invalidSessionIds: string[] = [];
+
+            for (let i = 0; i < sessionDataList.length; i++) {
+                const data = sessionDataList[i];
+                if (data) {
+                    try {
+                        const session = this.deserializeSession(data);
+                        if (session.isValid && new Date() < session.expiresAt) {
+                            sessions.push(session);
+                        } else {
+                            invalidSessionIds.push(sessionIds[i]);
+                        }
+                    } catch {
+                        invalidSessionIds.push(sessionIds[i]);
+                    }
+                } else {
+                    invalidSessionIds.push(sessionIds[i]);
+                }
             }
+
+            if (invalidSessionIds.length > 0) {
+                await this.redis.srem(
+                    this.getUserSessionsKey(userId),
+                    ...invalidSessionIds,
+                );
+            }
+
+            return sessions.sort(
+                (a, b) =>
+                    b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime(),
+            );
+        } else {
+            const sessions: SessionData[] = [];
+            for (const session of this.memoryStore.values()) {
+                if (session.userId === userId && session.isValid) {
+                    sessions.push(session);
+                }
+            }
+            return sessions.sort(
+                (a, b) =>
+                    b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime(),
+            );
         }
-        return sessions.sort(
-            (a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime(),
-        );
     }
 
-    getSession(sessionId: string): SessionData | undefined {
-        return this.sessionStore.get(sessionId);
+    async getSession(sessionId: string): Promise<SessionData | undefined> {
+        if (this.useRedis()) {
+            const data = await this.redis.get(this.getSessionKey(sessionId));
+            if (!data) return undefined;
+            try {
+                return this.deserializeSession(data);
+            } catch {
+                return undefined;
+            }
+        } else {
+            return this.memoryStore.get(sessionId);
+        }
     }
 
-    refreshSession(sessionId: string): SessionData | null {
-        const session = this.sessionStore.get(sessionId);
+    async refreshSession(sessionId: string): Promise<SessionData | null> {
+        const session = await this.getSession(sessionId);
         if (!session || !session.isValid) {
             return null;
         }
@@ -133,13 +282,22 @@ export class SessionService {
         session.expiresAt = new Date(
             now.getTime() + SECURITY_CONFIG.session.sessionTtl,
         );
-        this.sessionStore.set(sessionId, session);
+
+        if (this.useRedis()) {
+            await this.redis.set(
+                this.getSessionKey(sessionId),
+                this.serializeSession(session),
+                this.getTtlSeconds(),
+            );
+        } else {
+            this.memoryStore.set(sessionId, session);
+        }
 
         return session;
     }
 
-    private enforceMaxSessions(userId: string): void {
-        const userSessions = this.getUserSessions(userId);
+    private async enforceMaxSessions(userId: string): Promise<void> {
+        const userSessions = await this.getUserSessions(userId);
 
         if (userSessions.length > SECURITY_CONFIG.session.maxSessionsPerUser) {
             const sessionsToRemove = userSessions
@@ -154,7 +312,7 @@ export class SessionService {
                 );
 
             for (const session of sessionsToRemove) {
-                this.invalidateSession(session.id);
+                await this.invalidateSession(session.id);
             }
 
             this.logger.log(
@@ -169,12 +327,16 @@ export class SessionService {
     }
 
     cleanup(): number {
+        if (this.useRedis()) {
+            return 0;
+        }
+
         const now = new Date();
         let removed = 0;
 
-        for (const [sessionId, session] of this.sessionStore.entries()) {
+        for (const [sessionId, session] of this.memoryStore.entries()) {
             if (now > session.expiresAt || !session.isValid) {
-                this.sessionStore.delete(sessionId);
+                this.memoryStore.delete(sessionId);
                 removed++;
             }
         }

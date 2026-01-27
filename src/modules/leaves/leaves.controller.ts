@@ -29,7 +29,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Leaves')
 @Auth()
-@Controller('takeleave')
+@Controller(['takeleave', 'leave-requests'])
 export class LeavesController {
     constructor(private readonly leavesService: LeavesService) {}
 

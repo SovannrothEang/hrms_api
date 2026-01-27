@@ -141,7 +141,7 @@ export class AuthService {
             throw new UnauthorizedException('Roles do not match!');
         }
 
-        const session = this.sessionService.createSession(
+        const session = await this.sessionService.createSession(
             user.id,
             ip,
             userAgent,
@@ -194,7 +194,7 @@ export class AuthService {
         this.logger.log('Logging out user');
 
         if (sessionId) {
-            this.sessionService.invalidateSession(sessionId);
+            await this.sessionService.invalidateSession(sessionId);
             this.csrfService.invalidateToken(sessionId);
         }
 
@@ -215,12 +215,13 @@ export class AuthService {
     ): Promise<Result<{ count: number }>> {
         this.logger.log('Logging out all sessions for user');
 
-        const sessions = this.sessionService.getUserSessions(userId);
+        const sessions = await this.sessionService.getUserSessions(userId);
         for (const session of sessions) {
             this.csrfService.invalidateToken(session.id);
         }
 
-        const count = this.sessionService.invalidateAllUserSessions(userId);
+        const count =
+            await this.sessionService.invalidateAllUserSessions(userId);
 
         await this.securityEventService.logEvent('SESSION_INVALIDATED', {
             userId,
@@ -359,7 +360,7 @@ export class AuthService {
                 throw new UnauthorizedException('Session mismatch');
             }
 
-            const sessionValidation = this.sessionService.validateSession(
+            const sessionValidation = await this.sessionService.validateSession(
                 sessionId,
                 ip,
             );
@@ -389,7 +390,7 @@ export class AuthService {
                 throw new UnauthorizedException('Roles do not match!');
             }
 
-            this.sessionService.refreshSession(sessionId);
+            await this.sessionService.refreshSession(sessionId);
             const csrfToken = this.csrfService.rotateToken(sessionId);
 
             const userPayload: UserPayload = {
@@ -529,16 +530,18 @@ export class AuthService {
         return Result.ok();
     }
 
-    getUserSessionsAsync(userId: string): Result<
-        Array<{
-            id: string;
-            ip: string;
-            userAgent: string;
-            createdAt: Date;
-            lastAccessedAt: Date;
-        }>
+    async getUserSessionsAsync(userId: string): Promise<
+        Result<
+            Array<{
+                id: string;
+                ip: string;
+                userAgent: string;
+                createdAt: Date;
+                lastAccessedAt: Date;
+            }>
+        >
     > {
-        const sessions = this.sessionService.getUserSessions(userId);
+        const sessions = await this.sessionService.getUserSessions(userId);
         return Result.ok(
             sessions.map((s) => ({
                 id: s.id.substring(0, 8) + '...',

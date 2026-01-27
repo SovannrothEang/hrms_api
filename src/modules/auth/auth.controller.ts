@@ -266,7 +266,7 @@ export class AuthController {
         return { message: 'Password changed successfully' };
     }
 
-    @Get('me')
+    @Get(['me', 'session'])
     @Auth()
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiResponse({
@@ -289,8 +289,8 @@ export class AuthController {
         status: HttpStatus.OK,
         description: 'Return user active sessions',
     })
-    getSessions(@CurrentUser('sub') userId: string) {
-        const result = this.authService.getUserSessionsAsync(userId);
+    async getSessions(@CurrentUser('sub') userId: string) {
+        const result = await this.authService.getUserSessionsAsync(userId);
         return result.getData();
     }
 
