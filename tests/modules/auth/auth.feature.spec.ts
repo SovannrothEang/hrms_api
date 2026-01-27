@@ -4,10 +4,8 @@ import request from 'supertest';
 import { Result } from '../../../src/common/logic/result';
 import { AuthController } from '../../../src/modules/auth/auth.controller';
 import { AuthService } from '../../../src/modules/auth/auth.service';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
+import { CookieService } from '../../../src/common/security/services/cookie.service';
 
-// Mock Guards
 jest.mock('src/common/guards/jwt-auth.guard', () => ({
     JwtAuthGuard: class {
         canActivate(context: any) {
@@ -24,10 +22,39 @@ jest.mock('src/common/guards/roles.guard', () => ({
         }
     },
 }));
+jest.mock('src/common/security/guards/session.guard', () => ({
+    SessionGuard: class {
+        canActivate() {
+            return true;
+        }
+    },
+}));
+jest.mock('src/common/security/guards/csrf.guard', () => ({
+    CsrfGuard: class {
+        canActivate() {
+            return true;
+        }
+    },
+    SKIP_CSRF_KEY: 'skipCsrf',
+}));
 
 const mockService = {
     signInAsync: jest.fn(),
+    signInSecureAsync: jest.fn(),
     getMe: jest.fn(),
+    logoutAsync: jest.fn(),
+    logoutAllSessionsAsync: jest.fn(),
+    refreshTokenSecureAsync: jest.fn(),
+    getUserSessionsAsync: jest.fn(),
+};
+
+const mockCookieService = {
+    setAllAuthCookies: jest.fn(),
+    clearAuthCookies: jest.fn(),
+    setAccessTokenCookie: jest.fn(),
+    setRefreshTokenCookie: jest.fn(),
+    setCsrfTokenCookie: jest.fn(),
+    setSessionIdCookie: jest.fn(),
 };
 
 describe('AuthController (Feature)', () => {
@@ -36,7 +63,10 @@ describe('AuthController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [AuthController],
-            providers: [{ provide: AuthService, useValue: mockService }],
+            providers: [
+                { provide: AuthService, useValue: mockService },
+                { provide: CookieService, useValue: mockCookieService },
+            ],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -48,13 +78,32 @@ describe('AuthController (Feature)', () => {
     });
 
     it('/auth/login (POST) should login', () => {
-        mockService.signInAsync.mockResolvedValue(
-            Result.ok({ token: 'token' }),
+        mockService.signInSecureAsync.mockResolvedValue(
+            Result.ok({
+                tokens: {
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                    csrfToken: 'csrf-token',
+                    sessionId: 'session-id',
+                    expiresAt: Date.now() + 3600000,
+                },
+                user: {
+                    id: '1',
+                    email: 'test@test.com',
+                    username: 'testuser',
+                    roles: ['ADMIN'],
+                },
+            }),
         );
         return request(app.getHttpServer())
             .post('/auth/login')
             .send({ email: 'test@test.com', password: 'pass' })
-            .expect(200);
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.accessToken).toBe('access-token');
+                expect(res.body.user).toBeDefined();
+                expect(res.body.expiresAt).toBeDefined();
+            });
     });
 
     it('/auth/me (GET) should return profile', () => {

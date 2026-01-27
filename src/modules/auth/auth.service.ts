@@ -8,6 +8,19 @@ import { RegisterDto } from './dtos/register.dto';
 import { UserPayload } from 'src/common/decorators/current-user.decorator';
 import { Result } from 'src/common/logic/result';
 import { v4 as uuidv4 } from 'uuid';
+import { SessionService } from 'src/common/security/services/session.service';
+import { CsrfService } from 'src/common/security/services/csrf.service';
+import { SecurityEventService } from 'src/common/security/services/security-event.service';
+import {
+    AuthTokens,
+    AuthResponse,
+} from 'src/common/security/interfaces/security.interfaces';
+import { SECURITY_CONFIG } from 'src/common/security/constants/security.constants';
+
+export interface SecureAuthResult {
+    tokens: AuthTokens;
+    user: AuthResponse['user'];
+}
 
 @Injectable()
 export class AuthService {
@@ -17,6 +30,9 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly usersService: UsersService,
+        private readonly sessionService: SessionService,
+        private readonly csrfService: CsrfService,
+        private readonly securityEventService: SecurityEventService,
     ) {}
 
     async signInAsync(
@@ -36,8 +52,6 @@ export class AuthService {
             },
         });
 
-        // Timing attack prevention: always run bcrypt compare
-        // Use a dummy hash when user not found to maintain consistent timing
         const dummyHash =
             '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtoG0f1CJ.fne';
         const passwordToCompare = user?.password ?? dummyHash;
@@ -60,6 +74,166 @@ export class AuthService {
             roles: roles,
         };
         return Result.ok({ token: await this.jwtService.signAsync(payloads) });
+    }
+
+    async signInSecureAsync(
+        email: string,
+        password: string,
+        ip: string,
+        userAgent: string,
+    ): Promise<Result<SecureAuthResult>> {
+        this.logger.log('Signing in user securely with {email}.', email);
+
+        const failedAttempts = this.securityEventService.getFailedLoginAttempts(
+            ip,
+            SECURITY_CONFIG.rateLimit.loginWindowMs,
+        );
+
+        if (failedAttempts >= SECURITY_CONFIG.rateLimit.loginAttempts) {
+            this.logger.warn(`Rate limit exceeded for IP: ${ip}`);
+            await this.securityEventService.logEvent('RATE_LIMIT_EXCEEDED', {
+                ip,
+                userAgent,
+                severity: 'HIGH',
+                details: { email, failedAttempts },
+            });
+            throw new UnauthorizedException(
+                'Too many login attempts. Please try again later.',
+            );
+        }
+
+        const user = await this.prisma.client.user.findFirst({
+            where: { email, isActive: true },
+            include: {
+                userRoles: {
+                    include: {
+                        role: true,
+                    },
+                },
+            },
+        });
+
+        const dummyHash =
+            '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4.VTtoG0f1CJ.fne';
+        const passwordToCompare = user?.password ?? dummyHash;
+        const isMatch = await bcrypt.compare(password, passwordToCompare);
+
+        if (!user || !isMatch) {
+            this.logger.warn('Invalid credentials attempt');
+            await this.securityEventService.logLoginFailed(
+                email,
+                ip,
+                userAgent,
+                'Invalid credentials',
+            );
+            throw new UnauthorizedException('Invalid email or password');
+        }
+
+        const roles = user.userRoles.map((e) => e.role.name);
+        if (roles.length <= 0) {
+            this.logger.warn('User has no roles!');
+            await this.securityEventService.logLoginFailed(
+                email,
+                ip,
+                userAgent,
+                'No roles assigned',
+            );
+            throw new UnauthorizedException('Roles do not match!');
+        }
+
+        const session = this.sessionService.createSession(
+            user.id,
+            ip,
+            userAgent,
+        );
+
+        const csrfToken = this.csrfService.generateToken(session.id);
+
+        const payload: UserPayload = {
+            sub: user.id,
+            email: user.email,
+            roles: roles,
+        };
+
+        const accessToken = await this.jwtService.signAsync(payload, {
+            expiresIn: SECURITY_CONFIG.jwt.accessTokenExpiry,
+        });
+
+        const refreshToken = await this.jwtService.signAsync(
+            { sub: user.id, type: 'refresh', sessionId: session.id },
+            { expiresIn: SECURITY_CONFIG.jwt.refreshTokenExpiry },
+        );
+
+        await this.securityEventService.logLoginSuccess(user.id, ip, userAgent);
+
+        const tokens: AuthTokens = {
+            accessToken,
+            refreshToken,
+            csrfToken,
+            sessionId: session.id,
+            expiresAt: Date.now() + SECURITY_CONFIG.session.accessTokenTtl,
+        };
+
+        return Result.ok({
+            tokens,
+            user: {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                roles,
+            },
+        });
+    }
+
+    async logoutAsync(
+        userId: string,
+        sessionId: string,
+        ip: string,
+        userAgent: string,
+    ): Promise<Result<void>> {
+        this.logger.log('Logging out user');
+
+        if (sessionId) {
+            this.sessionService.invalidateSession(sessionId);
+            this.csrfService.invalidateToken(sessionId);
+        }
+
+        await this.securityEventService.logLogout(
+            userId,
+            sessionId,
+            ip,
+            userAgent,
+        );
+
+        return Result.ok();
+    }
+
+    async logoutAllSessionsAsync(
+        userId: string,
+        ip: string,
+        userAgent: string,
+    ): Promise<Result<{ count: number }>> {
+        this.logger.log('Logging out all sessions for user');
+
+        const sessions = this.sessionService.getUserSessions(userId);
+        for (const session of sessions) {
+            this.csrfService.invalidateToken(session.id);
+        }
+
+        const count = this.sessionService.invalidateAllUserSessions(userId);
+
+        await this.securityEventService.logEvent('SESSION_INVALIDATED', {
+            userId,
+            ip,
+            userAgent,
+            severity: 'INFO',
+            details: {
+                sessionCount: count,
+                reason: 'User logged out all sessions',
+            },
+        });
+
+        return Result.ok({ count });
     }
 
     async registerAsync(dto: RegisterDto): Promise<Result<UserDto>> {
@@ -152,6 +326,120 @@ export class AuthService {
         }
     }
 
+    async refreshTokenSecureAsync(
+        refreshToken: string,
+        sessionId: string,
+        ip: string,
+        userAgent: string,
+    ): Promise<Result<SecureAuthResult>> {
+        this.logger.log('Refreshing token securely');
+
+        try {
+            const payload = this.jwtService.verify<{
+                sub: string;
+                type: string;
+                sessionId: string;
+            }>(refreshToken);
+
+            if (payload.type !== 'refresh') {
+                throw new UnauthorizedException('Invalid token type');
+            }
+
+            if (payload.sessionId !== sessionId) {
+                await this.securityEventService.logSuspiciousActivity(
+                    payload.sub,
+                    ip,
+                    userAgent,
+                    'Session ID mismatch during token refresh',
+                    {
+                        expectedSessionId: payload.sessionId,
+                        providedSessionId: sessionId,
+                    },
+                );
+                throw new UnauthorizedException('Session mismatch');
+            }
+
+            const sessionValidation = this.sessionService.validateSession(
+                sessionId,
+                ip,
+            );
+            if (!sessionValidation.valid) {
+                throw new UnauthorizedException(
+                    sessionValidation.reason || 'Invalid session',
+                );
+            }
+
+            const user = await this.prisma.client.user.findFirst({
+                where: { id: payload.sub, isActive: true },
+                include: {
+                    userRoles: {
+                        include: {
+                            role: true,
+                        },
+                    },
+                },
+            });
+
+            if (!user) {
+                throw new UnauthorizedException('User not found');
+            }
+
+            const roles = user.userRoles.map((e) => e.role.name);
+            if (roles.length <= 0) {
+                throw new UnauthorizedException('Roles do not match!');
+            }
+
+            this.sessionService.refreshSession(sessionId);
+            const csrfToken = this.csrfService.rotateToken(sessionId);
+
+            const userPayload: UserPayload = {
+                sub: user.id,
+                email: user.email,
+                roles: roles,
+            };
+
+            const accessToken = await this.jwtService.signAsync(userPayload, {
+                expiresIn: SECURITY_CONFIG.jwt.accessTokenExpiry,
+            });
+
+            const newRefreshToken = await this.jwtService.signAsync(
+                { sub: user.id, type: 'refresh', sessionId },
+                { expiresIn: SECURITY_CONFIG.jwt.refreshTokenExpiry },
+            );
+
+            await this.securityEventService.logEvent('TOKEN_REFRESH', {
+                userId: user.id,
+                sessionId,
+                ip,
+                userAgent,
+                severity: 'INFO',
+            });
+
+            return Result.ok({
+                tokens: {
+                    accessToken,
+                    refreshToken: newRefreshToken,
+                    csrfToken,
+                    sessionId,
+                    expiresAt:
+                        Date.now() + SECURITY_CONFIG.session.accessTokenTtl,
+                },
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                    roles,
+                },
+            });
+        } catch (error) {
+            this.logger.warn('Invalid refresh token');
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+    }
+
     async forgotPassword(email: string): Promise<Result<void>> {
         this.logger.log('Forgot password request for {email}', email);
 
@@ -160,13 +448,11 @@ export class AuthService {
         });
 
         if (!user) {
-            // Don't reveal if user exists
             return Result.ok();
         }
 
-        // Generate reset token
         const resetToken = uuidv4();
-        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
         await this.prisma.client.user.update({
             where: { id: user.id },
@@ -176,8 +462,6 @@ export class AuthService {
             },
         });
 
-        // TODO: Send email with reset token
-        // For now, log it
         this.logger.log(`Reset token for ${email}: ${resetToken}`);
 
         return Result.ok();
@@ -243,5 +527,26 @@ export class AuthService {
         });
 
         return Result.ok();
+    }
+
+    getUserSessionsAsync(userId: string): Result<
+        Array<{
+            id: string;
+            ip: string;
+            userAgent: string;
+            createdAt: Date;
+            lastAccessedAt: Date;
+        }>
+    > {
+        const sessions = this.sessionService.getUserSessions(userId);
+        return Result.ok(
+            sessions.map((s) => ({
+                id: s.id.substring(0, 8) + '...',
+                ip: s.ip,
+                userAgent: s.userAgent,
+                createdAt: s.createdAt,
+                lastAccessedAt: s.lastAccessedAt,
+            })),
+        );
     }
 }

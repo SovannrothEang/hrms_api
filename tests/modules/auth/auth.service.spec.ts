@@ -3,6 +3,9 @@ import { AuthService } from '../../../src/modules/auth/auth.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../../../src/modules/iam/users/users.service';
+import { SessionService } from '../../../src/common/security/services/session.service';
+import { CsrfService } from '../../../src/common/security/services/csrf.service';
+import { SecurityEventService } from '../../../src/common/security/services/security-event.service';
 import * as bcrypt from 'bcrypt';
 import { UnauthorizedException } from '@nestjs/common';
 
@@ -29,6 +32,31 @@ const mockUsersService = {
     findOneByIdAsync: jest.fn(),
 };
 
+const mockSessionService = {
+    createSession: jest.fn(),
+    validateSession: jest.fn(),
+    invalidateSession: jest.fn(),
+    invalidateAllUserSessions: jest.fn(),
+    getUserSessions: jest.fn(),
+    refreshSession: jest.fn(),
+};
+
+const mockCsrfService = {
+    generateToken: jest.fn(),
+    validateToken: jest.fn(),
+    rotateToken: jest.fn(),
+    invalidateToken: jest.fn(),
+};
+
+const mockSecurityEventService = {
+    logEvent: jest.fn(),
+    logLoginSuccess: jest.fn(),
+    logLoginFailed: jest.fn(),
+    logLogout: jest.fn(),
+    logSuspiciousActivity: jest.fn(),
+    getFailedLoginAttempts: jest.fn().mockReturnValue(0),
+};
+
 describe('AuthService', () => {
     let service: AuthService;
     let prismaClient: typeof mockPrismaClient;
@@ -41,6 +69,12 @@ describe('AuthService', () => {
                 { provide: PrismaService, useValue: mockPrismaService },
                 { provide: JwtService, useValue: mockJwtService },
                 { provide: UsersService, useValue: mockUsersService },
+                { provide: SessionService, useValue: mockSessionService },
+                { provide: CsrfService, useValue: mockCsrfService },
+                {
+                    provide: SecurityEventService,
+                    useValue: mockSecurityEventService,
+                },
             ],
         }).compile();
 

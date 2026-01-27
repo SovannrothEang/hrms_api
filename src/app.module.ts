@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './common/services/prisma/prisma.module';
+import { SecurityModule } from './common/security/security.module';
 import { UsersModule } from './modules/iam/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
@@ -103,6 +104,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
         PublicHolidaysModule,
         ReportsModule,
         RolesModule,
+        SecurityModule,
         ShiftsModule,
         TaxBracketsModule,
         UsersModule,
