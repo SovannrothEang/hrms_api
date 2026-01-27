@@ -25,6 +25,7 @@ import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.m
 import { PayrollsModule } from './modules/payroll/payrolls/payrolls.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
     imports: [
@@ -97,6 +98,7 @@ import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
         AuthModule,
         AutomationModule,
         CurrenciesModule,
+        DashboardModule,
         DepartmentsModule,
         EmployeePositionsModule,
         EmployeesModule,
