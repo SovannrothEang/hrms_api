@@ -8,6 +8,8 @@ import { Result } from 'src/common/logic/result';
 import * as bcrypt from 'bcrypt';
 import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { EmployeeQueryDto } from './dtos/employee-query.dto';
 
 @Injectable()
 export class EmployeesService {
@@ -138,64 +140,159 @@ export class EmployeesService {
     }
 
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-        childIncluded?: boolean,
-    ): Promise<
-        Result<{
-            data: EmployeeDto[];
-            meta: {
-                page: number;
-                limit: number;
-                total: number;
-                totalPages: number;
-                hasNext: boolean;
-                hasPrevious: boolean;
+        query: EmployeeQueryDto,
+    ): Promise<ResultPagination<EmployeeDto>> {
+        this.logger.log('Getting paginated employees');
+        const {
+            page = 1,
+            limit = 10,
+            employeeCode,
+            firstname,
+            lastname,
+            departmentId,
+            positionId,
+            employmentType,
+            status,
+            isActive,
+            hireDateFrom,
+            hireDateTo,
+            salaryRange,
+            gender,
+            sortBy,
+            sortOrder,
+            includeDetails,
+        } = query;
+
+        const where: Prisma.EmployeeWhereInput = {
+            isDeleted: false,
+        };
+
+        if (isActive !== undefined) {
+            where.isActive = isActive;
+        }
+
+        if (employeeCode) {
+            where.employeeCode = {
+                contains: employeeCode,
+                mode: 'insensitive',
             };
-        }>
-    > {
-        const skip = (page - 1) * limit;
+        }
 
-        const [employees, total] = await this.prisma.$transaction([
-            this.prisma.client.employee.findMany({
-                where: { isDeleted: false },
-                skip,
-                take: limit,
-                include: {
-                    department: true,
-                    position: true,
-                    user: {
-                        include: { userRoles: { include: { role: true } } },
-                    },
-                    performer: childIncluded
-                        ? {
-                              include: {
-                                  userRoles: {
-                                      include: { role: true },
-                                  },
-                              },
-                          }
-                        : false,
-                },
-                orderBy: { employeeCode: 'asc' },
-            }),
-            this.prisma.client.employee.count({ where: { isDeleted: false } }),
-        ]);
+        if (firstname) {
+            where.firstname = {
+                contains: firstname,
+                mode: 'insensitive',
+            };
+        }
 
-        const data = employees.map((e) => plainToInstance(EmployeeDto, e));
-        const totalPages = Math.ceil(total / limit);
+        if (lastname) {
+            where.lastname = {
+                contains: lastname,
+                mode: 'insensitive',
+            };
+        }
 
-        return Result.ok({
-            data,
-            meta: {
-                page,
-                limit,
-                total,
-                totalPages,
-                hasNext: skip + limit < total,
-                hasPrevious: skip > 0,
+        if (departmentId) {
+            where.departmentId = departmentId;
+        }
+
+        if (positionId) {
+            where.positionId = positionId;
+        }
+
+        if (employmentType) {
+            where.employmentType =
+                employmentType as Prisma.EmployeeCreateInput['employmentType'];
+        }
+
+        if (status) {
+            where.status = status as Prisma.EmployeeCreateInput['status'];
+        }
+
+        if (hireDateFrom || hireDateTo) {
+            where.hireDate = {};
+            if (hireDateFrom) {
+                where.hireDate.gte = new Date(hireDateFrom);
+            }
+            if (hireDateTo) {
+                const end = new Date(hireDateTo);
+                end.setHours(23, 59, 59, 999);
+                where.hireDate.lte = end;
+            }
+        }
+
+        if (salaryRange) {
+            const min = query.salaryMin;
+            const max = query.salaryMax;
+            where.salary = {};
+            if (min !== null) {
+                where.salary.gte = min;
+            }
+            if (max !== null) {
+                where.salary.lte = max;
+            }
+        }
+
+        if (gender) {
+            const genderMap: Record<string, number> = {
+                male: 0,
+                female: 1,
+                unknown: 2,
+            };
+            where.gender = genderMap[gender] ?? 2;
+        }
+
+        const orderBy: Prisma.EmployeeOrderByWithRelationInput = {};
+        if (sortBy === 'firstname') {
+            orderBy.firstname = sortOrder;
+        } else if (sortBy === 'lastname') {
+            orderBy.lastname = sortOrder;
+        } else if (sortBy === 'hireDate') {
+            orderBy.hireDate = sortOrder;
+        } else if (sortBy === 'salary') {
+            orderBy.salary = sortOrder;
+        } else if (sortBy === 'createdAt') {
+            orderBy.createdAt = sortOrder;
+        } else {
+            orderBy.employeeCode = sortOrder;
+        }
+
+        const include = {
+            department: includeDetails,
+            position: includeDetails,
+            user: {
+                include: { userRoles: { include: { role: true } } },
             },
-        });
+            performer: includeDetails
+                ? {
+                      include: {
+                          userRoles: {
+                              include: { role: true },
+                          },
+                      },
+                  }
+                : false,
+        };
+
+        try {
+            const [total, employees] = await Promise.all([
+                this.prisma.client.employee.count({ where }),
+                this.prisma.client.employee.findMany({
+                    where,
+                    skip: query.skip,
+                    take: limit,
+                    include,
+                    orderBy,
+                }),
+            ]);
+
+            const data = employees.map((e) => plainToInstance(EmployeeDto, e));
+
+            return ResultPagination.of(data, total, page, limit);
+        } catch (error) {
+            this.logger.error('Failed to fetch paginated employees', error);
+            throw error;
+        }
     }
 
     async findOneByIdAsync(

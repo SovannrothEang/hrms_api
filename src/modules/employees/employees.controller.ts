@@ -26,7 +26,9 @@ import { EmployeeUpdateDto } from './dtos/employee-update.dto';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { EmployeeQueryDto } from './dtos/employee-query.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { EmployeeDto } from './dtos/employee.dto';
 
 @Controller('employees')
 @ApiTags('Employees')
@@ -36,22 +38,29 @@ export class EmployeesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get all employees (Paginated with filtering)' })
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiQuery({ name: 'childIncluded', required: false })
-    @ApiOperation({ summary: 'Get all employees (Paginated)' })
+    @ApiQuery({ name: 'employeeCode', required: false, type: String })
+    @ApiQuery({ name: 'firstname', required: false, type: String })
+    @ApiQuery({ name: 'lastname', required: false, type: String })
+    @ApiQuery({ name: 'departmentId', required: false, type: String })
+    @ApiQuery({ name: 'positionId', required: false, type: String })
+    @ApiQuery({ name: 'employmentType', required: false, type: String })
+    @ApiQuery({ name: 'status', required: false, type: String })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+    @ApiQuery({ name: 'hireDateFrom', required: false, type: String })
+    @ApiQuery({ name: 'hireDateTo', required: false, type: String })
+    @ApiQuery({ name: 'salaryRange', required: false, type: String })
+    @ApiQuery({ name: 'gender', required: false, type: String })
+    @ApiQuery({ name: 'sortBy', required: false, type: String })
+    @ApiQuery({ name: 'sortOrder', required: false, type: String })
+    @ApiQuery({ name: 'includeDetails', required: false, type: Boolean })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
-        @Query() pagination: PaginationDto,
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
-    ) {
-        const result = await this.employeesService.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-            childIncluded,
-        );
-        return result.getData();
+        @Query() query: EmployeeQueryDto,
+    ): Promise<ResultPagination<EmployeeDto>> {
+        return await this.employeesService.findAllPaginatedAsync(query);
     }
 
     @Get(':id')

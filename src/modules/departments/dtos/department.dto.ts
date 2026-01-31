@@ -21,7 +21,7 @@ export class DepartmentDto {
     employees: EmployeeDto[];
 
     @Expose({ name: 'employee_count' })
-    @Transform(({ obj }: { obj: Department & { employees?: Employee[]}}) => {
+    @Transform(({ obj }: { obj: Department & { employees?: Employee[] } }) => {
         if (!Array.isArray(obj.employees)) return 0;
         return obj.employees.length;
     })

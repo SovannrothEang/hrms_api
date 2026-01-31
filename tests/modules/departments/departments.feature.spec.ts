@@ -15,17 +15,20 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllPaginatedAsync: jest.fn(),
     findAllWithEmployeeAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     updateAsync: jest.fn(),
@@ -38,9 +41,7 @@ describe('DepartmentsController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [DepartmentsController],
-            providers: [
-                { provide: DepartmentsService, useValue: mockService },
-            ],
+            providers: [{ provide: DepartmentsService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -53,7 +54,9 @@ describe('DepartmentsController (Feature)', () => {
 
     it('/departments (POST) should create department', () => {
         const dto = { name: 'Engineering' };
-        mockService.createAsync.mockResolvedValue(Result.ok({ id: '1', ...dto }));
+        mockService.createAsync.mockResolvedValue(
+            Result.ok({ id: '1', ...dto }),
+        );
 
         return request(app.getHttpServer())
             .post('/departments')
@@ -62,9 +65,12 @@ describe('DepartmentsController (Feature)', () => {
     });
 
     it('/departments (GET) should return list', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.ok([]));
-        return request(app.getHttpServer())
-            .get('/departments')
-            .expect(200);
+        const {
+            ResultPagination,
+        } = require('../../../src/common/logic/result-pagination');
+        mockService.findAllPaginatedAsync.mockResolvedValue(
+            ResultPagination.of([], 0, 1, 10),
+        );
+        return request(app.getHttpServer()).get('/departments').expect(200);
     });
 });

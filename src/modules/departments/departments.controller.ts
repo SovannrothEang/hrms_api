@@ -26,6 +26,9 @@ import {
     ApiResponse,
     ApiTags,
 } from '@nestjs/swagger';
+import { DepartmentQueryDto } from './dtos/department-query.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { DepartmentDto } from './dtos/department.dto';
 
 @Controller('departments')
 @Auth(RoleName.ADMIN)
@@ -35,16 +38,20 @@ export class DepartmentsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all departments' })
-    @ApiQuery({ name: 'childIncluded', required: false })
+    @ApiOperation({ summary: 'Get all departments (Paginated with filtering)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'name', required: false, type: String })
+    @ApiQuery({ name: 'employeeCountRange', required: false, type: String })
+    @ApiQuery({ name: 'isActive', required: false, type: Boolean })
+    @ApiQuery({ name: 'sortBy', required: false, type: String })
+    @ApiQuery({ name: 'sortOrder', required: false, type: String })
+    @ApiQuery({ name: 'includeEmployees', required: false, type: Boolean })
     @ApiResponse({ status: HttpStatus.OK })
     async findAllAsync(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
-    ) {
-        const result =
-            await this.departmentsService.findAllAsync(childIncluded);
-        return result.getData();
+        @Query() query: DepartmentQueryDto,
+    ): Promise<ResultPagination<DepartmentDto>> {
+        return await this.departmentsService.findAllPaginatedAsync(query);
     }
 
     @Get(':id')
