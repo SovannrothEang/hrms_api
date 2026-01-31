@@ -99,6 +99,7 @@ export class EmployeesController {
     @ApiParam({ name: 'id', required: true, description: 'Employee ID' })
     @ApiOperation({ summary: 'Update employee details' })
     @ApiResponse({ status: HttpStatus.OK })
+    @ApiResponse({ status: HttpStatus.NOT_FOUND })
     async update(
         @Param('id') id: string,
         @Body() dto: EmployeeUpdateDto,

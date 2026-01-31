@@ -77,7 +77,7 @@ export class EmployeesService {
                             dob: new Date(dto.dob),
                             address: dto.address,
                             phone: dto.phone,
-                            hireDate: new Date(dto.hireDate),
+                            hireDate: new Date(dto.hireDate).toISOString(),
                             departmentId: dto.departmentId,
                             positionId: dto.positionId,
                             managerId: dto.managerId,

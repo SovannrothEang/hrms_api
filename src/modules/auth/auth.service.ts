@@ -44,10 +44,7 @@ export class AuthService {
         const user = await this.prisma.client.user.findFirst({
             where: { email, isActive: true },
             include: {
-                userRoles: {
-                    include: {
-                        role: true,
-                    },
+                userRoles: { include: { role: true, },
                 },
             },
         });
