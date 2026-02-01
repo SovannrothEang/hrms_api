@@ -5,6 +5,8 @@ import { CurrencyDto } from './dtos/currency.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class CurrenciesService {
     private readonly logger = new Logger(CurrenciesService.name);
@@ -66,6 +68,31 @@ export class CurrenciesService {
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch currencies');
+        }
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+    ): Promise<ResultPagination<CurrencyDto>> {
+        try {
+            const skip = (page - 1) * limit;
+
+            const [total, values] = await Promise.all([
+                this.prisma.client.currency.count({ where: { isDeleted: false } }),
+                this.prisma.client.currency.findMany({
+                    where: { isDeleted: false },
+                    skip,
+                    take: limit,
+                    orderBy: { code: 'asc' },
+                }),
+            ]);
+
+            const dtos = values.map((v) => plainToInstance(CurrencyDto, v));
+            return ResultPagination.of(dtos, total, page, limit);
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
         }
     }
 

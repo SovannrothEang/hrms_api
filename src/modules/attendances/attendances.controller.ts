@@ -43,11 +43,12 @@ export class AttendancesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.attendancesService.findAllPaginatedAsync(
+        const result = await this.attendancesService.findAllPaginatedAsync(
             pagination.page || 1,
             pagination.limit || 10,
             childIncluded,
         );
+        return result.getData();
     }
 
     @Get(':id')

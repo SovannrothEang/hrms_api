@@ -5,6 +5,8 @@ import { CreateShiftDto } from './dtos/create-shift.dto';
 import { ShiftDto } from './dtos/shift.dto';
 import { plainToInstance } from 'class-transformer';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class ShiftsService {
     constructor(private readonly prisma: PrismaService) {}
@@ -37,6 +39,26 @@ export class ShiftsService {
             where: { isDeleted: false },
         });
         return Result.ok(shifts.map((s) => plainToInstance(ShiftDto, s)));
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+    ): Promise<ResultPagination<ShiftDto>> {
+        const skip = (page - 1) * limit;
+
+        const [total, shifts] = await Promise.all([
+            this.prisma.client.shift.count({ where: { isDeleted: false } }),
+            this.prisma.client.shift.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                orderBy: { name: 'asc' },
+            }),
+        ]);
+
+        const dtos = shifts.map((s) => plainToInstance(ShiftDto, s));
+        return ResultPagination.of(dtos, total, page, limit);
     }
 
     async findOneByIdAsync(id: string): Promise<Result<ShiftDto>> {

@@ -9,15 +9,19 @@ import {
     Param,
     Post,
     Put,
+    Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
 import UserCreateDto from './dtos/user-create.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserUpdateDto } from './dtos/user-update.dto';
+
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('users')
 @Auth(RoleName.ADMIN)
@@ -26,10 +30,15 @@ export class UsersController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all users' })
-    @ApiResponse({ status: HttpStatus.OK, description: 'List of users dto' })
-    async findAll() {
-        return await this.usersService.findAllAsync();
+    @ApiOperation({ summary: 'Get all users (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of users' })
+    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<UserDto>> {
+        return await this.usersService.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+        );
     }
 
     @Get(':id')

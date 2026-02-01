@@ -15,6 +15,7 @@ import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
 import { Prisma } from '@prisma/client';
+import { ResultPagination } from '../../../common/logic/result-pagination';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -375,19 +376,7 @@ export class PayrollsService {
             year?: number;
             month?: number;
         },
-    ): Promise<
-        Result<{
-            data: PayrollDto[];
-            meta: {
-                page: number;
-                limit: number;
-                total: number;
-                totalPages: number;
-                hasNext: boolean;
-                hasPrevious: boolean;
-            };
-        }>
-    > {
+    ): Promise<Result<ResultPagination<PayrollDto>>> {
         try {
             const skip = (page - 1) * limit;
             const where: Prisma.PayrollWhereInput = { isDeleted: false };
@@ -409,7 +398,7 @@ export class PayrollsService {
                 };
             }
 
-            const [payrolls, total] = await this.prisma.$transaction([
+            const [payrolls, total] = await this.prisma.client.$transaction([
                 this.prisma.client.payroll.findMany({
                     where,
                     skip,
@@ -430,19 +419,8 @@ export class PayrollsService {
                     excludeExtraneousValues: true,
                 }),
             );
-            const totalPages = Math.ceil(total / limit);
 
-            return Result.ok({
-                data,
-                meta: {
-                    page,
-                    limit,
-                    total,
-                    totalPages,
-                    hasNext: skip + limit < total,
-                    hasPrevious: skip > 0,
-                },
-            });
+            return Result.ok(ResultPagination.of(data, total, page, limit));
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
             return Result.fail('Failed to fetch payrolls');

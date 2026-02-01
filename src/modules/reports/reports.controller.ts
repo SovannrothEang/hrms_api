@@ -138,7 +138,9 @@ export class ReportsController {
 
     @Get('employee')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get employee report with filters' })
+    @ApiOperation({ summary: 'Get employee report with filters (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'departmentId', required: false, type: String })
     @ApiQuery({
         name: 'status',
@@ -146,13 +148,20 @@ export class ReportsController {
         enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
     })
     async getEmployeeReport(
+        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+        @Query('limit', new ParseIntPipe({ optional: true }))
+        limit: number = 10,
         @Query('departmentId') departmentId?: string,
         @Query('status') status?: string,
     ) {
-        return await this.reportsService.getEmployeeReportData({
-            departmentId,
-            status,
-        });
+        return await this.reportsService.getPaginatedEmployeeReport(
+            page || 1,
+            limit || 10,
+            {
+                departmentId,
+                status,
+            },
+        );
     }
 
     @Get('employee/export')
@@ -203,7 +212,9 @@ export class ReportsController {
 
     @Get('payroll')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get payroll report with filters' })
+    @ApiOperation({ summary: 'Get payroll report with filters (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'year', required: false, type: Number })
     @ApiQuery({ name: 'month', required: false, type: Number })
     @ApiQuery({ name: 'departmentId', required: false, type: String })
@@ -213,17 +224,24 @@ export class ReportsController {
         enum: ['PENDING', 'PROCESSED', 'PAID', 'CANCELLED'],
     })
     async getPayrollReport(
+        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+        @Query('limit', new ParseIntPipe({ optional: true }))
+        limit: number = 10,
         @Query('year', new ParseIntPipe({ optional: true })) year?: number,
         @Query('month', new ParseIntPipe({ optional: true })) month?: number,
         @Query('departmentId') departmentId?: string,
         @Query('status') status?: string,
     ) {
-        return await this.reportsService.getPayrollReportData({
-            year,
-            month,
-            departmentId,
-            status,
-        });
+        return await this.reportsService.getPaginatedPayrollReport(
+            page || 1,
+            limit || 10,
+            {
+                year,
+                month,
+                departmentId,
+                status,
+            },
+        );
     }
 
     @Get('payroll/export')

@@ -59,12 +59,13 @@ export class LeavesController {
         limit: number = 10,
         @Query('employeeId') employeeId?: string,
     ) {
-        return await this.leavesService.findAllPaginatedAsync(
+        const result = await this.leavesService.findAllPaginatedAsync(
             page || 1,
             limit || 10,
             childIncluded,
             employeeId,
         );
+        return result.getData();
     }
 
     @Get(':id')

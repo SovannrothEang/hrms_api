@@ -10,6 +10,8 @@ import { Result } from 'src/common/logic/result';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class RolesService {
     private readonly logger = new Logger(RolesService.name);
@@ -36,6 +38,41 @@ export class RolesService {
             },
         });
         return Result.ok(roles.map((e) => plainToInstance(RoleDto, e)));
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        childIncluded: boolean = false,
+    ): Promise<ResultPagination<RoleDto>> {
+        this.logger.log(`Getting paginated roles: page ${page}, limit ${limit}`);
+        const skip = (page - 1) * limit;
+
+        const [total, roles] = await Promise.all([
+            this.prisma.client.role.count({ where: { isDeleted: false } }),
+            this.prisma.client.role.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                include: {
+                    performer: childIncluded
+                        ? {
+                              include: {
+                                  userRoles: {
+                                      include: {
+                                          role: true,
+                                      },
+                                  },
+                              },
+                          }
+                        : false,
+                },
+                orderBy: { name: 'asc' },
+            }),
+        ]);
+
+        const dtos = roles.map((e) => plainToInstance(RoleDto, e));
+        return ResultPagination.of(dtos, total, page, limit);
     }
 
     async findOneByIdAsync(

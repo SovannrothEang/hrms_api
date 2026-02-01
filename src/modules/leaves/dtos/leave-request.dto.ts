@@ -38,7 +38,7 @@ export class LeaveRequestDto {
     @Expose({ name: 'reason' })
     reason: string | null;
 
-    @Expose({ name: 'requester' })
+    @Expose({ name: 'employee' })
     @Type(() => EmployeeDto)
     @Transform(
         ({ obj }: { obj: LeaveRequest & { requester?: Employee | null } }) => {
@@ -46,7 +46,7 @@ export class LeaveRequestDto {
             return plainToInstance(EmployeeDto, obj.requester);
         },
     )
-    requester: EmployeeDto;
+    employee: EmployeeDto;
 
     @Expose({ name: 'approver' })
     @Type(() => EmployeeDto)

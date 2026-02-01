@@ -4,6 +4,8 @@ export class ResultPagination<T> {
     public readonly page: number;
     public readonly limit: number;
     public readonly totalPages: number;
+    public readonly hasNext: boolean;
+    public readonly hasPrevious: boolean;
 
     constructor(data: T[], total: number, page: number, limit: number) {
         this.data = data;
@@ -11,6 +13,8 @@ export class ResultPagination<T> {
         this.page = page;
         this.limit = limit;
         this.totalPages = Math.ceil(total / limit);
+        this.hasNext = page < this.totalPages;
+        this.hasPrevious = page > 1;
     }
 
     public static of<U>(

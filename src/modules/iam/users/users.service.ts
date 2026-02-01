@@ -14,6 +14,8 @@ import { UserUpdateDto } from './dtos/user-update.dto';
 import { Result } from 'src/common/logic/result';
 import { RoleName } from 'src/common/enums/roles.enum';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
@@ -32,6 +34,34 @@ export class UsersService {
             },
         });
         return users.map((u) => plainToInstance(UserDto, u));
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+    ): Promise<ResultPagination<UserDto>> {
+        this.logger.log(`Getting paginated users: page ${page}, limit ${limit}`);
+        const skip = (page - 1) * limit;
+
+        const [total, users] = await Promise.all([
+            this.prisma.client.user.count({ where: { isDeleted: false } }),
+            this.prisma.client.user.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                include: {
+                    userRoles: {
+                        include: {
+                            role: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+            }),
+        ]);
+
+        const dtos = users.map((u) => plainToInstance(UserDto, u));
+        return ResultPagination.of(dtos, total, page, limit);
     }
 
     async findOneByIdAsync(userId: string): Promise<Result<UserDto>> {

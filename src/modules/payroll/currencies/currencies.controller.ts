@@ -10,12 +10,17 @@ import {
     BadRequestException,
     NotFoundException,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrenciesService } from './currencies.service';
 import { CreateCurrencyDto } from './dtos/create-currency.dto';
+
+import { Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { CurrencyDto } from './dtos/currency.dto';
 
 @ApiTags('Payroll - Currencies')
 @Controller('currencies')
@@ -40,13 +45,15 @@ export class CurrenciesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all currencies' })
-    @ApiResponse({ status: HttpStatus.OK })
-    async findAll() {
-        const result = await this.service.findAllAsync();
-        if (!result.isSuccess)
-            throw new BadRequestException(result.error ?? 'Unknown Error');
-        return result.getData();
+    @ApiOperation({ summary: 'Get all currencies (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of currencies' })
+    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<CurrencyDto>> {
+        return await this.service.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+        );
     }
 
     @Get(':id')

@@ -18,13 +18,11 @@ export class LeavesService {
     ) {}
 
     async findAllAsync(
-        childIncluded?: boolean,
+        childIncluded: boolean = false,
     ): Promise<Result<LeaveRequestDto[]>> {
         const leaves = await this.prisma.client.leaveRequest.findMany({
             include: {
-                requester: childIncluded
-                    ? { include: { department: true } }
-                    : false,
+                requester: { include: { department: true } },
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
@@ -59,9 +57,7 @@ export class LeavesService {
                 take: limit,
                 orderBy: { startDate: 'desc' }, // Future to past
                 include: {
-                    requester: childIncluded
-                        ? { include: { department: true } }
-                        : false,
+                    requester: { include: { department: true } },
                     approver: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
@@ -82,14 +78,12 @@ export class LeavesService {
 
     async findOneByIdAsync(
         id: string,
-        childIncluded?: boolean,
+        childIncluded: boolean = false,
     ): Promise<Result<LeaveRequestDto>> {
         const leave = await this.prisma.client.leaveRequest.findFirst({
             where: { id },
             include: {
-                requester: childIncluded
-                    ? { include: { department: true } }
-                    : false,
+                requester: { include: { department: true } },
                 approver: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
@@ -209,7 +203,7 @@ export class LeavesService {
                         status: LeaveStatus.PENDING,
                         performBy: performerId,
                     },
-                    include: { requester: true },
+                    include: { requester: { include: { department: true } } },
                 });
             });
 
@@ -291,7 +285,10 @@ export class LeavesService {
                             approvedBy: dto.approverId,
                             performBy: performerId,
                         },
-                        include: { requester: true, approver: true },
+                        include: {
+                            requester: { include: { department: true } },
+                            approver: true,
+                        },
                     });
                 },
             );

@@ -5,6 +5,8 @@ import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import { AttendanceStatus } from 'src/common/enums/attendance-status.enum';
 
+import { ResultPagination } from '../../common/logic/result-pagination';
+
 @Injectable()
 export class AttendancesService {
     constructor(private readonly prisma: PrismaService) {}
@@ -43,7 +45,7 @@ export class AttendancesService {
         page: number,
         limit: number,
         childIncluded?: boolean,
-    ): Promise<Result<any>> {
+    ): Promise<Result<ResultPagination<AttendanceDto>>> {
         const skip = (page - 1) * limit;
 
         const [attendances, total] = await this.prisma.$transaction([
@@ -78,19 +80,7 @@ export class AttendancesService {
         ]);
 
         const data = attendances.map((a) => plainToInstance(AttendanceDto, a));
-        const totalPages = Math.ceil(total / limit);
-
-        return Result.ok({
-            data,
-            meta: {
-                page,
-                limit,
-                total,
-                totalPages,
-                hasNext: skip + limit < total,
-                hasPrevious: skip > 0,
-            },
-        });
+        return Result.ok(ResultPagination.of(data, total, page, limit));
     }
 
     async findOneByIdAsync(

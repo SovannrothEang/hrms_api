@@ -180,6 +180,67 @@ export class ReportsService {
         return workbook;
     }
 
+    async getPaginatedEmployeeReport(
+        page: number,
+        limit: number,
+        params?: {
+            departmentId?: string;
+            status?: string;
+        },
+    ): Promise<ResultPagination<EmployeeReportData>> {
+        const skip = (page - 1) * limit;
+        const where: {
+            isDeleted: boolean;
+            departmentId?: string;
+            status?:
+                | 'ACTIVE'
+                | 'INACTIVE'
+                | 'ON_LEAVE'
+                | 'PROBATION'
+                | 'TERMINATED';
+        } = {
+            isDeleted: false,
+        };
+
+        if (params?.departmentId) {
+            where.departmentId = params.departmentId;
+        }
+
+        if (params?.status) {
+            where.status = params.status as typeof where.status;
+        }
+
+        const [total, employees] = await Promise.all([
+            this.prisma.client.employee.count({ where }),
+            this.prisma.client.employee.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    department: { select: { departmentName: true } },
+                    position: { select: { title: true } },
+                    user: { select: { email: true } },
+                },
+                orderBy: { employeeCode: 'asc' },
+            }),
+        ]);
+
+        const data = employees.map((e) => ({
+            id: e.id,
+            employeeCode: e.employeeCode,
+            fullName: `${e.firstname} ${e.lastname}`,
+            email: e.user?.email ?? '',
+            department: e.department.departmentName,
+            position: e.position.title,
+            status: e.status,
+            employmentType: e.employmentType,
+            hireDate: e.hireDate,
+            salary: e.salary ? Number(e.salary) : null,
+        }));
+
+        return ResultPagination.of(data, total, page, limit);
+    }
+
     async getEmployeeReportData(params?: {
         departmentId?: string;
         status?: string;
@@ -227,6 +288,88 @@ export class ReportsService {
             hireDate: e.hireDate,
             salary: e.salary ? Number(e.salary) : null,
         }));
+    }
+
+    async getPaginatedPayrollReport(
+        page: number,
+        limit: number,
+        params?: {
+            year?: number;
+            month?: number;
+            departmentId?: string;
+            status?: string;
+        },
+    ): Promise<ResultPagination<PayrollReportData>> {
+        const skip = (page - 1) * limit;
+        const where: {
+            isDeleted: boolean;
+            payPeriodStart?: { gte?: Date; lte?: Date };
+            status?: string;
+            employee?: { departmentId?: string };
+        } = {
+            isDeleted: false,
+        };
+
+        if (params?.year && params?.month) {
+            const startOfMonth = new Date(params.year, params.month - 1, 1);
+            const endOfMonth = new Date(params.year, params.month, 0);
+            where.payPeriodStart = {
+                gte: startOfMonth,
+                lte: endOfMonth,
+            };
+        } else if (params?.year) {
+            const startOfYear = new Date(params.year, 0, 1);
+            const endOfYear = new Date(params.year, 11, 31);
+            where.payPeriodStart = {
+                gte: startOfYear,
+                lte: endOfYear,
+            };
+        }
+
+        if (params?.status) {
+            where.status = params.status;
+        }
+
+        if (params?.departmentId) {
+            where.employee = { departmentId: params.departmentId };
+        }
+
+        const [total, payrolls] = await Promise.all([
+            this.prisma.client.payroll.count({ where }),
+            this.prisma.client.payroll.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    employee: {
+                        select: {
+                            employeeCode: true,
+                            firstname: true,
+                            lastname: true,
+                            department: { select: { departmentName: true } },
+                        },
+                    },
+                },
+                orderBy: [{ payPeriodStart: 'desc' }, { createdAt: 'desc' }],
+            }),
+        ]);
+
+        const data = payrolls.map((p) => ({
+            id: p.id,
+            employeeCode: p.employee.employeeCode,
+            employeeName: `${p.employee.firstname} ${p.employee.lastname}`,
+            department: p.employee.department.departmentName,
+            payPeriodStart: p.payPeriodStart,
+            payPeriodEnd: p.payPeriodEnd,
+            basicSalary: Number(p.basicSalary),
+            overtimePay: Number(p.overtimeRate) * Number(p.overtimeHrs),
+            bonus: Number(p.bonus),
+            deductions: Number(p.deductions),
+            netSalary: Number(p.netSalary),
+            status: p.status,
+        }));
+
+        return ResultPagination.of(data, total, page, limit);
     }
 
     async getPayrollReportData(params?: {

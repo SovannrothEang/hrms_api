@@ -27,6 +27,10 @@ import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleUpdateDto } from './dtos/role-update.dto';
 
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { RoleDto } from './dtos/roles.dto';
+
 @Controller('roles')
 @ApiTags('Roles')
 @Auth(RoleName.ADMIN)
@@ -35,15 +39,21 @@ export class RolesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all roles' })
-    @ApiQuery({ name: 'childIncluded', required: false })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Get all roles' })
+    @ApiOperation({ summary: 'Get all roles (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of roles' })
     async findAll(
+        @Query() pagination: PaginationDto,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
-    ) {
-        const result = await this.rolesService.findAllAsync(childIncluded);
-        return result.getData();
+    ): Promise<ResultPagination<RoleDto>> {
+        return await this.rolesService.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+            childIncluded,
+        );
     }
 
     @Get(':id')

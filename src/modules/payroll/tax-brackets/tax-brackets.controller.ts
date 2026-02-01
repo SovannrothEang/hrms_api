@@ -24,6 +24,10 @@ import { RoleName } from 'src/common/enums/roles.enum';
 import { TaxBracketsService } from './tax-brackets.service';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { TaxBracketDto } from './dtos/tax-bracket.dto';
+
 @ApiTags('Payroll - Tax Brackets')
 @Controller('tax-brackets')
 @Auth(RoleName.ADMIN, RoleName.HR)
@@ -47,7 +51,9 @@ export class TaxBracketsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all tax brackets' })
+    @ApiOperation({ summary: 'Get all tax brackets (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({
         name: 'country',
         required: false,
@@ -59,18 +65,18 @@ export class TaxBracketsController {
         type: Number,
         description: 'Filter by tax year',
     })
-    @ApiResponse({ status: HttpStatus.OK })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of tax brackets' })
     async findAll(
+        @Query() pagination: PaginationDto,
         @Query('country') country?: string,
         @Query('year') year?: number,
-    ) {
-        const result = await this.service.findAllAsync(
+    ): Promise<ResultPagination<TaxBracketDto>> {
+        return await this.service.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
             country,
             year ? Number(year) : undefined,
         );
-        if (!result.isSuccess)
-            throw new BadRequestException(result.error ?? 'Unknown Error');
-        return result.getData();
     }
 
     @Delete(':id')

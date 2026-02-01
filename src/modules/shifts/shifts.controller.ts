@@ -8,12 +8,17 @@ import {
     HttpCode,
     HttpStatus,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShiftsService } from './shifts.service';
 import { CreateShiftDto } from './dtos/create-shift.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
+
+import { Query } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
+import { ShiftDto } from './dtos/shift.dto';
 
 @ApiTags('Shifts')
 @Controller('shifts')
@@ -37,11 +42,15 @@ export class ShiftsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all shifts' })
-    @ApiResponse({ status: HttpStatus.OK })
-    async findAll() {
-        const result = await this.shiftsService.findAllAsync();
-        return result.getData();
+    @ApiOperation({ summary: 'Get all shifts (Paginated)' })
+    @ApiQuery({ name: 'page', required: false, type: Number })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of shifts' })
+    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<ShiftDto>> {
+        return await this.shiftsService.findAllPaginatedAsync(
+            pagination.page || 1,
+            pagination.limit || 10,
+        );
     }
 
     @Get(':id')

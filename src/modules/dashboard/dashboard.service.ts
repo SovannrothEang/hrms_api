@@ -8,6 +8,8 @@ import {
 import { DepartmentDistributionDto } from './dtos/department-distribution.dto';
 import { RecentActivitiesDto } from './dtos/recent-activity.dto';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class DashboardService {
     private readonly logger = new Logger(DashboardService.name);
@@ -268,6 +270,66 @@ export class DashboardService {
             return { activities, count: activities.length };
         } catch (error) {
             this.logger.error('Failed to fetch recent activity', error);
+            throw error;
+        }
+    }
+
+    async getPaginatedRecentActivityAsync(
+        page: number,
+        limit: number,
+    ): Promise<ResultPagination<any>> {
+        try {
+            const skip = (page - 1) * limit;
+            const where = { isDeleted: false, isActive: true };
+
+            const [total, logs] = await Promise.all([
+                this.prisma.client.auditLog.count({ where }),
+                this.prisma.client.auditLog.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    orderBy: { timestamp: 'desc' },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                username: true,
+                                employee: {
+                                    select: {
+                                        firstname: true,
+                                        lastname: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+            ]);
+
+            const activities = logs.map((log) => {
+                const userName = log.user?.employee
+                    ? `${log.user.employee.firstname} ${log.user.employee.lastname}`
+                    : log.user?.username || log.user?.email;
+
+                return {
+                    id: log.id,
+                    action: log.action,
+                    entityType: log.tableName,
+                    entityId: log.recordId,
+                    performedBy: userName,
+                    userId: log.userId ?? undefined,
+                    timestamp: log.timestamp,
+                    description: this.generateActivityDescription(
+                        log.action,
+                        log.tableName,
+                    ),
+                };
+            });
+
+            return ResultPagination.of(activities, total, page, limit);
+        } catch (error) {
+            this.logger.error('Failed to fetch paginated recent activity', error);
             throw error;
         }
     }

@@ -6,6 +6,8 @@ import { TaxBracketDto } from './dtos/tax-bracket.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class TaxBracketsService {
     private readonly logger = new Logger(TaxBracketsService.name);
@@ -58,6 +60,38 @@ export class TaxBracketsService {
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch tax brackets');
+        }
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+        countryCode?: string,
+        year?: number,
+    ): Promise<ResultPagination<TaxBracketDto>> {
+        try {
+            const skip = (page - 1) * limit;
+            const whereClause: Prisma.TaxBracketWhereInput = {
+                isDeleted: false,
+            };
+            if (countryCode) whereClause.countryCode = countryCode;
+            if (year) whereClause.taxYear = year;
+
+            const [total, values] = await Promise.all([
+                this.prisma.client.taxBracket.count({ where: whereClause }),
+                this.prisma.client.taxBracket.findMany({
+                    where: whereClause,
+                    skip,
+                    take: limit,
+                    orderBy: { minAmount: 'asc' },
+                }),
+            ]);
+
+            const dtos = values.map((v) => plainToInstance(TaxBracketDto, v));
+            return ResultPagination.of(dtos, total, page, limit);
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
         }
     }
 

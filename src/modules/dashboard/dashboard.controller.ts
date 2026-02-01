@@ -13,6 +13,7 @@ import { DashboardStatsDto } from './dtos/dashboard-stats.dto';
 import { AttendanceTrendDto } from './dtos/attendance-trend.dto';
 import { DepartmentDistributionDto } from './dtos/department-distribution.dto';
 import { RecentActivitiesDto } from './dtos/recent-activity.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('dashboard')
 @ApiTags('Dashboard')
@@ -54,18 +55,28 @@ export class DashboardController {
 
     @Get('recent-activity')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get recent system activity' })
+    @ApiOperation({ summary: 'Get recent system activity (Paginated)' })
+    @ApiQuery({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: 'Page number (default: 1)',
+    })
     @ApiQuery({
         name: 'limit',
         required: false,
         type: Number,
-        description: 'Number of activities (default: 10)',
+        description: 'Number of activities per page (default: 10)',
     })
-    @ApiResponse({ status: HttpStatus.OK, type: RecentActivitiesDto })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated recent activities' })
     async getRecentActivity(
+        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
         @Query('limit', new ParseIntPipe({ optional: true }))
         limit: number = 10,
-    ): Promise<RecentActivitiesDto> {
-        return await this.dashboardService.getRecentActivityAsync(limit || 10);
+    ): Promise<ResultPagination<any>> {
+        return await this.dashboardService.getPaginatedRecentActivityAsync(
+            page || 1,
+            limit || 10,
+        );
     }
 }

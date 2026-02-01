@@ -5,6 +5,8 @@ import { PublicHolidayDto } from './dtos/public-holiday.dto';
 import { plainToInstance } from 'class-transformer';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 
+import { ResultPagination } from 'src/common/logic/result-pagination';
+
 @Injectable()
 export class PublicHolidaysService {
     constructor(private readonly prisma: PrismaService) {}
@@ -32,6 +34,28 @@ export class PublicHolidaysService {
         return Result.ok(
             holidays.map((h) => plainToInstance(PublicHolidayDto, h)),
         );
+    }
+
+    async findAllPaginatedAsync(
+        page: number,
+        limit: number,
+    ): Promise<ResultPagination<PublicHolidayDto>> {
+        const skip = (page - 1) * limit;
+
+        const [total, holidays] = await Promise.all([
+            this.prisma.client.publicHoliday.count({
+                where: { isDeleted: false },
+            }),
+            this.prisma.client.publicHoliday.findMany({
+                where: { isDeleted: false },
+                skip,
+                take: limit,
+                orderBy: { date: 'asc' },
+            }),
+        ]);
+
+        const dtos = holidays.map((h) => plainToInstance(PublicHolidayDto, h));
+        return ResultPagination.of(dtos, total, page, limit);
     }
 
     async findOneByIdAsync(id: string): Promise<Result<PublicHolidayDto>> {
