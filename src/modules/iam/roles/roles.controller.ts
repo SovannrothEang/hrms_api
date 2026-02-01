@@ -39,21 +39,15 @@ export class RolesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all roles (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get all roles' })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of roles' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of roles' })
     async findAll(
-        @Query() pagination: PaginationDto,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
-    ): Promise<ResultPagination<RoleDto>> {
-        return await this.rolesService.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-            childIncluded,
-        );
+    ): Promise<RoleDto[]> {
+        const result = await this.rolesService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')

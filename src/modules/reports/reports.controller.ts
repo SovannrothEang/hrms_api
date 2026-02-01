@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery, ApiProduces } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { ReportsService } from './reports.service';
+import { EmployeeReportData, PayrollReportData, ReportsService } from './reports.service';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
 
@@ -138,9 +138,7 @@ export class ReportsController {
 
     @Get('employee')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get employee report with filters (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get employee report with filters' })
     @ApiQuery({ name: 'departmentId', required: false, type: String })
     @ApiQuery({
         name: 'status',
@@ -148,20 +146,13 @@ export class ReportsController {
         enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
     })
     async getEmployeeReport(
-        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-        @Query('limit', new ParseIntPipe({ optional: true }))
-        limit: number = 10,
         @Query('departmentId') departmentId?: string,
         @Query('status') status?: string,
-    ) {
-        return await this.reportsService.getPaginatedEmployeeReport(
-            page || 1,
-            limit || 10,
-            {
-                departmentId,
-                status,
-            },
-        );
+    ): Promise<EmployeeReportData[]> {
+        return await this.reportsService.getEmployeeReportData({
+            departmentId,
+            status,
+        });
     }
 
     @Get('employee/export')
@@ -212,9 +203,7 @@ export class ReportsController {
 
     @Get('payroll')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get payroll report with filters (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get payroll report with filters' })
     @ApiQuery({ name: 'year', required: false, type: Number })
     @ApiQuery({ name: 'month', required: false, type: Number })
     @ApiQuery({ name: 'departmentId', required: false, type: String })
@@ -224,24 +213,17 @@ export class ReportsController {
         enum: ['PENDING', 'PROCESSED', 'PAID', 'CANCELLED'],
     })
     async getPayrollReport(
-        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-        @Query('limit', new ParseIntPipe({ optional: true }))
-        limit: number = 10,
         @Query('year', new ParseIntPipe({ optional: true })) year?: number,
         @Query('month', new ParseIntPipe({ optional: true })) month?: number,
         @Query('departmentId') departmentId?: string,
         @Query('status') status?: string,
-    ) {
-        return await this.reportsService.getPaginatedPayrollReport(
-            page || 1,
-            limit || 10,
-            {
-                year,
-                month,
-                departmentId,
-                status,
-            },
-        );
+    ): Promise<PayrollReportData[]> {
+        return await this.reportsService.getPayrollReportData({
+            year,
+            month,
+            departmentId,
+            status,
+        });
     }
 
     @Get('payroll/export')

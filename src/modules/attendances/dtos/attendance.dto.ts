@@ -30,14 +30,14 @@ export class AttendanceDto {
     checkOutTime: Date;
 
     @Expose({ name: 'workHours' })
-    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
+    @Transform(({ value }: { value: any }) => {
         if (!value) return null;
         return Number(value);
     })
     workHours: number | null;
 
     @Expose({ name: 'overtime' })
-    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
+    @Transform(({ value }: { value: any }) => {
         if (!value) return null;
         return Number(value);
     })

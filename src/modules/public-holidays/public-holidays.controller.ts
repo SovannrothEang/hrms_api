@@ -45,15 +45,11 @@ export class PublicHolidaysController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all public holidays (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of public holidays' })
-    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<PublicHolidayDto>> {
-        return await this.service.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-        );
+    @ApiOperation({ summary: 'Get all public holidays' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of public holidays' })
+    async findAll(): Promise<PublicHolidayDto[]> {
+        const result = await this.service.findAllAsync();
+        return result.getData();
     }
 
     @Get(':id')

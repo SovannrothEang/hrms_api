@@ -31,7 +31,7 @@ export class EmployeePositionDto {
             value: string | number | Decimal | null | undefined;
         }) => {
             if (value === null || value === undefined) return null;
-            return new Decimal(value);
+            return new DecimalNumber(value);
         },
     )
     salaryRangeMin: DecimalNumber;
@@ -45,7 +45,7 @@ export class EmployeePositionDto {
             value: string | number | Decimal | null | undefined;
         }) => {
             if (value === null || value === undefined) return null;
-            return new Decimal(value);
+            return new DecimalNumber(value);
         },
     )
     salaryRangeMax: DecimalNumber;

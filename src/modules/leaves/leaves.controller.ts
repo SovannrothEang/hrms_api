@@ -35,36 +35,14 @@ export class LeavesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all leave requests (Paginated)' })
+    @ApiOperation({ summary: 'Get all leave requests' })
     @ApiResponse({ status: HttpStatus.OK })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
-    @ApiQuery({
-        name: 'page',
-        required: false,
-        type: Number,
-        description: 'Default 1',
-    })
-    @ApiQuery({
-        name: 'limit',
-        required: false,
-        type: Number,
-        description: 'Default 10',
-    })
-    @ApiQuery({ name: 'employeeId', required: false, type: String })
     async findAll(
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
-        @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-        @Query('limit', new ParseIntPipe({ optional: true }))
-        limit: number = 10,
-        @Query('employeeId') employeeId?: string,
     ) {
-        const result = await this.leavesService.findAllPaginatedAsync(
-            page || 1,
-            limit || 10,
-            childIncluded,
-            employeeId,
-        );
+        const result = await this.leavesService.findAllAsync(childIncluded);
         return result.getData();
     }
 

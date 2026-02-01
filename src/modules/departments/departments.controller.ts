@@ -38,9 +38,7 @@ export class DepartmentsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all departments (Paginated with filtering)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get all departments (Filtered)' })
     @ApiQuery({ name: 'name', required: false, type: String })
     @ApiQuery({ name: 'employeeCountRange', required: false, type: String })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean })
@@ -50,8 +48,9 @@ export class DepartmentsController {
     @ApiResponse({ status: HttpStatus.OK })
     async findAllAsync(
         @Query() query: DepartmentQueryDto,
-    ): Promise<ResultPagination<DepartmentDto>> {
-        return await this.departmentsService.findAllPaginatedAsync(query);
+    ): Promise<DepartmentDto[]> {
+        const result = await this.departmentsService.findAllFilteredAsync(query);
+        return result.getData();
     }
 
     @Get(':id')

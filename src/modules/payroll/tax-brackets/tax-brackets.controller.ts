@@ -51,9 +51,7 @@ export class TaxBracketsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all tax brackets (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get all tax brackets' })
     @ApiQuery({
         name: 'country',
         required: false,
@@ -65,18 +63,16 @@ export class TaxBracketsController {
         type: Number,
         description: 'Filter by tax year',
     })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of tax brackets' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of tax brackets' })
     async findAll(
-        @Query() pagination: PaginationDto,
         @Query('country') country?: string,
         @Query('year') year?: number,
-    ): Promise<ResultPagination<TaxBracketDto>> {
-        return await this.service.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
+    ): Promise<TaxBracketDto[]> {
+        const result = await this.service.findAllAsync(
             country,
             year ? Number(year) : undefined,
         );
+        return result.getData();
     }
 
     @Delete(':id')

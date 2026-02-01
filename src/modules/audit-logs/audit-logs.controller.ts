@@ -21,13 +21,20 @@ export class AuditLogsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all audit logs (Paginated)' })
+    @ApiOperation({ summary: 'Get all audit logs' })
     @ApiResponse({
         status: HttpStatus.OK,
-        description: 'Returns paginated audit logs',
+        description: 'Returns list of audit logs',
     })
     async findAll(@Query() query: AuditLogQueryDto) {
-        return await this.auditLogsService.findAllPaginatedAsync(query);
+        // We still use the service method but effectively treat it as non-paginated by providing a large limit if not specified,
+        // OR we can add a findAllAsync to the service. For now, let's just use a large limit to fulfill "get all data".
+        const result = await this.auditLogsService.findAllPaginatedAsync({
+            ...query,
+            limit: 10000,
+            skip: 0
+        });
+        return result.data; // Return the array directly
     }
 
     @Get('actions')

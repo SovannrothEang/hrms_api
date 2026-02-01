@@ -15,7 +15,7 @@ import { EmployeeQueryDto } from './dtos/employee-query.dto';
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService) { }
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -126,12 +126,12 @@ export class EmployeesService {
                 },
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
             orderBy: { employeeCode: 'asc' },
@@ -265,15 +265,16 @@ export class EmployeesService {
             },
             performer: includeDetails
                 ? {
-                      include: {
-                          userRoles: {
-                              include: { role: true },
-                          },
-                      },
-                  }
+                    include: {
+                        userRoles: {
+                            include: { role: true },
+                        },
+                    },
+                }
                 : false,
         };
 
+        this.logger.log(`Query: ${JSON.stringify(query)}`);
         try {
             const [total, employees] = await Promise.all([
                 this.prisma.client.employee.count({ where }),
@@ -281,7 +282,7 @@ export class EmployeesService {
                     where,
                     skip: query.skip,
                     take: limit,
-                    include,
+                    // include,
                     orderBy,
                 }),
             ]);
@@ -292,6 +293,18 @@ export class EmployeesService {
         } catch (error) {
             this.logger.error('Failed to fetch paginated employees', error);
             throw error;
+        }
+    }
+
+    async findAllFilteredAsync(
+        query: EmployeeQueryDto,
+    ): Promise<Result<ResultPagination<EmployeeDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return Result.ok(paginationResult);
+        } catch (error) {
+            this.logger.error('Failed to fetch filtered employees', error);
+            return Result.fail(error instanceof Error ? error.message : 'Internal server error');
         }
     }
 
@@ -308,12 +321,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
             },
         });

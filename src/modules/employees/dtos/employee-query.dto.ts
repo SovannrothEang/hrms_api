@@ -29,7 +29,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Search by employee code',
-        example: 'EMP001',
     })
     @IsOptional()
     @IsString()
@@ -37,7 +36,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Search by first name (partial match, case-insensitive)',
-        example: 'John',
     })
     @IsOptional()
     @IsString()
@@ -45,7 +43,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Search by last name (partial match, case-insensitive)',
-        example: 'Doe',
     })
     @IsOptional()
     @IsString()
@@ -53,7 +50,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by department ID',
-        example: '32dc9a4b-4dc6-40ed-8c07-9cf25b8f0ef2',
     })
     @IsOptional()
     @IsString()
@@ -61,7 +57,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by position ID',
-        example: 'position-uuid',
     })
     @IsOptional()
     @IsString()
@@ -69,7 +64,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by employment type',
-        example: 'FULL_TIME',
         enum: ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'],
     })
     @IsOptional()
@@ -79,7 +73,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by employee status',
-        example: 'ACTIVE',
         enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
     })
     @IsOptional()
@@ -89,7 +82,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by active status',
-        example: true,
     })
     @IsOptional()
     @Type(() => Boolean)
@@ -98,7 +90,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by hire date (start date)',
-        example: '2024-01-01',
     })
     @IsOptional()
     @IsDateString()
@@ -106,7 +97,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by hire date (end date)',
-        example: '2024-12-31',
     })
     @IsOptional()
     @IsDateString()
@@ -114,7 +104,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by salary range (min-max)',
-        example: '30000-100000',
     })
     @IsOptional()
     @IsString()
@@ -122,7 +111,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by gender',
-        example: 'male',
         enum: ['male', 'female', 'unknown'],
     })
     @IsOptional()
@@ -132,7 +120,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Sort by field',
-        example: 'employeeCode',
         enum: [
             'employeeCode',
             'firstname',
@@ -156,7 +143,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Sort order',
-        example: 'asc',
         enum: ['asc', 'desc'],
     })
     @IsOptional()
@@ -166,7 +152,6 @@ export class EmployeeQueryDto {
 
     @ApiPropertyOptional({
         description: 'Include department and position data in response',
-        example: false,
     })
     @IsOptional()
     @Type(() => Boolean)

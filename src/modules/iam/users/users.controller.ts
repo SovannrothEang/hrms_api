@@ -30,15 +30,11 @@ export class UsersController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all users (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of users' })
-    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<UserDto>> {
-        return await this.usersService.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-        );
+    @ApiOperation({ summary: 'Get all users' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of users' })
+    async findAll(): Promise<UserDto[]> {
+        const result = await this.usersService.findAllAsync();
+        return result.getData();
     }
 
     @Get(':id')

@@ -9,6 +9,8 @@ import { Employee, User, Prisma } from '@prisma/client';
 import { DepartmentDto } from '../../departments/dtos/department.dto';
 import { EmployeePositionDto } from '../../employee-positions/dtos/employee-position.dto';
 import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
+import { DecimalNumber } from 'src/config/decimal-number';
+import { Decimal } from '@prisma/client/runtime/client';
 
 export class EmergencyContactDto {
     name?: string;
@@ -55,7 +57,7 @@ export class EmployeeDto {
     })
     dateOfBirth: string;
 
-    @Expose({ name: 'user_id' })
+    @Expose({ name: 'userId' })
     userId: string;
 
     @Expose({ name: 'user' })
@@ -71,20 +73,20 @@ export class EmployeeDto {
     @Expose({ name: 'phone' })
     phoneNumber: string;
 
-    @Expose({ name: 'profile_image' })
+    @Expose({ name: 'profileImage' })
     profileImage: string | null;
 
-    @Expose({ name: 'hire_date' })
+    @Expose({ name: 'hireDate' })
     hireDate: Date;
 
-    @Expose({ name: 'position_id' })
+    @Expose({ name: 'positionId' })
     positionId: string;
 
     @Expose({ name: 'position' })
     @Type(() => EmployeePositionDto)
     position: EmployeePositionDto;
 
-    @Expose({ name: 'department_id' })
+    @Expose({ name: 'departmentId' })
     departmentId: string;
 
     @Expose({ name: 'department' })
@@ -98,11 +100,12 @@ export class EmployeeDto {
     status: string;
 
     @Expose({ name: 'salary' })
-    @Transform(({ value }: { value: Prisma.Decimal | null }) => {
-        if (!value) return null;
-        return Number(value);
+    @Type(() => DecimalNumber)
+    @Transform(({ value }: { value: string | number | Decimal | null | undefined; }) => {
+        if (value === null || value === undefined) return null;
+        return new DecimalNumber(value);
     })
-    salary: number | null;
+    salary: DecimalNumber | null;
 
     @Expose({ name: 'emergencyContact' })
     emergencyContact: EmergencyContactDto | null;

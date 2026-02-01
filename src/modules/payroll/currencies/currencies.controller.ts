@@ -45,15 +45,11 @@ export class CurrenciesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all currencies (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of currencies' })
-    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<CurrencyDto>> {
-        return await this.service.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-        );
+    @ApiOperation({ summary: 'Get all currencies' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of currencies' })
+    async findAll(): Promise<CurrencyDto[]> {
+        const result = await this.service.findAllAsync();
+        return result.getData();
     }
 
     @Get(':id')

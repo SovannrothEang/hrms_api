@@ -34,13 +34,11 @@ import { EmployeeDto } from './dtos/employee.dto';
 @ApiTags('Employees')
 @Auth()
 export class EmployeesController {
-    constructor(private readonly employeesService: EmployeesService) {}
+    constructor(private readonly employeesService: EmployeesService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all employees (Paginated with filtering)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get all employees (Filtered)' })
     @ApiQuery({ name: 'employeeCode', required: false, type: String })
     @ApiQuery({ name: 'firstname', required: false, type: String })
     @ApiQuery({ name: 'lastname', required: false, type: String })
@@ -60,7 +58,9 @@ export class EmployeesController {
     async findAll(
         @Query() query: EmployeeQueryDto,
     ): Promise<ResultPagination<EmployeeDto>> {
-        return await this.employeesService.findAllPaginatedAsync(query);
+        const result = await this.employeesService.findAllFilteredAsync(query);
+        if (!result.isSuccess) throw new BadRequestException(result.error);
+        return result.getData();
     }
 
     @Get(':id')

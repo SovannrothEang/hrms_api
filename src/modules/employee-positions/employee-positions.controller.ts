@@ -45,22 +45,16 @@ export class EmployeePositionsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all employee positions (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiOperation({ summary: 'Get all employee positions' })
     @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of positions' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of positions' })
     async findAllAsync(
-        @Query() pagination: PaginationDto,
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
-    ): Promise<ResultPagination<EmployeePositionDto>> {
-        this._logger.log(`Get paginated positions`);
-        return await this.employeePositionsService.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-            childIncluded,
-        );
+    ): Promise<EmployeePositionDto[]> {
+        this._logger.log(`Get all positions`);
+        const result = await this.employeePositionsService.findAllAsync(childIncluded);
+        return result.getData();
     }
 
     @Get(':id')

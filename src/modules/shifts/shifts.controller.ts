@@ -42,15 +42,11 @@ export class ShiftsController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all shifts (Paginated)' })
-    @ApiQuery({ name: 'page', required: false, type: Number })
-    @ApiQuery({ name: 'limit', required: false, type: Number })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of shifts' })
-    async findAll(@Query() pagination: PaginationDto): Promise<ResultPagination<ShiftDto>> {
-        return await this.shiftsService.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-        );
+    @ApiOperation({ summary: 'Get all shifts' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'List of shifts' })
+    async findAll(): Promise<ShiftDto[]> {
+        const result = await this.shiftsService.findAllAsync();
+        return result.getData();
     }
 
     @Get(':id')

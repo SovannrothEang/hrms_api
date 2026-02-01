@@ -124,19 +124,7 @@ export class PayrollsController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
-        summary: 'List all payrolls with optional filters (Paginated)',
-    })
-    @ApiQuery({
-        name: 'page',
-        required: false,
-        type: Number,
-        description: 'Page number',
-    })
-    @ApiQuery({
-        name: 'limit',
-        required: false,
-        type: Number,
-        description: 'Items per page',
+        summary: 'List all payrolls with optional filters',
     })
     @ApiQuery({
         name: 'employeeId',
@@ -162,25 +150,17 @@ export class PayrollsController {
     })
     @ApiResponse({ status: HttpStatus.OK, type: [PayrollDto] })
     async findAll(
-        @Query() pagination: PaginationDto,
         @Query('employeeId') employeeId?: string,
         @Query('status') status?: string,
         @Query('year') year?: string,
         @Query('month') month?: string,
     ) {
-        const result = await this.service.findAllPaginatedAsync(
-            pagination.page || 1,
-            pagination.limit || 10,
-            {
-                employeeId,
-                status,
-                year: year ? parseInt(year, 10) : undefined,
-                month: month ? parseInt(month, 10) : undefined,
-            },
-        );
-        if (!result.isSuccess) {
-            throw new Error(result.error ?? 'Failed to fetch payrolls');
-        }
+        const result = await this.service.findAllAsync({
+            employeeId,
+            status,
+            year: year ? parseInt(year, 10) : undefined,
+            month: month ? parseInt(month, 10) : undefined,
+        });
         return result.getData();
     }
 

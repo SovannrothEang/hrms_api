@@ -22,9 +22,10 @@ export class UsersService {
 
     constructor(private readonly prisma: PrismaService) {}
 
-    async findAllAsync() {
+    async findAllAsync(): Promise<Result<UserDto[]>> {
         this.logger.log('Getting all users');
         const users = await this.prisma.client.user.findMany({
+            where: { isDeleted: false },
             include: {
                 userRoles: {
                     include: {
@@ -33,7 +34,7 @@ export class UsersService {
                 },
             },
         });
-        return users.map((u) => plainToInstance(UserDto, u));
+        return Result.ok(users.map((u) => plainToInstance(UserDto, u)));
     }
 
     async findAllPaginatedAsync(
