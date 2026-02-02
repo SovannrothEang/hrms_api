@@ -11,6 +11,15 @@ import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
 import { DecimalNumber } from '../../../config/decimal-number';
 import { Decimal } from '@prisma/client/runtime/client';
 
+const toDecimal = ({
+    value,
+}: {
+    value: string | number | Decimal | null | undefined;
+}) => {
+    if (value === null || value === undefined) return null;
+    return new DecimalNumber(value);
+};
+
 @Exclude()
 export class EmployeePositionDto {
     @Expose({ name: 'id' })
@@ -24,30 +33,12 @@ export class EmployeePositionDto {
 
     @Expose()
     @Type(() => DecimalNumber)
-    @Transform(
-        ({
-            value,
-        }: {
-            value: string | number | Decimal | null | undefined;
-        }) => {
-            if (value === null || value === undefined) return null;
-            return new DecimalNumber(value);
-        },
-    )
+    @Transform(toDecimal)
     salaryRangeMin: DecimalNumber;
 
     @Expose()
     @Type(() => DecimalNumber)
-    @Transform(
-        ({
-            value,
-        }: {
-            value: string | number | Decimal | null | undefined;
-        }) => {
-            if (value === null || value === undefined) return null;
-            return new DecimalNumber(value);
-        },
-    )
+    @Transform(toDecimal)
     salaryRangeMax: DecimalNumber;
 
     @Expose({ name: 'perform_by' })

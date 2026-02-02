@@ -40,7 +40,8 @@ export class AttendancesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        const result = await this.attendancesService.findAllAsync(childIncluded);
+        const result =
+            await this.attendancesService.findAllAsync(childIncluded);
         return result.getData();
     }
 

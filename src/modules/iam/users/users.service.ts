@@ -41,7 +41,9 @@ export class UsersService {
         page: number,
         limit: number,
     ): Promise<ResultPagination<UserDto>> {
-        this.logger.log(`Getting paginated users: page ${page}, limit ${limit}`);
+        this.logger.log(
+            `Getting paginated users: page ${page}, limit ${limit}`,
+        );
         const skip = (page - 1) * limit;
 
         const [total, users] = await Promise.all([

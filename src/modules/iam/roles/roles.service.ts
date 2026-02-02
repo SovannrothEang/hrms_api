@@ -45,7 +45,9 @@ export class RolesService {
         limit: number,
         childIncluded: boolean = false,
     ): Promise<ResultPagination<RoleDto>> {
-        this.logger.log(`Getting paginated roles: page ${page}, limit ${limit}`);
+        this.logger.log(
+            `Getting paginated roles: page ${page}, limit ${limit}`,
+        );
         const skip = (page - 1) * limit;
 
         const [total, roles] = await Promise.all([

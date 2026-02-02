@@ -79,7 +79,9 @@ export class CurrenciesService {
             const skip = (page - 1) * limit;
 
             const [total, values] = await Promise.all([
-                this.prisma.client.currency.count({ where: { isDeleted: false } }),
+                this.prisma.client.currency.count({
+                    where: { isDeleted: false },
+                }),
                 this.prisma.client.currency.findMany({
                     where: { isDeleted: false },
                     skip,

@@ -17,7 +17,13 @@ import { CreatePublicHolidayDto } from './dtos/create-public-holiday.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 import { Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { PublicHolidayDto } from './dtos/public-holiday.dto';
@@ -46,7 +52,10 @@ export class PublicHolidaysController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all public holidays' })
-    @ApiResponse({ status: HttpStatus.OK, description: 'List of public holidays' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'List of public holidays',
+    })
     async findAll(): Promise<PublicHolidayDto[]> {
         const result = await this.service.findAllAsync();
         return result.getData();

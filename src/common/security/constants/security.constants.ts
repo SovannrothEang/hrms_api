@@ -15,7 +15,9 @@ export const SECURITY_CONFIG = {
     },
     cookies: {
         secure: process.env.NODE_ENV === 'production',
-        sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'none') as 'strict' | 'lax' | 'none',
+        sameSite: (process.env.NODE_ENV === 'production'
+            ? 'strict'
+            : 'none') as 'strict' | 'lax' | 'none',
         domain: process.env.COOKIE_DOMAIN || undefined,
     },
     rateLimit: {

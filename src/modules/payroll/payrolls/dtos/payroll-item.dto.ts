@@ -3,14 +3,14 @@ import { Exclude, Expose, Transform, Type } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
 import { DecimalNumber } from '../../../../config/decimal-number';
 
-// Transform Decimal/number/string to number (handles null/undefined gracefully)
-const toNumber = ({
+// Transform Decimal/number/string to DecimalNumber (handles null/undefined gracefully)
+const toDecimal = ({
     value,
 }: {
-    value: Decimal | number | string | null | undefined;
+    value: string | number | Decimal | null | undefined;
 }) => {
     if (value === null || value === undefined) return null;
-    return Number(value);
+    return new DecimalNumber(value);
 };
 
 @Exclude()
@@ -35,9 +35,10 @@ export class PayrollItemDto {
     itemName: string;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 2500.0 })
-    @Transform(toNumber)
-    amount: number | null;
+    @Transform(toDecimal)
+    amount: DecimalNumber | null;
 
     @Expose()
     @ApiPropertyOptional({ example: 'USD' })

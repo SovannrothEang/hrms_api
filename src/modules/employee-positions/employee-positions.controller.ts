@@ -53,7 +53,8 @@ export class EmployeePositionsController {
         childIncluded?: boolean,
     ): Promise<EmployeePositionDto[]> {
         this._logger.log(`Get all positions`);
-        const result = await this.employeePositionsService.findAllAsync(childIncluded);
+        const result =
+            await this.employeePositionsService.findAllAsync(childIncluded);
         return result.getData();
     }
 

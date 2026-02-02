@@ -43,7 +43,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
-    ) {}
+    ) { }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -157,10 +157,8 @@ export class AuthController {
         @Res({ passthrough: true }) res: Response,
     ): Promise<AuthResponse> {
         const cookies = req.cookies as Record<string, string> | undefined;
-        this.logger.log(`Refresh endpoint cookies: ${JSON.stringify(Object.keys(cookies || {}))}`);
         const refreshToken = cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
         const sessionId = cookies?.[COOKIE_NAMES.SESSION_ID];
-        this.logger.log(`Refresh token present: ${!!refreshToken}, Session ID present: ${!!sessionId}`);
 
         if (!refreshToken || !sessionId) {
             throw new UnauthorizedException('Missing authentication cookies');

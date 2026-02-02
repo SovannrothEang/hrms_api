@@ -32,7 +32,7 @@ export class AuditLogsController {
         const result = await this.auditLogsService.findAllPaginatedAsync({
             ...query,
             limit: 10000,
-            skip: 0
+            skip: 0,
         });
         return result.data; // Return the array directly
     }

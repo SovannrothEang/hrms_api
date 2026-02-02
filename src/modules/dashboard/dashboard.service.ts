@@ -14,7 +14,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 export class DashboardService {
     private readonly logger = new Logger(DashboardService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async getStatsAsync(): Promise<DashboardStatsDto> {
         const today = new Date();
@@ -210,8 +210,8 @@ export class DashboardService {
                     percentage:
                         totalEmployees > 0
                             ? Math.round(
-                                  (d._count.employees / totalEmployees) * 10000,
-                              ) / 100
+                                (d._count.employees / totalEmployees) * 10000,
+                            ) / 100
                             : 0,
                 })),
                 totalEmployees,
@@ -329,7 +329,10 @@ export class DashboardService {
 
             return ResultPagination.of(activities, total, page, limit);
         } catch (error) {
-            this.logger.error('Failed to fetch paginated recent activity', error);
+            this.logger.error(
+                'Failed to fetch paginated recent activity',
+                error,
+            );
             throw error;
         }
     }

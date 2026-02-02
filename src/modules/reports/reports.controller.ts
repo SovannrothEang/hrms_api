@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiQuery, ApiProduces } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { EmployeeReportData, PayrollReportData, ReportsService } from './reports.service';
+import {
+    EmployeeReportData,
+    PayrollReportData,
+    ReportsService,
+} from './reports.service';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
 

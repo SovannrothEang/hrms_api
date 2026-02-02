@@ -5,13 +5,13 @@ import { DecimalNumber } from '../../../../config/decimal-number';
 import { PayrollItemDto } from './payroll-item.dto';
 
 // Transform Decimal/number/string to number (handles null/undefined gracefully)
-const toNumber = ({
+const toDecimal = ({
     value,
 }: {
-    value: any;
+    value: string | number | Decimal | null | undefined;
 }) => {
     if (value === null || value === undefined) return null;
-    return Number(value);
+    return new DecimalNumber(value);
 };
 
 @Exclude()
@@ -21,24 +21,28 @@ export class TaxCalculationDto {
     id: string;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 3000.0 })
-    @Transform(toNumber)
-    grossIncome: number | null;
+    @Transform(toDecimal)
+    grossIncome: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 3000.0 })
-    @Transform(toNumber)
-    taxableIncome: number | null;
+    @Transform(toDecimal)
+    taxableIncome: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 150.0 })
-    @Transform(toNumber)
-    taxAmount: number | null;
+    @Transform(toDecimal)
+    taxAmount: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 0.05 })
-    @Transform(toNumber)
-    taxRateUsed: number | null;
+    @Transform(toDecimal)
+    taxRateUsed: DecimalNumber | null;
 
     @Expose()
     @ApiProperty({ example: 'uuid-bracket-id' })
@@ -76,34 +80,40 @@ export class PayrollDto {
     paymentDate?: Date;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 2500.0 })
-    @Transform(toNumber)
-    basicSalary: number | null;
+    @Transform(toDecimal)
+    basicSalary: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 10 })
-    @Transform(toNumber)
-    overtimeHrs: number | null;
+    @Transform(toDecimal)
+    overtimeHrs: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 23.44 })
-    @Transform(toNumber)
-    overtimeRate: number | null;
+    @Transform(toDecimal)
+    overtimeRate: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 500.0 })
-    @Transform(toNumber)
-    bonus: number | null;
+    @Transform(toDecimal)
+    bonus: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 100.0 })
-    @Transform(toNumber)
-    deductions: number | null;
+    @Transform(toDecimal)
+    deductions: DecimalNumber | null;
 
     @Expose()
+    @Type(() => DecimalNumber)
     @ApiProperty({ example: 2850.0 })
-    @Transform(toNumber)
-    netSalary: number | null;
+    @Transform(toDecimal)
+    netSalary: DecimalNumber | null;
 
     @Expose()
     @ApiProperty({
@@ -111,6 +121,18 @@ export class PayrollDto {
         description: 'Status: PENDING, PROCESSED, PAID',
     })
     status: string;
+
+    @Expose()
+    @Type(() => DecimalNumber)
+    @ApiPropertyOptional({ example: 4000.0 })
+    @Transform(toDecimal)
+    exchangeRate: DecimalNumber | null;
+
+    @Expose()
+    @Type(() => DecimalNumber)
+    @ApiPropertyOptional({ example: 11400000.0 })
+    @Transform(toDecimal)
+    baseCurrencyAmount: DecimalNumber | null;
 
     @Expose()
     @ApiPropertyOptional()

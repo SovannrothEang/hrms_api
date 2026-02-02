@@ -7,7 +7,18 @@ import {
 } from 'class-transformer';
 import { UserDto } from '../../iam/users/dtos/user.dto';
 import { EmployeeDto } from '../../employees/dtos/employee.dto';
-import { Attendance, Employee, User, Prisma } from '@prisma/client';
+import { Attendance, Employee, User } from '@prisma/client';
+import { DecimalNumber } from '../../../config/decimal-number';
+import { Decimal } from '@prisma/client/runtime/client';
+
+const toDecimal = ({
+    value,
+}: {
+    value: string | number | Decimal | null | undefined;
+}) => {
+    if (value === null || value === undefined) return null;
+    return new DecimalNumber(value);
+};
 
 @Exclude()
 export class AttendanceDto {
@@ -30,18 +41,14 @@ export class AttendanceDto {
     checkOutTime: Date;
 
     @Expose({ name: 'workHours' })
-    @Transform(({ value }: { value: any }) => {
-        if (!value) return null;
-        return Number(value);
-    })
-    workHours: number | null;
+    @Type(() => DecimalNumber)
+    @Transform(toDecimal)
+    workHours: DecimalNumber | null;
 
     @Expose({ name: 'overtime' })
-    @Transform(({ value }: { value: any }) => {
-        if (!value) return null;
-        return Number(value);
-    })
-    overtime: number | null;
+    @Type(() => DecimalNumber)
+    @Transform(toDecimal)
+    overtime: DecimalNumber | null;
 
     @Expose({ name: 'notes' })
     notes: string | null;

@@ -34,7 +34,7 @@ import { EmployeeDto } from './dtos/employee.dto';
 @ApiTags('Employees')
 @Auth()
 export class EmployeesController {
-    constructor(private readonly employeesService: EmployeesService) { }
+    constructor(private readonly employeesService: EmployeesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)

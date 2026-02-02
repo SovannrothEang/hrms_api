@@ -49,7 +49,8 @@ export class DepartmentsController {
     async findAllAsync(
         @Query() query: DepartmentQueryDto,
     ): Promise<DepartmentDto[]> {
-        const result = await this.departmentsService.findAllFilteredAsync(query);
+        const result =
+            await this.departmentsService.findAllFilteredAsync(query);
         return result.getData();
     }
 

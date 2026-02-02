@@ -46,7 +46,9 @@ export class EmployeePositionsService {
         limit: number,
         childIncluded?: boolean,
     ): Promise<ResultPagination<EmployeePositionDto>> {
-        this._logger.log(`Get paginated positions: page ${page}, limit ${limit}`);
+        this._logger.log(
+            `Get paginated positions: page ${page}, limit ${limit}`,
+        );
         const skip = (page - 1) * limit;
 
         const [total, positions] = await Promise.all([
@@ -61,7 +63,9 @@ export class EmployeePositionsService {
                     employees: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
-                              include: { userRoles: { include: { role: true } } },
+                              include: {
+                                  userRoles: { include: { role: true } },
+                              },
                           }
                         : false,
                 },

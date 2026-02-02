@@ -15,7 +15,7 @@ import { EmployeeQueryDto } from './dtos/employee-query.dto';
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -126,12 +126,12 @@ export class EmployeesService {
                 },
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
             orderBy: { employeeCode: 'asc' },
@@ -265,12 +265,12 @@ export class EmployeesService {
             },
             performer: includeDetails
                 ? {
-                    include: {
-                        userRoles: {
-                            include: { role: true },
-                        },
-                    },
-                }
+                      include: {
+                          userRoles: {
+                              include: { role: true },
+                          },
+                      },
+                  }
                 : false,
         };
 
@@ -304,7 +304,11 @@ export class EmployeesService {
             return Result.ok(paginationResult);
         } catch (error) {
             this.logger.error('Failed to fetch filtered employees', error);
-            return Result.fail(error instanceof Error ? error.message : 'Internal server error');
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 
@@ -321,12 +325,12 @@ export class EmployeesService {
                 manager: true,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
             },
         });
