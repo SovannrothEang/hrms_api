@@ -9,24 +9,17 @@ import {
     HttpStatus,
     BadRequestException,
     NotFoundException,
+    Query,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrenciesService } from './currencies.service';
 import { CreateCurrencyDto } from './dtos/create-currency.dto';
-
-import { Query } from '@nestjs/common';
-import {
-    ApiOperation,
-    ApiParam,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
-} from '@nestjs/swagger';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
 import { CurrencyDto } from './dtos/currency.dto';
+import { CurrencyQueryDto } from './dtos/currency-query.dto';
+import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @ApiTags('Payroll - Currencies')
 @Controller('currencies')
@@ -53,8 +46,10 @@ export class CurrenciesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all currencies' })
     @ApiResponse({ status: HttpStatus.OK, description: 'List of currencies' })
-    async findAll(): Promise<CurrencyDto[]> {
-        const result = await this.service.findAllAsync();
+    async findAll(
+        @Query() query: CurrencyQueryDto,
+    ): Promise<ResultPagination<CurrencyDto>> {
+        const result = await this.service.findAllFilteredAsync(query);
         return result.getData();
     }
 

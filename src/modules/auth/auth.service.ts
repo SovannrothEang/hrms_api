@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +21,8 @@ import {
     AuthResponse,
 } from 'src/common/security/interfaces/security.interfaces';
 import { SECURITY_CONFIG } from 'src/common/security/constants/security.constants';
+import { AttendanceDto } from '../attendances/dtos/attendance.dto';
+import { AttendancesService } from '../attendances/attendances.service';
 
 export interface SecureAuthResult {
     tokens: AuthTokens;
@@ -33,6 +40,7 @@ export class AuthService {
         private readonly sessionService: SessionService,
         private readonly csrfService: CsrfService,
         private readonly securityEventService: SecurityEventService,
+        private readonly attendanceService: AttendancesService,
     ) {}
 
     async signInAsync(
@@ -278,6 +286,18 @@ export class AuthService {
     async getMe(userId: string): Promise<Result<UserDto>> {
         this.logger.log('Getting current user');
         return await this.usersService.findOneByIdAsync(userId);
+    }
+
+    async getMyAttendance(userId: string): Promise<Result<AttendanceDto>> {
+        this.logger.log('Getting my attendance');
+        const result = await this.attendanceService.findOneByIdAsync(
+            userId,
+            true,
+        );
+        if (result === null) {
+            throw new NotFoundException('Attendance not found');
+        }
+        return result;
     }
 
     async refreshToken(

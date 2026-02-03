@@ -20,28 +20,66 @@ import {
 import { AttendancesService } from './attendances.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
+import { AttendanceQueryDto } from './dtos/attendance-query.dto';
 
+import { RoleName } from '../../common/enums/roles.enum';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ResultPagination } from '../../common/logic/result-pagination';
+import { AttendanceDto } from './dtos/attendance.dto';
+import { MeAttendanceResponseDto } from './dtos/me-attendance-response.dto';
+import { QrManagerService } from './services/qr-manager.service';
 
 @ApiTags('Attendances')
 @Auth()
 @Controller(['attendances', 'attendance'])
 export class AttendancesController {
-    constructor(private readonly attendancesService: AttendancesService) {}
+    constructor(
+        private readonly attendancesService: AttendancesService,
+        private readonly qrManagerService: QrManagerService,
+    ) {}
+
+    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Get('qr/in')
+    @ApiOperation({ summary: 'Generate QR code for clock-in' })
+    async generateQrIn() {
+        return { token: await this.qrManagerService.generateToken('IN') };
+    }
+
+    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Get('qr/out')
+    @ApiOperation({ summary: 'Generate QR code for clock-out' })
+    async generateQrOut() {
+        return { token: await this.qrManagerService.generateToken('OUT') };
+    }
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiOperation({ summary: 'Get all attendances' })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
-    ) {
+        @Query() query: AttendanceQueryDto,
+    ): Promise<ResultPagination<AttendanceDto>> {
         const result =
-            await this.attendancesService.findAllAsync(childIncluded);
+            await this.attendancesService.findAllFilteredAsync(query);
+        return result.getData();
+    }
+
+    @Get('me')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get current user attendances' })
+    @ApiResponse({ status: HttpStatus.OK, type: MeAttendanceResponseDto })
+    async getMeAttendance(
+        @CurrentUser('sub') userId: string,
+        @Query() query: AttendanceQueryDto,
+    ): Promise<MeAttendanceResponseDto> {
+        const result = await this.attendancesService.getMeAttendance(
+            userId,
+            query,
+        );
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
         return result.getData();
     }
 

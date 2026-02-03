@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { Result } from 'src/common/logic/result';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
+import { LeaveQueryDto } from './dtos/leave-query.dto';
 import { plainToInstance } from 'class-transformer';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
 import { ResultPagination } from '../../common/logic/result-pagination';
@@ -41,13 +43,42 @@ export class LeavesService {
     }
 
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-        childIncluded?: boolean,
-        employeeId?: string,
+        query: LeaveQueryDto,
     ): Promise<Result<ResultPagination<LeaveRequestDto>>> {
-        const skip = (page - 1) * limit;
-        const whereClause = employeeId ? { employeeId } : {};
+        const {
+            page = 1,
+            limit = 10,
+            employeeId,
+            approverId,
+            leaveType,
+            status,
+            dateFrom,
+            dateTo,
+            childIncluded = false,
+            sortBy = 'startDate',
+            sortOrder = 'desc',
+            skip,
+        } = query;
+
+        const whereClause: Prisma.LeaveRequestWhereInput = { isDeleted: false };
+
+        if (employeeId) whereClause.employeeId = employeeId;
+        if (approverId) whereClause.approvedBy = approverId;
+        if (leaveType) whereClause.leaveType = leaveType;
+        if (status) whereClause.status = status;
+
+        if (dateFrom || dateTo) {
+            const dateFilter: Prisma.DateTimeFilter = {};
+            if (dateFrom) dateFilter.gte = new Date(dateFrom);
+            if (dateTo) dateFilter.lte = new Date(dateTo);
+            whereClause.startDate = dateFilter;
+        }
+
+        const orderBy: Prisma.LeaveRequestOrderByWithRelationInput = {};
+        if (sortBy === 'startDate') orderBy.startDate = sortOrder;
+        else if (sortBy === 'endDate') orderBy.endDate = sortOrder;
+        else if (sortBy === 'requestDate') orderBy.requestDate = sortOrder;
+        else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
 
         const [total, leaves] = await Promise.all([
             this.prisma.client.leaveRequest.count({ where: whereClause }),
@@ -55,7 +86,7 @@ export class LeavesService {
                 where: whereClause,
                 skip,
                 take: limit,
-                orderBy: { startDate: 'desc' }, // Future to past
+                orderBy,
                 include: {
                     requester: { include: { department: true } },
                     approver: childIncluded ? true : false,
@@ -74,6 +105,21 @@ export class LeavesService {
 
         const dtos = leaves.map((l) => plainToInstance(LeaveRequestDto, l));
         return Result.ok(ResultPagination.of(dtos, total, page, limit));
+    }
+
+    async findAllFilteredAsync(
+        query: LeaveQueryDto,
+    ): Promise<Result<ResultPagination<LeaveRequestDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
+        }
     }
 
     async findOneByIdAsync(

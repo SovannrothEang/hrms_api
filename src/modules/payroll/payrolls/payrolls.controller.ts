@@ -11,7 +11,9 @@ import {
     Query,
     BadRequestException,
     NotFoundException,
+    Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
     ApiOperation,
     ApiParam,
@@ -30,14 +32,17 @@ import {
     GeneratePayrollDto,
     GeneratePayrollResultDto,
 } from './dtos/generate-payroll.dto';
-import { PaginationDto } from '../../../common/dto/pagination.dto';
+import { PayrollQueryDto } from './dtos/payroll-query.dto';
+import { MePayslipResponseDto } from './dtos/me-payslip-response.dto';
+import { ResultPagination } from '../../../common/logic/result-pagination';
 
 @ApiTags('Payroll - Payrolls')
 @Controller(['payrolls', 'payroll'])
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth()
 export class PayrollsController {
     constructor(private readonly service: PayrollsService) {}
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Post('process')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create a draft payroll with calculated values' })
@@ -59,6 +64,7 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Get('summary')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get payroll summary with totals and breakdowns' })
@@ -98,6 +104,7 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Post('generate')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({
@@ -121,49 +128,21 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'List all payrolls with optional filters',
     })
-    @ApiQuery({
-        name: 'employeeId',
-        required: false,
-        description: 'Filter by employee',
-    })
-    @ApiQuery({
-        name: 'status',
-        required: false,
-        description: 'Filter by status (PENDING, PROCESSED, PAID)',
-    })
-    @ApiQuery({
-        name: 'year',
-        required: false,
-        type: Number,
-        description: 'Filter by year',
-    })
-    @ApiQuery({
-        name: 'month',
-        required: false,
-        type: Number,
-        description: 'Filter by month (1-12)',
-    })
-    @ApiResponse({ status: HttpStatus.OK, type: [PayrollDto] })
+    @ApiResponse({ status: HttpStatus.OK })
     async findAll(
-        @Query('employeeId') employeeId?: string,
-        @Query('status') status?: string,
-        @Query('year') year?: string,
-        @Query('month') month?: string,
-    ) {
-        const result = await this.service.findAllAsync({
-            employeeId,
-            status,
-            year: year ? parseInt(year, 10) : undefined,
-            month: month ? parseInt(month, 10) : undefined,
-        });
+        @Query() query: PayrollQueryDto,
+    ): Promise<ResultPagination<PayrollDto>> {
+        const result = await this.service.findAllFilteredAsync(query);
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get payroll by ID with items and tax details' })
@@ -181,6 +160,7 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Patch(':id/finalize')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
@@ -209,6 +189,7 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Auth([RoleName.ADMIN, RoleName.HR])
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a pending payroll' })
@@ -229,5 +210,46 @@ export class PayrollsController {
                 result.error ?? 'Failed to delete payroll',
             );
         }
+    }
+
+    @Get('me')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get current user payslips and YTD summary' })
+    @ApiResponse({ status: HttpStatus.OK, type: MePayslipResponseDto })
+    async getMyPayrolls(
+        @CurrentUser('sub') userId: string,
+        @Query('year') year?: string,
+    ): Promise<MePayslipResponseDto> {
+        const result = await this.service.getMePayslipsAsync(
+            userId,
+            year ? parseInt(year, 10) : undefined,
+        );
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+        return result.getData();
+    }
+
+    @Get('payslip/:id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Download personal payslip as PDF' })
+    @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
+    async getMyPayslipPdf(
+        @Param('id') id: string,
+        @CurrentUser('sub') userId: string,
+        @Res() res: Response,
+    ) {
+        const result = await this.service.downloadPayslipPdfAsync(id, userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+
+        const { buffer, filename } = result.getData();
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Length': buffer.length,
+        });
+        res.end(buffer);
     }
 }

@@ -43,7 +43,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
-    ) { }
+    ) {}
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -294,6 +294,20 @@ export class AuthController {
     })
     async getSessions(@CurrentUser('sub') userId: string) {
         const result = await this.authService.getUserSessionsAsync(userId);
+        return result.getData();
+    }
+
+    @Get('me/profile')
+    @Auth()
+    @ApiOperation({ summary: 'Get current user profile' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'Return current user details',
+    })
+    async getMeProfile(@CurrentUser('sub') userId: string) {
+        const result = await this.authService.getMe(userId);
+        if (!result.isSuccess)
+            throw new UnauthorizedException('User is not authenticated!');
         return result.getData();
     }
 

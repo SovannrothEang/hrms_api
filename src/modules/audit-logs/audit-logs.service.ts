@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AuditSeverity, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { ResultPagination } from 'src/common/logic/result-pagination';
+import { Result } from 'src/common/logic/result';
 import { AuditLogQueryDto } from './dtos/audit-log-query.dto';
 import { AuditLogDto } from './dtos/audit-log.dto';
 
@@ -13,7 +14,7 @@ export class AuditLogsService {
 
     async findAllPaginatedAsync(
         query: AuditLogQueryDto,
-    ): Promise<ResultPagination<AuditLogDto>> {
+    ): Promise<Result<ResultPagination<AuditLogDto>>> {
         const {
             page = 1,
             limit = 10,
@@ -117,10 +118,30 @@ export class AuditLogsService {
                     : undefined,
             }));
 
-            return ResultPagination.of(data, total, page, limit);
+            return Result.ok(ResultPagination.of(data, total, page, limit));
         } catch (error) {
             this.logger.error('Failed to fetch audit logs', error);
-            throw error;
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
+        }
+    }
+
+    async findAllFilteredAsync(
+        query: AuditLogQueryDto,
+    ): Promise<Result<ResultPagination<AuditLogDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            this.logger.error('Failed to fetch filtered audit logs', error);
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 

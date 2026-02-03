@@ -10,6 +10,8 @@ import { EmployeePositionDto } from './dtos/employee-position.dto';
 import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
+import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
+import { Prisma } from '@prisma/client';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
@@ -42,21 +44,36 @@ export class EmployeePositionsService {
     }
 
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-        childIncluded?: boolean,
-    ): Promise<ResultPagination<EmployeePositionDto>> {
+        query: EmployeePositionQueryDto,
+    ): Promise<Result<ResultPagination<EmployeePositionDto>>> {
+        const {
+            page = 1,
+            limit = 10,
+            title,
+            childIncluded = false,
+            sortBy = 'title',
+            sortOrder = 'asc',
+            skip,
+        } = query;
+
         this._logger.log(
             `Get paginated positions: page ${page}, limit ${limit}`,
         );
-        const skip = (page - 1) * limit;
+
+        const where: Prisma.EmployeePositionWhereInput = { isDeleted: false };
+        if (title) {
+            where.title = { contains: title, mode: 'insensitive' };
+        }
+
+        const orderBy: Prisma.EmployeePositionOrderByWithRelationInput = {};
+        if (sortBy === 'title') orderBy.title = sortOrder;
+        else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
+        else if (sortBy === 'updatedAt') orderBy.updatedAt = sortOrder;
 
         const [total, positions] = await Promise.all([
-            this.prisma.client.employeePosition.count({
-                where: { isDeleted: false },
-            }),
+            this.prisma.client.employeePosition.count({ where }),
             this.prisma.client.employeePosition.findMany({
-                where: { isDeleted: false },
+                where,
                 skip,
                 take: limit,
                 include: {
@@ -69,14 +86,30 @@ export class EmployeePositionsService {
                           }
                         : false,
                 },
-                orderBy: { title: 'asc' },
+                orderBy,
             }),
         ]);
 
         const dtos = positions.map((p) =>
             plainToInstance(EmployeePositionDto, p),
         );
-        return ResultPagination.of(dtos, total, page, limit);
+        return Result.ok(ResultPagination.of(dtos, total, page, limit));
+    }
+
+    async findAllFilteredAsync(
+        query: EmployeePositionQueryDto,
+    ): Promise<Result<ResultPagination<EmployeePositionDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            this._logger.error('Failed to fetch filtered positions', error);
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
+        }
     }
 
     async findOneByIdAsync(

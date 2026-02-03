@@ -48,9 +48,12 @@ export class DepartmentsController {
     @ApiResponse({ status: HttpStatus.OK })
     async findAllAsync(
         @Query() query: DepartmentQueryDto,
-    ): Promise<DepartmentDto[]> {
+    ): Promise<ResultPagination<DepartmentDto>> {
         const result =
             await this.departmentsService.findAllFilteredAsync(query);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
         return result.getData();
     }
 

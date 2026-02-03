@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
 import { PayrollDto } from './dtos/payroll.dto';
+import { PayrollQueryDto } from './dtos/payroll-query.dto';
 import {
     PayrollSummaryDto,
     PayrollSummaryByStatusDto,
@@ -11,6 +12,12 @@ import {
     GeneratePayrollDto,
     GeneratePayrollResultDto,
 } from './dtos/generate-payroll.dto';
+import {
+    MePayslipResponseDto,
+    MePayslipRecordDto,
+    MePayslipSummaryDto,
+    MePayslipYtdDto,
+} from './dtos/me-payslip-response.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
@@ -368,35 +375,44 @@ export class PayrollsService {
      * Lists payrolls with optional filters (Paginated).
      */
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-        params?: {
-            employeeId?: string;
-            status?: string;
-            year?: number;
-            month?: number;
-        },
+        query: PayrollQueryDto,
     ): Promise<Result<ResultPagination<PayrollDto>>> {
         try {
-            const skip = (page - 1) * limit;
+            const {
+                page = 1,
+                limit = 10,
+                employeeId,
+                status,
+                year,
+                month,
+                sortBy = 'payPeriodStart',
+                sortOrder = 'desc',
+                skip,
+            } = query;
+
             const where: Prisma.PayrollWhereInput = { isDeleted: false };
 
-            if (params?.employeeId) {
-                where.employeeId = params.employeeId;
+            if (employeeId) {
+                where.employeeId = employeeId;
             }
 
-            if (params?.status) {
-                where.status = params.status;
+            if (status) {
+                where.status = status;
             }
 
-            if (params?.year && params?.month) {
-                const startOfMonth = new Date(params.year, params.month - 1, 1);
-                const endOfMonth = new Date(params.year, params.month, 0);
+            if (year && month) {
+                const startOfMonth = new Date(year, month - 1, 1);
+                const endOfMonth = new Date(year, month, 0);
                 where.payPeriodStart = {
                     gte: startOfMonth,
                     lte: endOfMonth,
                 };
             }
+
+            const orderBy: Prisma.PayrollOrderByWithRelationInput = {};
+            if (sortBy === 'payPeriodStart') orderBy.payPeriodStart = sortOrder;
+            else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
+            else if (sortBy === 'updatedAt') orderBy.updatedAt = sortOrder;
 
             const [payrolls, total] = await this.prisma.client.$transaction([
                 this.prisma.client.payroll.findMany({
@@ -409,7 +425,7 @@ export class PayrollsService {
                         },
                         taxCalculation: true,
                     },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy,
                 }),
                 this.prisma.client.payroll.count({ where }),
             ]);
@@ -424,6 +440,22 @@ export class PayrollsService {
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
             return Result.fail('Failed to fetch payrolls');
+        }
+    }
+
+    async findAllFilteredAsync(
+        query: PayrollQueryDto,
+    ): Promise<Result<ResultPagination<PayrollDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            this.logger.error('Failed to fetch filtered payrolls', error);
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 
@@ -740,6 +772,172 @@ export class PayrollsService {
         } catch (error) {
             this.logger.error('Failed to generate bulk payrolls', error);
             return Result.fail('Failed to generate payrolls');
+        }
+    }
+
+    async getMePayslipsAsync(
+        userId: string,
+        year?: number,
+    ): Promise<Result<MePayslipResponseDto>> {
+        try {
+            const employee = await this.prisma.client.employee.findUnique({
+                where: { userId, isDeleted: false },
+            });
+
+            if (!employee) {
+                return Result.fail('Employee profile not found');
+            }
+
+            const currentYear = year || new Date().getFullYear();
+            const startOfYear = new Date(currentYear, 0, 1);
+            const endOfYear = new Date(currentYear, 11, 31);
+
+            const payrolls = await this.prisma.client.payroll.findMany({
+                where: {
+                    employeeId: employee.id,
+                    payPeriodStart: {
+                        gte: startOfYear,
+                        lte: endOfYear,
+                    },
+                    isDeleted: false,
+                },
+                include: {
+                    items: { where: { isDeleted: false } },
+                },
+                orderBy: { payPeriodStart: 'desc' },
+            });
+
+            const records: MePayslipRecordDto[] = payrolls.map((p) => {
+                const gross = p.basicSalary
+                    .plus(p.overtimeHrs.times(p.overtimeRate))
+                    .plus(p.bonus);
+
+                let totalTax = new Decimal(0);
+                for (const item of p.items) {
+                    if (item.itemName === 'Tax') {
+                        totalTax = totalTax.plus(item.amount);
+                    }
+                }
+
+                const summary: MePayslipSummaryDto = {
+                    grossSalary: Number(gross),
+                    totalDeductions: Number(totalTax.plus(p.deductions)),
+                    netSalary: Number(p.netSalary),
+                };
+
+                const monthName = p.payPeriodStart.toLocaleString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                });
+
+                return {
+                    id: p.id,
+                    period: monthName,
+                    periodStart: p.payPeriodStart.toISOString().split('T')[0],
+                    periodEnd: p.payPeriodEnd.toISOString().split('T')[0],
+                    payDate: p.paymentDate
+                        ? p.paymentDate.toISOString().split('T')[0]
+                        : null,
+                    status: p.status.toLowerCase(),
+                    summary,
+                    pdfUrl: `/api/payrolls/payslip/${p.id}`,
+                    isRead: p.isRead,
+                };
+            });
+
+            // Calculate YTD
+            let ytdGross = new Decimal(0);
+            let ytdNet = new Decimal(0);
+            let ytdTax = new Decimal(0);
+            let ytdNssf = new Decimal(0);
+
+            for (const p of payrolls) {
+                const gross = p.basicSalary
+                    .plus(p.overtimeHrs.times(p.overtimeRate))
+                    .plus(p.bonus);
+                ytdGross = ytdGross.plus(gross);
+                ytdNet = ytdNet.plus(p.netSalary);
+
+                for (const item of p.items) {
+                    if (item.itemName === 'Tax') {
+                        ytdTax = ytdTax.plus(item.amount);
+                    }
+                    if (item.itemName === 'NSSF') {
+                        ytdNssf = ytdNssf.plus(item.amount);
+                    }
+                }
+            }
+
+            const ytdSummary: MePayslipYtdDto = {
+                year: currentYear,
+                totalGross: Number(ytdGross),
+                totalTax: Number(ytdTax),
+                totalNssf: Number(ytdNssf),
+                totalNet: Number(ytdNet),
+            };
+
+            return Result.ok({
+                records,
+                ytdSummary,
+            });
+        } catch (error) {
+            this.logger.error('Failed to fetch personal payslips', error);
+            return Result.fail('Failed to fetch payslips');
+        }
+    }
+
+    async downloadPayslipPdfAsync(
+        id: string,
+        userId: string,
+    ): Promise<Result<{ buffer: Buffer; filename: string }>> {
+        try {
+            const payroll = await this.prisma.client.payroll.findFirst({
+                where: {
+                    id,
+                    employee: { userId },
+                    isDeleted: false,
+                },
+                include: {
+                    employee: true,
+                    items: true,
+                },
+            });
+
+            if (!payroll) {
+                return Result.fail('Payslip not found');
+            }
+
+            // Mark as read when downloaded
+            await this.markAsReadAsync(id, userId);
+
+            // Placeholder: In a real system, we would use a PDF generation library here.
+            const buffer = Buffer.from(
+                `Payslip for ${payroll.employee.firstname} ${payroll.employee.lastname}\nPeriod: ${payroll.payPeriodStart.toDateString()} - ${payroll.payPeriodEnd.toDateString()}\nNet Salary: ${payroll.netSalary}`,
+            );
+            const filename = `payslip_${payroll.id}.pdf`;
+
+            return Result.ok({ buffer, filename });
+        } catch (error) {
+            this.logger.error('Failed to generate payslip PDF', error);
+            return Result.fail('Failed to download payslip');
+        }
+    }
+
+    async markAsReadAsync(id: string, userId: string): Promise<Result<void>> {
+        try {
+            await this.prisma.client.payroll.updateMany({
+                where: {
+                    id,
+                    employee: { userId },
+                    isDeleted: false,
+                },
+                data: { isRead: true },
+            });
+
+            return Result.ok();
+        } catch (error) {
+            this.logger.error('Failed to mark payroll as read', error);
+            return Result.fail('Failed to update status');
         }
     }
 }

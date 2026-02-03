@@ -22,6 +22,6 @@ import { UsersService } from '../iam/users/users.service';
     ],
     providers: [AuthService, JwtStrategy, UsersService, UserContextService],
     controllers: [AuthController],
-    exports: [AuthService, UserContextService],
+    exports: [AuthService, UserContextService, JwtModule],
 })
 export class AuthModule {}

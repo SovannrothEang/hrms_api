@@ -6,4 +6,5 @@ export enum AttendanceStatus {
     EARLY_OUT = 'EARLY_OUT',
     OVERTIME = 'OVERTIME',
     DID_NOT_CHECKOUT = 'DID_NOT_CHECKOUT',
+    ON_LEAVE = 'ON_LEAVE',
 }

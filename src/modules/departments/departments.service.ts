@@ -129,79 +129,17 @@ export class DepartmentsService {
 
     async findAllFilteredAsync(
         query: DepartmentQueryDto,
-    ): Promise<Result<DepartmentDto[]>> {
-        this.logger.log('Getting all filtered departments');
-        const {
-            name,
-            employeeCountRange,
-            isActive,
-            sortBy,
-            sortOrder,
-            includeEmployees,
-        } = query;
-
-        const where: Prisma.DepartmentWhereInput = {
-            isDeleted: false,
-        };
-
-        if (isActive !== undefined) {
-            where.isActive = isActive;
-        }
-
-        if (name) {
-            where.departmentName = {
-                contains: name,
-                mode: 'insensitive',
-            };
-        }
-
-        const orderBy: Prisma.DepartmentOrderByWithRelationInput = {};
-        if (sortBy === 'createdAt') {
-            orderBy.createdAt = sortOrder;
-        } else {
-            orderBy.departmentName = sortOrder;
-        }
-
-        const include = {
-            employees: includeEmployees,
-            performer: includeEmployees
-                ? {
-                      include: {
-                          userRoles: { include: { role: true } },
-                      },
-                  }
-                : false,
-        };
-
+    ): Promise<Result<ResultPagination<DepartmentDto>>> {
         try {
-            const departments = await this.prisma.client.department.findMany({
-                where,
-                include,
-                orderBy,
-            });
-
-            // Apply employee count filtering after fetching
-            let filteredDepartments = departments;
-            if (employeeCountRange) {
-                const min = query.employeeCountMin;
-                const max = query.employeeCountMax;
-
-                filteredDepartments = departments.filter((dept) => {
-                    const employeeCount = dept.employees?.length ?? 0;
-                    if (min !== null && employeeCount < min) return false;
-                    if (max !== null && employeeCount > max) return false;
-                    return true;
-                });
-            }
-
-            const data = filteredDepartments.map((d) =>
-                plainToInstance(DepartmentDto, d),
-            );
-
-            return Result.ok(data);
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return Result.ok(paginationResult);
         } catch (error) {
             this.logger.error('Failed to fetch filtered departments', error);
-            throw error;
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 

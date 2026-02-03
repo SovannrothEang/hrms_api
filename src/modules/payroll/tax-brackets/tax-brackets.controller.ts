@@ -11,20 +11,14 @@ import {
     BadRequestException,
     NotFoundException,
 } from '@nestjs/common';
-import {
-    ApiOperation,
-    ApiParam,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { TaxBracketsService } from './tax-brackets.service';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
+import { TaxBracketQueryDto } from './dtos/tax-bracket-query.dto';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';
 
@@ -52,26 +46,13 @@ export class TaxBracketsController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all tax brackets' })
-    @ApiQuery({
-        name: 'country',
-        required: false,
-        description: 'Filter by country code',
-    })
-    @ApiQuery({
-        name: 'year',
-        required: false,
-        type: Number,
-        description: 'Filter by tax year',
-    })
     @ApiResponse({ status: HttpStatus.OK, description: 'List of tax brackets' })
     async findAll(
-        @Query('country') country?: string,
-        @Query('year') year?: number,
-    ): Promise<TaxBracketDto[]> {
-        const result = await this.service.findAllAsync(
-            country,
-            year ? Number(year) : undefined,
-        );
+        @Query() query: TaxBracketQueryDto,
+    ): Promise<ResultPagination<TaxBracketDto>> {
+        const result = await this.service.findAllFilteredAsync(query);
+        if (!result.isSuccess)
+            throw new BadRequestException(result.error ?? 'Unknown Error');
         return result.getData();
     }
 

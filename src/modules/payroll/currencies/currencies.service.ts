@@ -2,10 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { CreateCurrencyDto } from './dtos/create-currency.dto';
 import { CurrencyDto } from './dtos/currency.dto';
+import { CurrencyQueryDto } from './dtos/currency-query.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CurrenciesService {
@@ -72,29 +74,67 @@ export class CurrenciesService {
     }
 
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-    ): Promise<ResultPagination<CurrencyDto>> {
+        query: CurrencyQueryDto,
+    ): Promise<Result<ResultPagination<CurrencyDto>>> {
         try {
-            const skip = (page - 1) * limit;
+            const {
+                page = 1,
+                limit = 10,
+                code,
+                name,
+                country,
+                sortBy = 'code',
+                sortOrder = 'asc',
+                skip,
+            } = query;
+
+            const where: Prisma.CurrencyWhereInput = { isDeleted: false };
+            if (code) where.code = { contains: code, mode: 'insensitive' };
+            if (name) where.name = { contains: name, mode: 'insensitive' };
+            if (country)
+                where.country = { contains: country, mode: 'insensitive' };
+
+            const orderBy: Prisma.CurrencyOrderByWithRelationInput = {};
+            if (sortBy === 'code') orderBy.code = sortOrder;
+            else if (sortBy === 'name') orderBy.name = sortOrder;
+            else if (sortBy === 'country') orderBy.country = sortOrder;
+            else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
 
             const [total, values] = await Promise.all([
-                this.prisma.client.currency.count({
-                    where: { isDeleted: false },
-                }),
+                this.prisma.client.currency.count({ where }),
                 this.prisma.client.currency.findMany({
-                    where: { isDeleted: false },
+                    where,
                     skip,
                     take: limit,
-                    orderBy: { code: 'asc' },
+                    orderBy,
                 }),
             ]);
 
             const dtos = values.map((v) => plainToInstance(CurrencyDto, v));
-            return ResultPagination.of(dtos, total, page, limit);
+            return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);
-            throw error;
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
+        }
+    }
+
+    async findAllFilteredAsync(
+        query: CurrencyQueryDto,
+    ): Promise<Result<ResultPagination<CurrencyDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            this.logger.error('Failed to fetch filtered currencies', error);
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 

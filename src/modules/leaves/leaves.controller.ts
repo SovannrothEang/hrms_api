@@ -11,7 +11,6 @@ import {
     Query,
     BadRequestException,
     ParseBoolPipe,
-    ParseIntPipe,
 } from '@nestjs/common';
 import {
     ApiOperation,
@@ -24,6 +23,9 @@ import { LeavesService } from './leaves.service';
 
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
+import { LeaveQueryDto } from './dtos/leave-query.dto';
+import { LeaveRequestDto } from './dtos/leave-request.dto';
+import { ResultPagination } from '../../common/logic/result-pagination';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -37,12 +39,10 @@ export class LeavesController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all leave requests' })
     @ApiResponse({ status: HttpStatus.OK })
-    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     async findAll(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
-    ) {
-        const result = await this.leavesService.findAllAsync(childIncluded);
+        @Query() query: LeaveQueryDto,
+    ): Promise<ResultPagination<LeaveRequestDto>> {
+        const result = await this.leavesService.findAllFilteredAsync(query);
         return result.getData();
     }
 

@@ -10,8 +10,10 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AuditLogsService } from './audit-logs.service';
 import { AuditLogQueryDto } from './dtos/audit-log-query.dto';
+import { AuditLogDto } from './dtos/audit-log.dto';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
+import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('audit-logs')
 @ApiTags('Audit Logs')
@@ -26,15 +28,11 @@ export class AuditLogsController {
         status: HttpStatus.OK,
         description: 'Returns list of audit logs',
     })
-    async findAll(@Query() query: AuditLogQueryDto) {
-        // We still use the service method but effectively treat it as non-paginated by providing a large limit if not specified,
-        // OR we can add a findAllAsync to the service. For now, let's just use a large limit to fulfill "get all data".
-        const result = await this.auditLogsService.findAllPaginatedAsync({
-            ...query,
-            limit: 10000,
-            skip: 0,
-        });
-        return result.data; // Return the array directly
+    async findAll(
+        @Query() query: AuditLogQueryDto,
+    ): Promise<ResultPagination<AuditLogDto>> {
+        const result = await this.auditLogsService.findAllFilteredAsync(query);
+        return result.getData();
     }
 
     @Get('actions')

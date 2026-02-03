@@ -15,4 +15,12 @@ export class CheckOutDto {
         example: 'Worked on project X',
     })
     notes?: string;
+    @IsString()
+    @IsNotEmpty()
+    @ApiProperty({
+        name: 'qrToken',
+        required: true,
+        example: 'signed-jwt-token',
+    })
+    qrToken: string;
 }

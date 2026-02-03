@@ -3,6 +3,7 @@ import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';
+import { TaxBracketQueryDto } from './dtos/tax-bracket-query.dto';
 import { Result } from '../../../common/logic/result';
 import { plainToInstance } from 'class-transformer';
 
@@ -64,34 +65,77 @@ export class TaxBracketsService {
     }
 
     async findAllPaginatedAsync(
-        page: number,
-        limit: number,
-        countryCode?: string,
-        year?: number,
-    ): Promise<ResultPagination<TaxBracketDto>> {
+        query: TaxBracketQueryDto,
+    ): Promise<Result<ResultPagination<TaxBracketDto>>> {
         try {
-            const skip = (page - 1) * limit;
-            const whereClause: Prisma.TaxBracketWhereInput = {
-                isDeleted: false,
-            };
-            if (countryCode) whereClause.countryCode = countryCode;
-            if (year) whereClause.taxYear = year;
+            const {
+                page = 1,
+                limit = 10,
+                country,
+                year,
+                bracketName,
+                currencyCode,
+                sortBy = 'minAmount',
+                sortOrder = 'asc',
+                skip,
+            } = query;
+
+            const where: Prisma.TaxBracketWhereInput = { isDeleted: false };
+            if (country) where.countryCode = country;
+            if (year) where.taxYear = year;
+            if (bracketName)
+                where.bracketName = {
+                    contains: bracketName,
+                    mode: 'insensitive',
+                };
+            if (currencyCode) where.currencyCode = currencyCode;
+
+            const orderBy: Prisma.TaxBracketOrderByWithRelationInput = {};
+            if (sortBy === 'minAmount') orderBy.minAmount = sortOrder;
+            else if (sortBy === 'maxAmount') orderBy.maxAmount = sortOrder;
+            else if (sortBy === 'taxRate') orderBy.taxRate = sortOrder;
+            else if (sortBy === 'year') orderBy.taxYear = sortOrder;
+            else if (sortBy === 'country') orderBy.countryCode = sortOrder;
+            else if (sortBy === 'currencyCode')
+                orderBy.currencyCode = sortOrder;
+            else if (sortBy === 'bracketName') orderBy.bracketName = sortOrder;
+            else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
 
             const [total, values] = await Promise.all([
-                this.prisma.client.taxBracket.count({ where: whereClause }),
+                this.prisma.client.taxBracket.count({ where }),
                 this.prisma.client.taxBracket.findMany({
-                    where: whereClause,
+                    where,
                     skip,
                     take: limit,
-                    orderBy: { minAmount: 'asc' },
+                    orderBy,
                 }),
             ]);
 
             const dtos = values.map((v) => plainToInstance(TaxBracketDto, v));
-            return ResultPagination.of(dtos, total, page, limit);
+            return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);
-            throw error;
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
+        }
+    }
+
+    async findAllFilteredAsync(
+        query: TaxBracketQueryDto,
+    ): Promise<Result<ResultPagination<TaxBracketDto>>> {
+        try {
+            const paginationResult = await this.findAllPaginatedAsync(query);
+            return paginationResult;
+        } catch (error) {
+            this.logger.error('Failed to fetch filtered tax brackets', error);
+            return Result.fail(
+                error instanceof Error
+                    ? error.message
+                    : 'Internal server error',
+            );
         }
     }
 

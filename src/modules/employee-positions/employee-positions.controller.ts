@@ -17,6 +17,7 @@ import {
 import { EmployeePositionsService } from './employee-positions.service';
 
 import { EmployeePositionDto } from './dtos/employee-position.dto';
+import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
@@ -30,7 +31,6 @@ import {
 import { RoleName } from 'src/common/enums/roles.enum';
 import { Auth } from 'src/common/decorators/auth.decorator';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('employees/positions')
@@ -46,15 +46,13 @@ export class EmployeePositionsController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all employee positions' })
-    @ApiQuery({ name: 'childIncluded', required: false, type: Boolean })
     @ApiResponse({ status: HttpStatus.OK, description: 'List of positions' })
     async findAllAsync(
-        @Query('childIncluded', new ParseBoolPipe({ optional: true }))
-        childIncluded?: boolean,
-    ): Promise<EmployeePositionDto[]> {
+        @Query() query: EmployeePositionQueryDto,
+    ): Promise<ResultPagination<EmployeePositionDto>> {
         this._logger.log(`Get all positions`);
         const result =
-            await this.employeePositionsService.findAllAsync(childIncluded);
+            await this.employeePositionsService.findAllFilteredAsync(query);
         return result.getData();
     }
 

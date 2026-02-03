@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Result } from '../../../../src/common/logic/result';
+import { ResultPagination } from '../../../../src/common/logic/result-pagination';
 import { TaxBracketsController } from '../../../../src/modules/payroll/tax-brackets/tax-brackets.controller';
 import { TaxBracketsService } from '../../../../src/modules/payroll/tax-brackets/tax-brackets.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -28,6 +29,7 @@ jest.mock('src/common/guards/roles.guard', () => ({
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     deleteAsync: jest.fn(),
 };
 
@@ -70,7 +72,9 @@ describe('TaxBracketsController (Feature)', () => {
     });
 
     it('/tax-brackets (GET) should filter', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.ok([]));
+        mockService.findAllFilteredAsync.mockResolvedValue(
+            Result.ok(ResultPagination.of([], 0, 1, 10)),
+        );
         return request(app.getHttpServer())
             .get('/tax-brackets?country=US&year=2026')
             .expect(200);
@@ -104,7 +108,7 @@ describe('TaxBracketsController (Feature)', () => {
     });
 
     it('/tax-brackets (GET) should throw on service failure', () => {
-        mockService.findAllAsync.mockResolvedValue(
+        mockService.findAllFilteredAsync.mockResolvedValue(
             Result.fail('Failed to fetch'),
         );
         return request(app.getHttpServer()).get('/tax-brackets').expect(400);
