@@ -12,6 +12,7 @@ import { seedPayroll } from './payroll-seed';
 import { seedEmployees } from './employees-seed';
 import { seedAttendances } from './attendances-seed';
 import { seedLeaves } from './leaves-seed';
+import { seedPayrollRecords } from './payroll-records-seed';
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
@@ -34,6 +35,7 @@ async function main() {
     // Dependencies on Employees
     await seedAttendances(prisma);
     await seedLeaves(prisma);
+    await seedPayrollRecords(prisma);
 
     console.log('All seeds completed successfully.');
 }

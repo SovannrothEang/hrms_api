@@ -9,6 +9,7 @@ import {
     HttpStatus,
     BadRequestException,
     ParseBoolPipe,
+    Logger,
 } from '@nestjs/common';
 import {
     ApiOperation,
@@ -27,6 +28,7 @@ import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResultPagination } from '../../common/logic/result-pagination';
 import { AttendanceDto } from './dtos/attendance.dto';
+import { AttendanceSummaryDto } from './dtos/attendance-summary.dto';
 import { MeAttendanceResponseDto } from './dtos/me-attendance-response.dto';
 import { QrManagerService } from './services/qr-manager.service';
 
@@ -34,10 +36,11 @@ import { QrManagerService } from './services/qr-manager.service';
 @Auth()
 @Controller(['attendances', 'attendance'])
 export class AttendancesController {
+    private readonly _logger = new Logger(AttendancesController.name);
     constructor(
         private readonly attendancesService: AttendancesService,
         private readonly qrManagerService: QrManagerService,
-    ) {}
+    ) { }
 
     @Auth([RoleName.ADMIN, RoleName.HR])
     @Get('qr/in')
@@ -55,13 +58,18 @@ export class AttendancesController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get all attendances' })
+    @ApiOperation({ summary: 'Get all attendances with summary statistics' })
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
         @Query() query: AttendanceQueryDto,
-    ): Promise<ResultPagination<AttendanceDto>> {
+    ): Promise<ResultPagination<AttendanceDto, AttendanceSummaryDto>> {
         const result =
             await this.attendancesService.findAllFilteredAsync(query);
+
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+
         return result.getData();
     }
 

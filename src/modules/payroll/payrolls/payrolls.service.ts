@@ -23,6 +23,9 @@ import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from '../../../common/logic/result-pagination';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PdfPrinter = require('pdfmake/js/printer').default;
+import { TDocumentDefinitions } from 'pdfmake/interfaces';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -43,7 +46,7 @@ export enum PayrollItemType {
 export class PayrollsService {
     private readonly logger = new Logger(PayrollsService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     /**
      * Creates a draft payroll with calculated values (Gross, Tax, Net).
@@ -841,7 +844,6 @@ export class PayrollsService {
                     status: p.status.toLowerCase(),
                     summary,
                     pdfUrl: `/api/payrolls/payslip/${p.id}`,
-                    isRead: p.isRead,
                 };
             });
 
@@ -898,7 +900,12 @@ export class PayrollsService {
                     isDeleted: false,
                 },
                 include: {
-                    employee: true,
+                    employee: {
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    },
                     items: true,
                 },
             });
@@ -907,14 +914,8 @@ export class PayrollsService {
                 return Result.fail('Payslip not found');
             }
 
-            // Mark as read when downloaded
-            await this.markAsReadAsync(id, userId);
-
-            // Placeholder: In a real system, we would use a PDF generation library here.
-            const buffer = Buffer.from(
-                `Payslip for ${payroll.employee.firstname} ${payroll.employee.lastname}\nPeriod: ${payroll.payPeriodStart.toDateString()} - ${payroll.payPeriodEnd.toDateString()}\nNet Salary: ${payroll.netSalary}`,
-            );
-            const filename = `payslip_${payroll.id}.pdf`;
+            const buffer = await this.generatePdfBuffer(payroll);
+            const filename = `payslip_${payroll.payPeriodStart.toISOString().split('T')[0]}_${payroll.employee.employeeCode}.pdf`;
 
             return Result.ok({ buffer, filename });
         } catch (error) {
@@ -923,21 +924,137 @@ export class PayrollsService {
         }
     }
 
-    async markAsReadAsync(id: string, userId: string): Promise<Result<void>> {
-        try {
-            await this.prisma.client.payroll.updateMany({
-                where: {
-                    id,
-                    employee: { userId },
-                    isDeleted: false,
-                },
-                data: { isRead: true },
-            });
+    private async generatePdfBuffer(payroll: any): Promise<Buffer> {
+        const fonts = {
+            Helvetica: {
+                normal: 'Helvetica',
+                bold: 'Helvetica-Bold',
+                italics: 'Helvetica-Oblique',
+                bolditalics: 'Helvetica-BoldOblique',
+            },
+        };
 
-            return Result.ok();
-        } catch (error) {
-            this.logger.error('Failed to mark payroll as read', error);
-            return Result.fail('Failed to update status');
-        }
+        const printer = new PdfPrinter(fonts);
+
+        const periodStr = `${payroll.payPeriodStart.toLocaleDateString()} - ${payroll.payPeriodEnd.toLocaleDateString()}`;
+        const employeeName = `${payroll.employee.firstname} ${payroll.employee.lastname}`;
+        const department = payroll.employee.department?.departmentName || 'N/A';
+        const position = payroll.employee.position?.title || 'N/A';
+
+        const earnings = payroll.items.filter((i: any) => i.itemType === 'EARNING');
+        const deductions = payroll.items.filter((i: any) => i.itemType === 'DEDUCTION');
+
+        const docDefinition: TDocumentDefinitions = {
+            defaultStyle: {
+                font: 'Helvetica',
+                fontSize: 10,
+                lineHeight: 1.5,
+            },
+            content: [
+                { text: 'PAYSLIP', style: 'header', alignment: 'center', margin: [0, 0, 0, 20] },
+
+                // Employee Details
+                {
+                    columns: [
+                        {
+                            width: '*',
+                            text: [
+                                { text: 'Employee: ', bold: true }, employeeName, '\n',
+                                { text: 'ID: ', bold: true }, payroll.employee.employeeCode, '\n',
+                                { text: 'Department: ', bold: true }, department, '\n',
+                                { text: 'Position: ', bold: true }, position,
+                            ],
+                        },
+                        {
+                            width: '*',
+                            text: [
+                                { text: 'Pay Period: ', bold: true }, periodStr, '\n',
+                                { text: 'Pay Date: ', bold: true }, payroll.paymentDate ? new Date(payroll.paymentDate).toLocaleDateString() : 'Pending', '\n',
+                                { text: 'Status: ', bold: true }, payroll.status,
+                            ],
+                            alignment: 'right',
+                        },
+                    ],
+                    margin: [0, 0, 0, 20],
+                },
+
+                // Table
+                {
+                    table: {
+                        headerRows: 1,
+                        widths: ['*', 'auto', '*'],
+                        body: [
+                            [
+                                { text: 'Item', style: 'tableHeader' },
+                                { text: 'Type', style: 'tableHeader' },
+                                { text: 'Amount', style: 'tableHeader', alignment: 'right' },
+                            ],
+                            ...earnings.map((item: any) => [
+                                item.itemName,
+                                'Earning',
+                                { text: Number(item.amount).toFixed(2), alignment: 'right' },
+                            ]),
+                            ...deductions.map((item: any) => [
+                                item.itemName,
+                                'Deduction',
+                                { text: `(${Number(item.amount).toFixed(2)})`, alignment: 'right', color: 'red' },
+                            ]),
+                            // Divider
+                            [{ text: '', colSpan: 3, border: [false, false, false, false] }, {}, {}],
+                            // Totals
+                            [
+                                { text: 'Gross Salary', bold: true },
+                                {},
+                                { text: Number(payroll.basicSalary.plus(payroll.overtimeRate.times(payroll.overtimeHrs)).plus(payroll.bonus)).toFixed(2), alignment: 'right', bold: true },
+                            ],
+                            [
+                                { text: 'Total Deductions', bold: true },
+                                {},
+                                { text: `(${Number(payroll.deductions.plus(payroll.items.filter((i: any) => i.itemName === 'Tax').reduce((acc: any, curr: any) => acc + Number(curr.amount), 0))).toFixed(2)})`, alignment: 'right', bold: true, color: 'red' },
+                            ],
+                            [
+                                { text: 'NET SALARY', style: 'totalObj', fillColor: '#eeeeee' },
+                                { text: '', fillColor: '#eeeeee' },
+                                { text: `${payroll.currencyCode} ${Number(payroll.netSalary).toFixed(2)}`, style: 'totalObj', alignment: 'right', fillColor: '#eeeeee' },
+                            ],
+                        ],
+                    },
+                    layout: 'lightHorizontalLines',
+                },
+
+                { text: 'This is a computer-generated document. No signature is required.', style: 'footer', margin: [0, 40, 0, 0], alignment: 'center', italics: true, fontSize: 8 }
+            ],
+            styles: {
+                header: {
+                    fontSize: 18,
+                    bold: true,
+                },
+                tableHeader: {
+                    bold: true,
+                    fontSize: 11,
+                    color: 'black',
+                },
+                totalObj: {
+                    bold: true,
+                    fontSize: 12,
+                },
+                footer: {
+                    color: 'gray'
+                }
+            },
+        };
+
+        return new Promise(async (resolve, reject) => {
+            try {
+                const pdfDoc = await printer.createPdfKitDocument(docDefinition);
+                const chunks: Buffer[] = [];
+                pdfDoc.on('data', (chunk) => chunks.push(chunk));
+                pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+                pdfDoc.on('error', (err) => reject(err));
+                pdfDoc.end();
+            } catch (err) {
+                reject(err);
+            }
+        });
     }
 }

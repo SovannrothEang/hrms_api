@@ -45,7 +45,7 @@ describe('AttendancesService', () => {
 
     describe('checkIn', () => {
         it('should check in successfully', async () => {
-            const dto = { employeeId: 'emp-1' };
+            const dto = { employeeId: 'emp-1', qrToken: 'mock-token' };
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -81,7 +81,7 @@ describe('AttendancesService', () => {
         });
 
         it('should fail if already checked in', async () => {
-            const dto = { employeeId: 'emp-1' };
+            const dto = { employeeId: 'emp-1', qrToken: 'mock-token' };
             (prismaClient.attendance.findFirst as jest.Mock).mockResolvedValue({
                 id: '1',
             });
@@ -94,7 +94,7 @@ describe('AttendancesService', () => {
 
     describe('checkOut', () => {
         it('should check out successfully', async () => {
-            const dto = { employeeId: 'emp-1' };
+            const dto = { employeeId: 'emp-1', qrToken: 'mock-token' };
             // Mock existing attendance without checkout
             (prismaClient.attendance.findFirst as jest.Mock).mockResolvedValue({
                 id: '1',
@@ -115,7 +115,7 @@ describe('AttendancesService', () => {
                 null,
             );
             const result = await service.checkOut(
-                { employeeId: 'emp-1' },
+                { employeeId: 'emp-1', qrToken: 'mock-token' },
                 'admin-id',
             );
             expect(result.isSuccess).toBe(false);
@@ -127,7 +127,7 @@ describe('AttendancesService', () => {
                 checkOutTime: new Date(),
             });
             const result = await service.checkOut(
-                { employeeId: 'emp-1' },
+                { employeeId: 'emp-1', qrToken: 'mock-token' },
                 'admin-id',
             );
             expect(result.isSuccess).toBe(false);
@@ -169,7 +169,7 @@ describe('AttendancesService', () => {
 
     describe('checkIn - LATE status', () => {
         it('should mark as LATE when past shift start time', async () => {
-            const dto = { employeeId: 'emp-1' };
+            const dto = { employeeId: 'emp-1', qrToken: 'mock-token' };
             (prismaClient.attendance.findFirst as jest.Mock).mockResolvedValue(
                 null,
             );
@@ -201,7 +201,7 @@ describe('AttendancesService', () => {
         });
 
         it('should fail when employee not found', async () => {
-            const dto = { employeeId: 'non-existent' };
+            const dto = { employeeId: 'non-existent', qrToken: 'mock-token' };
             (prismaClient.attendance.findFirst as jest.Mock).mockResolvedValue(
                 null,
             );

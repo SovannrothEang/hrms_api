@@ -142,6 +142,24 @@ export class PayrollsController {
         return result.getData();
     }
 
+    @Get('me')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get current user payslips and YTD summary' })
+    @ApiResponse({ status: HttpStatus.OK, type: MePayslipResponseDto })
+    async getMyPayrolls(
+        @CurrentUser('sub') userId: string,
+        @Query('year') year?: string,
+    ): Promise<MePayslipResponseDto> {
+        const result = await this.service.getMePayslipsAsync(
+            userId,
+            year ? parseInt(year, 10) : undefined,
+        );
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+        return result.getData();
+    }
+
     @Auth([RoleName.ADMIN, RoleName.HR])
     @Get(':id')
     @HttpCode(HttpStatus.OK)
@@ -210,24 +228,6 @@ export class PayrollsController {
                 result.error ?? 'Failed to delete payroll',
             );
         }
-    }
-
-    @Get('me')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get current user payslips and YTD summary' })
-    @ApiResponse({ status: HttpStatus.OK, type: MePayslipResponseDto })
-    async getMyPayrolls(
-        @CurrentUser('sub') userId: string,
-        @Query('year') year?: string,
-    ): Promise<MePayslipResponseDto> {
-        const result = await this.service.getMePayslipsAsync(
-            userId,
-            year ? parseInt(year, 10) : undefined,
-        );
-        if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
-        }
-        return result.getData();
     }
 
     @Get('payslip/:id')

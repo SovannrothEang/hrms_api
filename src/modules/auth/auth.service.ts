@@ -1,4 +1,6 @@
 import {
+    Inject,
+    forwardRef,
     Injectable,
     Logger,
     NotFoundException,
@@ -40,8 +42,9 @@ export class AuthService {
         private readonly sessionService: SessionService,
         private readonly csrfService: CsrfService,
         private readonly securityEventService: SecurityEventService,
+        @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
-    ) {}
+    ) { }
 
     async signInAsync(
         email: string,

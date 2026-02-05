@@ -17,13 +17,14 @@ import {
 import { QrManagerService } from './services/qr-manager.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
+import { AttendanceSummaryDto } from './dtos/attendance-summary.dto';
 
 @Injectable()
 export class AttendancesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly qrManagerService: QrManagerService,
-    ) {}
+    ) { }
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -31,22 +32,22 @@ export class AttendancesService {
         const attendances = await this.prisma.client.attendance.findMany({
             where: { isDeleted: false },
             include: {
-                performer: childIncluded
-                    ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                performer: childIncluded ?
+                    {
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
-                employee: childIncluded
-                    ? {
-                          include: {
-                              department: true,
-                              position: true,
-                          },
-                      }
+                employee: childIncluded ?
+                    {
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    }
                     : false,
             },
         });
@@ -57,7 +58,7 @@ export class AttendancesService {
 
     async findAllFilteredAsync(
         query: AttendanceQueryDto,
-    ): Promise<Result<ResultPagination<AttendanceDto>>> {
+    ): Promise<Result<ResultPagination<AttendanceDto, AttendanceSummaryDto>>> {
         try {
             const paginationResult = await this.findAllPaginatedAsync(query);
             return paginationResult;
@@ -72,7 +73,7 @@ export class AttendancesService {
 
     async findAllPaginatedAsync(
         query: AttendanceQueryDto,
-    ): Promise<Result<ResultPagination<AttendanceDto>>> {
+    ): Promise<Result<ResultPagination<AttendanceDto, AttendanceSummaryDto>>> {
         const {
             page = 1,
             limit = 10,
@@ -117,37 +118,62 @@ export class AttendancesService {
             orderBy.createdAt = sortOrder;
         }
 
-        const [attendances, total] = await this.prisma.$transaction([
-            this.prisma.client.attendance.findMany({
-                where,
-                skip,
-                take: limit,
-                include: {
-                    performer: childIncluded
-                        ? {
-                              include: {
-                                  userRoles: {
-                                      include: { role: true },
-                                  },
-                              },
-                          }
-                        : false,
-                    employee: childIncluded
-                        ? {
-                              include: {
-                                  department: true,
-                                  position: true,
-                              },
-                          }
-                        : false,
-                },
-                orderBy,
-            }),
-            this.prisma.client.attendance.count({ where }),
-        ]);
+        const [attendances, total, aggregates, statusCounts] =
+            await this.prisma.$transaction([
+                this.prisma.client.attendance.findMany({
+                    where,
+                    skip,
+                    take: limit,
+                    include: {
+                        performer: childIncluded
+                            ? {
+                                include: {
+                                    userRoles: {
+                                        include: { role: true },
+                                    },
+                                },
+                            }
+                            : false,
+                        employee: childIncluded
+                            ? {
+                                include: {
+                                    department: true,
+                                    position: true,
+                                },
+                            }
+                            : false,
+                    },
+                    orderBy,
+                }),
+                this.prisma.client.attendance.count({ where }),
+                this.prisma.client.attendance.aggregate({
+                    where,
+                    _sum: { workHours: true, overtime: true },
+                }),
+                this.prisma.client.attendance.groupBy({
+                    by: ['status'],
+                    where,
+                    _count: { _all: true },
+                }),
+            ]);
+
+        const getCount = (s: string) =>
+            statusCounts.find((c) => c.status === s)?._count._all || 0;
+
+        const summary: AttendanceSummaryDto = {
+            daysPresent:
+                getCount(AttendanceStatus.PRESENT) +
+                getCount(AttendanceStatus.LATE) +
+                getCount(AttendanceStatus.EARLY_OUT),
+            lateCount: getCount(AttendanceStatus.LATE),
+            daysAbsent: getCount(AttendanceStatus.ABSENT),
+            daysOnLeave: getCount(AttendanceStatus.ON_LEAVE),
+            totalHoursWorked: Number(aggregates._sum.workHours || 0),
+            totalOvertimeHours: Number(aggregates._sum.overtime || 0),
+        };
 
         const data = attendances.map((a) => plainToInstance(AttendanceDto, a));
-        return Result.ok(ResultPagination.of(data, total, page, limit));
+        return Result.ok(ResultPagination.of(data, total, page, limit, summary));
     }
 
     async findOneByIdAsync(
@@ -159,20 +185,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: {
-                                  include: { role: true },
-                              },
-                          },
-                      }
+                        include: {
+                            userRoles: {
+                                include: { role: true },
+                            },
+                        },
+                    }
                     : false,
                 employee: childIncluded
                     ? {
-                          include: {
-                              department: true,
-                              position: true,
-                          },
-                      }
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    }
                     : false,
             },
         });
@@ -382,17 +408,17 @@ export class AttendancesService {
                         isDeleted: false,
                         ...(dateFrom || dateTo
                             ? {
-                                  startDate: {
-                                      ...(dateTo
-                                          ? { lte: new Date(dateTo) }
-                                          : {}),
-                                  },
-                                  endDate: {
-                                      ...(dateFrom
-                                          ? { gte: new Date(dateFrom) }
-                                          : {}),
-                                  },
-                              }
+                                startDate: {
+                                    ...(dateTo
+                                        ? { lte: new Date(dateTo) }
+                                        : {}),
+                                },
+                                endDate: {
+                                    ...(dateFrom
+                                        ? { gte: new Date(dateFrom) }
+                                        : {}),
+                                },
+                            }
                             : {}),
                     },
                 }),
@@ -444,9 +470,9 @@ export class AttendancesService {
                 },
                 clockOut: r.checkOutTime
                     ? {
-                          time: formatTime(r.checkOutTime),
-                          isEarly: r.status === 'EARLY_OUT',
-                      }
+                        time: formatTime(r.checkOutTime),
+                        isEarly: r.status === 'EARLY_OUT',
+                    }
                     : null,
                 hoursWorked: Number(r.workHours || 0),
                 overtimeHours: Number(r.overtime || 0),
