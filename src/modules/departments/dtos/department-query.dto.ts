@@ -29,7 +29,6 @@ export class DepartmentQueryDto {
     @ApiPropertyOptional({
         description:
             'Search by department name (partial match, case-insensitive)',
-        example: 'Engineering',
     })
     @IsOptional()
     @IsString()
@@ -37,7 +36,6 @@ export class DepartmentQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by employee count range (min-max)',
-        example: '5-50',
     })
     @IsOptional()
     @IsString()
@@ -45,7 +43,6 @@ export class DepartmentQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by active status',
-        example: true,
     })
     @IsOptional()
     @Type(() => Boolean)
@@ -54,7 +51,6 @@ export class DepartmentQueryDto {
 
     @ApiPropertyOptional({
         description: 'Sort by field',
-        example: 'department_name',
         enum: ['department_name', 'createdAt', 'employeeCount'],
     })
     @IsOptional()
@@ -64,7 +60,6 @@ export class DepartmentQueryDto {
 
     @ApiPropertyOptional({
         description: 'Sort order',
-        example: 'asc',
         enum: ['asc', 'desc'],
     })
     @IsOptional()
@@ -74,7 +69,6 @@ export class DepartmentQueryDto {
 
     @ApiPropertyOptional({
         description: 'Include employee data in response',
-        example: false,
     })
     @IsOptional()
     @Type(() => Boolean)

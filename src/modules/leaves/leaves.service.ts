@@ -9,6 +9,11 @@ import { LeaveQueryDto } from './dtos/leave-query.dto';
 import { plainToInstance } from 'class-transformer';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
 import { ResultPagination } from '../../common/logic/result-pagination';
+import { MeLeaveBalanceResponseDto } from './dtos/me-leave-balance-response.dto';
+import {
+    MeLeaveRequestResponseDto,
+    MeLeaveRequestSummaryDto,
+} from './dtos/me-leave-request-response.dto';
 
 import { EmailService } from '../notifications/email.service';
 
@@ -391,5 +396,190 @@ export class LeavesService {
                 e instanceof Error ? e.message : 'Transaction failed',
             );
         }
+    }
+
+    async getMyLeaveBalancesAsync(
+        userId: string,
+        year?: number,
+    ): Promise<Result<MeLeaveBalanceResponseDto>> {
+        const targetYear = year ?? new Date().getFullYear();
+
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+        });
+
+        if (!employee) {
+            return Result.fail('Employee record not found for user');
+        }
+
+        const balances = await this.prisma.client.leaveBalance.findMany({
+            where: {
+                employeeId: employee.id,
+                year: targetYear,
+                isDeleted: false,
+            },
+            orderBy: { leaveType: 'asc' },
+        });
+
+        const balanceItems = balances.map((balance) => {
+            const availableDays =
+                Number(balance.totalDays) -
+                Number(balance.usedDays) -
+                Number(balance.pendingDays);
+
+            return {
+                id: balance.id,
+                leave_type: balance.leaveType,
+                year: balance.year,
+                total_days: Number(balance.totalDays),
+                used_days: Number(balance.usedDays),
+                pending_days: Number(balance.pendingDays),
+                available_days: availableDays,
+            };
+        });
+
+        return Result.ok({
+            balances: balanceItems,
+            year: targetYear,
+        });
+    }
+
+    async getMyLeaveRequestsAsync(
+        userId: string,
+        query: LeaveQueryDto,
+    ): Promise<Result<MeLeaveRequestResponseDto>> {
+        const {
+            page = 1,
+            limit = 10,
+            status,
+            dateFrom,
+            dateTo,
+            sortBy = 'startDate',
+            sortOrder = 'desc',
+        } = query;
+
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+        });
+
+        if (!employee) {
+            return Result.fail('Employee record not found for user');
+        }
+
+        const whereClause: Prisma.LeaveRequestWhereInput = {
+            employeeId: employee.id,
+            isDeleted: false,
+        };
+
+        if (status) whereClause.status = status;
+
+        if (dateFrom || dateTo) {
+            const dateFilter: Prisma.DateTimeFilter = {};
+            if (dateFrom) dateFilter.gte = new Date(dateFrom);
+            if (dateTo) dateFilter.lte = new Date(dateTo);
+            whereClause.startDate = dateFilter;
+        }
+
+        const orderBy: Prisma.LeaveRequestOrderByWithRelationInput = {};
+        if (sortBy === 'startDate') orderBy.startDate = sortOrder;
+        else if (sortBy === 'endDate') orderBy.endDate = sortOrder;
+        else if (sortBy === 'requestDate') orderBy.requestDate = sortOrder;
+        else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
+
+        const [total, leaveRequests] = await Promise.all([
+            this.prisma.client.leaveRequest.count({ where: whereClause }),
+            this.prisma.client.leaveRequest.findMany({
+                where: whereClause,
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy,
+                include: {
+                    approver: {
+                        select: { id: true, firstname: true, lastname: true },
+                    },
+                },
+            }),
+        ]);
+
+        const statusCounts = await this.prisma.client.leaveRequest.groupBy({
+            by: ['status'],
+            where: { employeeId: employee.id, isDeleted: false },
+            _count: { _all: true },
+        });
+
+        const getCount = (s: string) =>
+            statusCounts.find((c) => c.status === s)?._count._all || 0;
+
+        const summary: MeLeaveRequestSummaryDto = {
+            total_requests: total,
+            pending_count: getCount('PENDING'),
+            approved_count: getCount('APPROVED'),
+            rejected_count: getCount('REJECTED'),
+        };
+
+        const records = leaveRequests.map((leave) => {
+            const startDate = new Date(leave.startDate);
+            const endDate = new Date(leave.endDate);
+            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+            const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            return {
+                id: leave.id,
+                leave_type: leave.leaveType,
+                start_date: leave.startDate.toISOString().split('T')[0],
+                end_date: leave.endDate.toISOString().split('T')[0],
+                total_days: totalDays,
+                reason: leave.reason,
+                status: leave.status,
+                request_date: leave.requestDate.toISOString(),
+                approved_by: leave.approver
+                    ? `${leave.approver.firstname} ${leave.approver.lastname}`
+                    : null,
+            };
+        });
+
+        const pagination = {
+            page,
+            limit,
+            total,
+            has_more: page * limit < total,
+        };
+
+        return Result.ok({
+            records,
+            summary,
+            pagination,
+        });
+    }
+
+    async getMyLeaveRequestByIdAsync(
+        userId: string,
+        leaveRequestId: string,
+    ): Promise<Result<LeaveRequestDto>> {
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+        });
+
+        if (!employee) {
+            return Result.fail('Employee record not found for user');
+        }
+
+        const leaveRequest = await this.prisma.client.leaveRequest.findFirst({
+            where: {
+                id: leaveRequestId,
+                employeeId: employee.id,
+                isDeleted: false,
+            },
+            include: {
+                requester: { include: { department: true } },
+                approver: true,
+            },
+        });
+
+        if (!leaveRequest) {
+            return Result.fail('Leave request not found or access denied');
+        }
+
+        return Result.ok(plainToInstance(LeaveRequestDto, leaveRequest));
     }
 }

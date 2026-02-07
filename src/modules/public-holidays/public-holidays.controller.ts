@@ -16,16 +16,8 @@ import { PublicHolidaysService } from './public-holidays.service';
 import { CreatePublicHolidayDto } from './dtos/create-public-holiday.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
-import { Query } from '@nestjs/common';
-import {
-    ApiOperation,
-    ApiParam,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
-} from '@nestjs/swagger';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { PublicHolidayDto } from './dtos/public-holiday.dto';
 
 @ApiTags('Public Holidays')

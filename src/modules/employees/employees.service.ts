@@ -282,7 +282,7 @@ export class EmployeesService {
                     where,
                     skip: query.skip,
                     take: limit,
-                    // include,
+                    include,
                     orderBy,
                 }),
             ]);

@@ -26,6 +26,7 @@ import { ResultPagination } from '../../../common/logic/result-pagination';
 
 const PdfPrinter = require('pdfmake/js/printer').default;
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
+import { DecimalNumber } from '../../../config/decimal-number';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -310,11 +311,7 @@ export class PayrollsService {
                 return Result.fail('Payroll not found');
             }
 
-            return Result.ok(
-                plainToInstance(PayrollDto, payroll, {
-                    excludeExtraneousValues: true,
-                }),
-            );
+            return Result.ok(plainToInstance(PayrollDto, payroll));
         } catch (error) {
             this.logger.error('Failed to fetch payroll', error);
             return Result.fail('Failed to fetch payroll');
@@ -362,11 +359,7 @@ export class PayrollsService {
             });
 
             return Result.ok(
-                payrolls.map((p) =>
-                    plainToInstance(PayrollDto, p, {
-                        excludeExtraneousValues: true,
-                    }),
-                ),
+                payrolls.map((p) => plainToInstance(PayrollDto, p)),
             );
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
@@ -433,11 +426,7 @@ export class PayrollsService {
                 this.prisma.client.payroll.count({ where }),
             ]);
 
-            const data = payrolls.map((p) =>
-                plainToInstance(PayrollDto, p, {
-                    excludeExtraneousValues: true,
-                }),
-            );
+            const data = payrolls.map((p) => plainToInstance(PayrollDto, p));
 
             return Result.ok(ResultPagination.of(data, total, page, limit));
         } catch (error) {
@@ -823,9 +812,11 @@ export class PayrollsService {
                 }
 
                 const summary: MePayslipSummaryDto = {
-                    grossSalary: Number(gross),
-                    totalDeductions: Number(totalTax.plus(p.deductions)),
-                    netSalary: Number(p.netSalary),
+                    gross_salary: new DecimalNumber(gross),
+                    total_deductions: new DecimalNumber(
+                        totalTax.plus(p.deductions),
+                    ),
+                    net_salary: new DecimalNumber(p.netSalary),
                 };
 
                 const monthName = p.payPeriodStart.toLocaleString('en-US', {
@@ -836,14 +827,14 @@ export class PayrollsService {
                 return {
                     id: p.id,
                     period: monthName,
-                    periodStart: p.payPeriodStart.toISOString().split('T')[0],
-                    periodEnd: p.payPeriodEnd.toISOString().split('T')[0],
-                    payDate: p.paymentDate
+                    period_start: p.payPeriodStart.toISOString().split('T')[0],
+                    period_end: p.payPeriodEnd.toISOString().split('T')[0],
+                    pay_date: p.paymentDate
                         ? p.paymentDate.toISOString().split('T')[0]
                         : null,
                     status: p.status.toLowerCase(),
                     summary,
-                    pdfUrl: `/api/payrolls/payslip/${p.id}`,
+                    pdf_url: `/api/payrolls/payslip/${p.id}`,
                 };
             });
 
@@ -872,19 +863,49 @@ export class PayrollsService {
 
             const ytdSummary: MePayslipYtdDto = {
                 year: currentYear,
-                totalGross: Number(ytdGross),
-                totalTax: Number(ytdTax),
-                totalNssf: Number(ytdNssf),
-                totalNet: Number(ytdNet),
+                total_gross: new DecimalNumber(ytdGross),
+                total_tax: new DecimalNumber(ytdTax),
+                total_nssf: new DecimalNumber(ytdNssf),
+                total_net: new DecimalNumber(ytdNet),
             };
 
             return Result.ok({
                 records,
-                ytdSummary,
+                ytd_summary: ytdSummary,
             });
         } catch (error) {
             this.logger.error('Failed to fetch personal payslips', error);
             return Result.fail('Failed to fetch payslips');
+        }
+    }
+
+    async getMyPayrollByIdAsync(
+        userId: string,
+        payrollId: string,
+    ): Promise<Result<PayrollDto>> {
+        try {
+            const payroll = await this.prisma.client.payroll.findFirst({
+                where: {
+                    id: payrollId,
+                    employee: { userId },
+                    isDeleted: false,
+                },
+                include: {
+                    items: {
+                        where: { isDeleted: false },
+                    },
+                    taxCalculation: true,
+                },
+            });
+
+            if (!payroll) {
+                return Result.fail('Payroll not found or access denied');
+            }
+
+            return Result.ok(plainToInstance(PayrollDto, payroll));
+        } catch (error) {
+            this.logger.error('Failed to fetch personal payroll', error);
+            return Result.fail('Failed to fetch payroll');
         }
     }
 

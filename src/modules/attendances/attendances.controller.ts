@@ -29,12 +29,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ResultPagination } from '../../common/logic/result-pagination';
 import { AttendanceDto } from './dtos/attendance.dto';
 import { AttendanceSummaryDto } from './dtos/attendance-summary.dto';
-import { MeAttendanceResponseDto } from './dtos/me-attendance-response.dto';
 import { QrManagerService } from './services/qr-manager.service';
 
 @ApiTags('Attendances')
 @Auth()
-@Controller(['attendances', 'attendance'])
+@Controller(['attendances'])
 export class AttendancesController {
     private readonly _logger = new Logger(AttendancesController.name);
     constructor(
@@ -70,24 +69,6 @@ export class AttendancesController {
             throw new BadRequestException(result.error);
         }
 
-        return result.getData();
-    }
-
-    @Get('me')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get current user attendances' })
-    @ApiResponse({ status: HttpStatus.OK, type: MeAttendanceResponseDto })
-    async getMeAttendance(
-        @CurrentUser('sub') userId: string,
-        @Query() query: AttendanceQueryDto,
-    ): Promise<MeAttendanceResponseDto> {
-        const result = await this.attendancesService.getMeAttendance(
-            userId,
-            query,
-        );
-        if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
-        }
         return result.getData();
     }
 

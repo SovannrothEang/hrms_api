@@ -19,8 +19,16 @@ export async function seedLeaves(prisma: PrismaClient) {
     );
     console.log('Today (UTC):', today.toISOString());
 
-    // Employees 21-30: On approved leave today
-    const onLeaveEmployees = employees.slice(20, 30);
+    // Realistic leave distribution for 50 employees:
+    // - 2-3 employees on approved leave today (~5%)
+    // - 2-3 employees with pending requests (~5%)
+    // - 1-2 employees with rejected requests (~3%)
+    console.log(
+        `Creating realistic leave distribution for ${employees.length} employees`,
+    );
+
+    // Employees 5-7: On approved leave today (3 employees)
+    const onLeaveEmployees = employees.slice(4, 7);
     for (const emp of onLeaveEmployees) {
         // Check if there's already an approved leave covering today
         const existingLeave = await prisma.leaveRequest.findFirst({
@@ -35,16 +43,24 @@ export async function seedLeaves(prisma: PrismaClient) {
 
         if (!existingLeave) {
             const endDate = new Date(today);
-            endDate.setUTCDate(endDate.getUTCDate() + 2);
+            endDate.setUTCDate(
+                endDate.getUTCDate() + Math.floor(Math.random() * 3) + 1,
+            ); // 1-3 days
 
             await prisma.leaveRequest.create({
                 data: {
                     employeeId: emp.id,
                     startDate: today,
                     endDate: endDate,
-                    leaveType: LeaveType.ANNUAL_LEAVE,
+                    leaveType:
+                        Math.random() > 0.5
+                            ? LeaveType.ANNUAL_LEAVE
+                            : LeaveType.SICK_LEAVE,
                     status: LeaveStatus.APPROVED,
-                    reason: 'Personal time off',
+                    reason:
+                        Math.random() > 0.5
+                            ? 'Personal time off'
+                            : 'Medical appointment',
                 },
                 select: { id: true },
             });
@@ -58,8 +74,8 @@ export async function seedLeaves(prisma: PrismaClient) {
         }
     }
 
-    // Employees 31-40: Pending leave requests
-    const pendingEmployees = employees.slice(30, 40);
+    // Employees 8-10: Pending leave requests (3 employees)
+    const pendingEmployees = employees.slice(7, 10);
     for (const emp of pendingEmployees) {
         // Check if there's already a pending request
         const existingPending = await prisma.leaveRequest.findFirst({
@@ -72,18 +88,28 @@ export async function seedLeaves(prisma: PrismaClient) {
 
         if (!existingPending) {
             const startDate = new Date(today);
-            startDate.setUTCDate(startDate.getUTCDate() + 3);
+            startDate.setUTCDate(
+                startDate.getUTCDate() + Math.floor(Math.random() * 7) + 3,
+            ); // 3-9 days from now
             const endDate = new Date(startDate);
-            endDate.setUTCDate(endDate.getUTCDate() + 2);
+            endDate.setUTCDate(
+                endDate.getUTCDate() + Math.floor(Math.random() * 3) + 1,
+            ); // 1-3 days
 
             await prisma.leaveRequest.create({
                 data: {
                     employeeId: emp.id,
                     startDate: startDate,
                     endDate: endDate,
-                    leaveType: LeaveType.SICK_LEAVE,
+                    leaveType:
+                        Math.random() > 0.5
+                            ? LeaveType.ANNUAL_LEAVE
+                            : LeaveType.SICK_LEAVE,
                     status: LeaveStatus.PENDING,
-                    reason: 'Medical appointment',
+                    reason:
+                        Math.random() > 0.5
+                            ? 'Vacation planning'
+                            : 'Doctor appointment',
                 },
                 select: { id: true },
             });
@@ -91,6 +117,50 @@ export async function seedLeaves(prisma: PrismaClient) {
         } else {
             console.log(
                 `Pending request already exists for employee ${emp.id}`,
+            );
+        }
+    }
+
+    // Employees 11-12: Rejected leave requests (2 employees)
+    const rejectedEmployees = employees.slice(10, 12);
+    for (const emp of rejectedEmployees) {
+        const existingRejected = await prisma.leaveRequest.findFirst({
+            where: {
+                employeeId: emp.id,
+                status: LeaveStatus.REJECTED,
+            },
+            select: { id: true },
+        });
+
+        if (!existingRejected) {
+            const startDate = new Date(today);
+            startDate.setUTCDate(
+                startDate.getUTCDate() - Math.floor(Math.random() * 14) - 7,
+            ); // 7-20 days ago
+            const endDate = new Date(startDate);
+            endDate.setUTCDate(
+                endDate.getUTCDate() + Math.floor(Math.random() * 3) + 1,
+            ); // 1-3 days
+
+            await prisma.leaveRequest.create({
+                data: {
+                    employeeId: emp.id,
+                    startDate: startDate,
+                    endDate: endDate,
+                    leaveType:
+                        Math.random() > 0.5
+                            ? LeaveType.ANNUAL_LEAVE
+                            : LeaveType.SICK_LEAVE,
+                    status: LeaveStatus.REJECTED,
+                    reason:
+                        Math.random() > 0.5
+                            ? 'Vacation request (rejected: insufficient balance)'
+                            : 'Sick leave (rejected: staffing requirements)',
+                },
+                select: { id: true },
+            });
+            console.log(
+                `Created REJECTED leave request for employee ${emp.id}`,
             );
         }
     }
@@ -130,7 +200,7 @@ export async function seedLeaves(prisma: PrismaClient) {
         });
 
         if (!reqExists) {
-            // Past Approved
+            // Past Approved (1 month ago)
             await prisma.leaveRequest.create({
                 data: {
                     employeeId: emp.id,
@@ -142,7 +212,7 @@ export async function seedLeaves(prisma: PrismaClient) {
                 },
                 select: { id: true },
             });
-            // Future Pending
+            // Future Pending (next month)
             await prisma.leaveRequest.create({
                 data: {
                     employeeId: emp.id,
@@ -150,7 +220,7 @@ export async function seedLeaves(prisma: PrismaClient) {
                     endDate: new Date(year, month + 1, 6),
                     leaveType: LeaveType.SICK_LEAVE,
                     status: LeaveStatus.PENDING,
-                    reason: 'Doctor appt',
+                    reason: 'Doctor appointment',
                 },
                 select: { id: true },
             });

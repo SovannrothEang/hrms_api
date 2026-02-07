@@ -27,8 +27,6 @@ import { RoleName } from 'src/common/enums/roles.enum';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleUpdateDto } from './dtos/role-update.dto';
 
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
 import { RoleDto } from './dtos/roles.dto';
 
 @Controller('roles')

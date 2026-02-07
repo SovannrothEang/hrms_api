@@ -82,14 +82,17 @@ export class DashboardService {
                 todayAttendance.map((a) => [a.status, a._count.id]),
             );
 
-            const presentToday = attendanceMap.get('PRESENT') || 0;
+            const presentTotal =
+                (attendanceMap.get('PRESENT') || 0) +
+                (attendanceMap.get('LATE') || 0) +
+                (attendanceMap.get('EARLY_OUT') || 0);
             const lateToday = attendanceMap.get('LATE') || 0;
             const absentToday =
-                totalEmployees - presentToday - lateToday - approvedLeavesToday;
+                totalEmployees - presentTotal - approvedLeavesToday;
 
             return {
                 totalEmployees,
-                presentToday,
+                presentToday: presentTotal,
                 onLeave: approvedLeavesToday,
                 pendingLeaveRequests,
                 absentToday: Math.max(0, absentToday),
@@ -154,11 +157,29 @@ export class DashboardService {
     async getAttendanceTrendAsync(
         days: number = 7,
     ): Promise<AttendanceTrendDto> {
-        const endDate = new Date();
-        endDate.setHours(23, 59, 59, 999);
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - (days - 1));
-        startDate.setHours(0, 0, 0, 0);
+        const now = new Date();
+        const endDate = new Date(
+            Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                23,
+                59,
+                59,
+                999,
+            ),
+        );
+        const startDate = new Date(
+            Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate() - (days - 1),
+                0,
+                0,
+                0,
+                0,
+            ),
+        );
 
         try {
             const attendances = await this.prisma.client.attendance.findMany({
@@ -192,7 +213,7 @@ export class DashboardService {
 
             for (let i = 0; i < days; i++) {
                 const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
+                date.setUTCDate(startDate.getUTCDate() + i);
                 const dateStr = date.toISOString().split('T')[0];
 
                 const dayAttendances = attendances.filter((a) => {
@@ -204,12 +225,17 @@ export class DashboardService {
                     return lr.startDate <= date && lr.endDate >= date;
                 }).length;
 
-                const present = dayAttendances.filter(
-                    (a) => a.status === 'PRESENT',
-                ).length;
                 const late = dayAttendances.filter(
                     (a) => a.status === 'LATE',
                 ).length;
+                const earlyOut = dayAttendances.filter(
+                    (a) => a.status === 'EARLY_OUT',
+                ).length;
+                const present =
+                    dayAttendances.filter((a) => a.status === 'PRESENT')
+                        .length +
+                    late +
+                    earlyOut;
                 const absent = dayAttendances.filter(
                     (a) => a.status === 'ABSENT',
                 ).length;

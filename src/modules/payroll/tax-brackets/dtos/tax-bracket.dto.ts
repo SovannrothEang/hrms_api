@@ -1,16 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose, Transform, Type } from 'class-transformer';
-import { DecimalNumber } from '../../../../config/decimal-number';
-import { Decimal } from '@prisma/client/runtime/client';
-
-const toDecimal = ({
-    value,
-}: {
-    value: string | number | Decimal | null | undefined;
-}) => {
-    if (value === null || value === undefined) return null;
-    return new DecimalNumber(value);
-};
+import {
+    Exclude,
+    Expose,
+    Transform,
+    TransformFnParams,
+    Type,
+} from 'class-transformer';
+import {DecimalNumber, toDecimal} from '../../../../config/decimal-number';
 
 @Exclude()
 export class TaxBracketDto {

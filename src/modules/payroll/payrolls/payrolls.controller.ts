@@ -33,7 +33,6 @@ import {
     GeneratePayrollResultDto,
 } from './dtos/generate-payroll.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
-import { MePayslipResponseDto } from './dtos/me-payslip-response.dto';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
 @ApiTags('Payroll - Payrolls')
@@ -139,24 +138,6 @@ export class PayrollsController {
         @Query() query: PayrollQueryDto,
     ): Promise<ResultPagination<PayrollDto>> {
         const result = await this.service.findAllFilteredAsync(query);
-        return result.getData();
-    }
-
-    @Get('me')
-    @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get current user payslips and YTD summary' })
-    @ApiResponse({ status: HttpStatus.OK, type: MePayslipResponseDto })
-    async getMyPayrolls(
-        @CurrentUser('sub') userId: string,
-        @Query('year') year?: string,
-    ): Promise<MePayslipResponseDto> {
-        const result = await this.service.getMePayslipsAsync(
-            userId,
-            year ? parseInt(year, 10) : undefined,
-        );
-        if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
-        }
         return result.getData();
     }
 

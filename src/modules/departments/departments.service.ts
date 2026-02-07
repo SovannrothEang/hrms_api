@@ -13,7 +13,7 @@ import { Prisma } from '@prisma/client';
 export class DepartmentsService {
     private readonly logger = new Logger(DepartmentsService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -25,10 +25,10 @@ export class DepartmentsService {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: { include: { role: true } },
-                          },
-                      }
+                        include: {
+                            userRoles: { include: { role: true } },
+                        },
+                    }
                     : false,
             },
             orderBy: { departmentName: 'asc' },
@@ -80,13 +80,15 @@ export class DepartmentsService {
         }
 
         const include = {
-            employees: includeEmployees,
+            employees: includeEmployees
+                ? { include: { position: true, }, }
+                : false,
             performer: includeEmployees
                 ? {
-                      include: {
-                          userRoles: { include: { role: true } },
-                      },
-                  }
+                    include: {
+                        userRoles: { include: { role: true } },
+                    },
+                }
                 : false,
         };
 
@@ -154,10 +156,10 @@ export class DepartmentsService {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                          include: {
-                              userRoles: { include: { role: true } },
-                          },
-                      }
+                        include: {
+                            userRoles: { include: { role: true } },
+                        },
+                    }
                     : false,
             },
         });

@@ -1,18 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
+import {Transform, Type} from 'class-transformer';
+import { DecimalNumber } from '../../../../config/decimal-number';
+import {isDecimal} from "class-validator";
 
 export class MePayslipSummaryDto {
     @ApiProperty({ example: 2850000 })
-    @Expose({ name: 'gross_salary' })
-    grossSalary: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    gross_salary: DecimalNumber;
 
     @ApiProperty({ example: 335000 })
-    @Expose({ name: 'total_deductions' })
-    totalDeductions: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    total_deductions: DecimalNumber;
 
     @ApiProperty({ example: 2515000 })
-    @Expose({ name: 'net_salary' })
-    netSalary: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    net_salary: DecimalNumber;
 }
 
 export class MePayslipRecordDto {
@@ -23,16 +28,13 @@ export class MePayslipRecordDto {
     period: string;
 
     @ApiProperty({ example: '2024-01-01' })
-    @Expose({ name: 'period_start' })
-    periodStart: string;
+    period_start: string;
 
     @ApiProperty({ example: '2024-01-31' })
-    @Expose({ name: 'period_end' })
-    periodEnd: string;
+    period_end: string;
 
     @ApiProperty({ example: '2024-01-25' })
-    @Expose({ name: 'pay_date' })
-    payDate: string | null;
+    pay_date: string | null;
 
     @ApiProperty({ example: 'paid' })
     status: string;
@@ -44,8 +46,7 @@ export class MePayslipRecordDto {
         example:
             'https://cdn.company.com/payslips/pay_2024_01.pdf?token=signed_url_token',
     })
-    @Expose({ name: 'pdf_url' })
-    pdfUrl: string;
+    pdf_url: string;
 }
 
 export class MePayslipYtdDto {
@@ -53,29 +54,30 @@ export class MePayslipYtdDto {
     year: number;
 
     @ApiProperty({ example: 2850000 })
-    @Expose({ name: 'total_gross' })
-    totalGross: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    total_gross: DecimalNumber;
 
     @ApiProperty({ example: 135000 })
-    @Expose({ name: 'total_tax' })
-    totalTax: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    total_tax: DecimalNumber;
 
     @ApiProperty({ example: 71250 })
-    @Expose({ name: 'total_nssf' })
-    totalNssf: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    total_nssf: DecimalNumber;
 
     @ApiProperty({ example: 2515000 })
-    @Expose({ name: 'total_net' })
-    totalNet: number;
+    @Type(() => DecimalNumber)
+    @Transform(isDecimal)
+    total_net: DecimalNumber;
 }
 
 export class MePayslipResponseDto {
     @ApiProperty({ type: [MePayslipRecordDto] })
-    @Type(() => MePayslipRecordDto)
     records: MePayslipRecordDto[];
 
     @ApiProperty({ type: MePayslipYtdDto })
-    @Type(() => MePayslipYtdDto)
-    @Expose({ name: 'ytd_summary' })
-    ytdSummary: MePayslipYtdDto;
+    ytd_summary: MePayslipYtdDto;
 }

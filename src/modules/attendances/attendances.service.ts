@@ -223,7 +223,7 @@ export class AttendancesService {
         const existingAttendance =
             await this.prisma.client.attendance.findFirst({
                 where: {
-                    employeeId: dto.employeeId,
+                    employeeId: employeeId,
                     date: today,
                 },
             });
@@ -234,7 +234,7 @@ export class AttendancesService {
 
         // Fetch employee to get shift details
         const employee = await this.prisma.client.employee.findFirst({
-            where: { id: dto.employeeId },
+            where: { id: employeeId },
             include: { shift: true },
         });
 
@@ -300,7 +300,7 @@ export class AttendancesService {
 
         const attendance = await this.prisma.client.attendance.findFirst({
             where: {
-                employeeId: dto.employeeId,
+                employeeId: employeeId,
                 date: today,
             },
             include: { employee: { include: { shift: true } } },
@@ -340,7 +340,7 @@ export class AttendancesService {
                 checkOutTime,
                 workHours: Math.round(workHours * 100) / 100,
                 overtime: Math.round(overtime * 100) / 100,
-                notes: dto.notes,
+                notes: notes,
                 performBy: performerId,
             },
             include: { employee: true },
@@ -495,5 +495,88 @@ export class AttendancesService {
             summary,
             pagination,
         });
+    }
+
+    async getMeAttendanceSummary(
+        userId: string,
+        query: AttendanceQueryDto,
+    ): Promise<Result<MeAttendanceSummaryDto>> {
+        const { dateFrom, dateTo, status } = query;
+
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+        });
+
+        if (!employee) return Result.fail('Employee record not found for user');
+
+        const where: Prisma.AttendanceWhereInput = {
+            employeeId: employee.id,
+            isDeleted: false,
+        };
+
+        if (status) {
+            where.status = status;
+        }
+
+        if (dateFrom || dateTo) {
+            where.date = {
+                ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+                ...(dateTo ? { lte: new Date(dateTo) } : {}),
+            };
+        }
+
+        const [summaryData, leaveCount] = await this.prisma.$transaction([
+            this.prisma.client.attendance.aggregate({
+                where,
+                _sum: { workHours: true, overtime: true },
+                _count: {
+                    id: true,
+                },
+            }),
+            this.prisma.client.leaveRequest.count({
+                where: {
+                    employeeId: employee.id,
+                    status: 'APPROVED',
+                    isDeleted: false,
+                    ...(dateFrom || dateTo
+                        ? {
+                              startDate: {
+                                  ...(dateTo ? { lte: new Date(dateTo) } : {}),
+                              },
+                              endDate: {
+                                  ...(dateFrom
+                                      ? { gte: new Date(dateFrom) }
+                                      : {}),
+                              },
+                          }
+                        : {}),
+                },
+            }),
+        ]);
+
+        const statusCounts = await this.prisma.client.attendance.groupBy({
+            by: ['status'],
+            where,
+            _count: { _all: true },
+        });
+
+        const getCount = (s: string) =>
+            statusCounts.find((c) => c.status === s)?._count._all || 0;
+
+        const summary: MeAttendanceSummaryDto = {
+            totalDays: summaryData._count.id,
+            daysPresent:
+                getCount(AttendanceStatus.PRESENT) +
+                getCount(AttendanceStatus.LATE) +
+                getCount(AttendanceStatus.EARLY_OUT),
+            daysAbsent: getCount(AttendanceStatus.ABSENT),
+            daysOnLeave: getCount(AttendanceStatus.ON_LEAVE) || leaveCount,
+            totalHoursWorked: Number(summaryData._sum.workHours || 0),
+            totalOvertimeHours: Number(summaryData._sum.overtime || 0),
+            lateCount: getCount(AttendanceStatus.LATE),
+            earlyLeaveCount: getCount(AttendanceStatus.EARLY_OUT),
+        };
+
+        return Result.ok(summary);
     }
 }

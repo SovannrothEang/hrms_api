@@ -9,19 +9,15 @@ import {
     Param,
     Post,
     Put,
-    Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
 import UserCreateDto from './dtos/user-create.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserUpdateDto } from './dtos/user-update.dto';
-
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('users')
 @Auth(RoleName.ADMIN)

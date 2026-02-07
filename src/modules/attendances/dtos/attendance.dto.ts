@@ -8,17 +8,7 @@ import {
 import { UserDto } from '../../iam/users/dtos/user.dto';
 import { EmployeeDto } from '../../employees/dtos/employee.dto';
 import { Attendance, Employee, User } from '@prisma/client';
-import { DecimalNumber } from '../../../config/decimal-number';
-import { Decimal } from '@prisma/client/runtime/client';
-
-const toDecimal = ({
-    value,
-}: {
-    value: string | number | Decimal | null | undefined;
-}) => {
-    if (value === null || value === undefined) return null;
-    return new DecimalNumber(value);
-};
+import { DecimalNumber, toDecimal } from '../../../config/decimal-number';
 
 @Exclude()
 export class AttendanceDto {

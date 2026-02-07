@@ -33,8 +33,8 @@ async function main() {
     await seedEmployees(prisma);
 
     // Dependencies on Employees
-    await seedAttendances(prisma);
     await seedLeaves(prisma);
+    await seedAttendances(prisma);
     await seedPayrollRecords(prisma);
 
     console.log('All seeds completed successfully.');

@@ -9,17 +9,7 @@ import { Employee, User } from '@prisma/client';
 import { DepartmentDto } from '../../departments/dtos/department.dto';
 import { EmployeePositionDto } from '../../employee-positions/dtos/employee-position.dto';
 import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
-import { DecimalNumber } from 'src/config/decimal-number';
-import { Decimal } from '@prisma/client/runtime/client';
-
-const toDecimal = ({
-    value,
-}: {
-    value: string | number | Decimal | null | undefined;
-}) => {
-    if (value === null || value === undefined) return null;
-    return new DecimalNumber(value);
-};
+import { DecimalNumber, toDecimal } from 'src/config/decimal-number';
 
 export class EmergencyContactDto {
     name?: string;
@@ -109,8 +99,8 @@ export class EmployeeDto {
     status: string;
 
     @Expose({ name: 'salary' })
-    @Type(() => DecimalNumber)
     @Transform(toDecimal)
+    @Type(() => DecimalNumber)
     salary: DecimalNumber | null;
 
     @Expose({ name: 'emergencyContact' })

@@ -14,16 +14,8 @@ import { Auth } from 'src/common/decorators/auth.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 
-import { Query } from '@nestjs/common';
-import {
-    ApiOperation,
-    ApiParam,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
-} from '@nestjs/swagger';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
+import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { ShiftDto } from './dtos/shift.dto';
 
 @ApiTags('Shifts')

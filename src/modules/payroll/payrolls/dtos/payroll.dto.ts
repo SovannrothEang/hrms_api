@@ -1,18 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose, Transform, Type } from 'class-transformer';
-import { Decimal } from '@prisma/client/runtime/client';
-import { DecimalNumber } from '../../../../config/decimal-number';
+import {
+    Exclude,
+    Expose,
+    Transform,
+    Type,
+} from 'class-transformer';
+import {DecimalNumber, toDecimal} from '../../../../config/decimal-number';
 import { PayrollItemDto } from './payroll-item.dto';
-
-// Transform Decimal/number/string to number (handles null/undefined gracefully)
-const toDecimal = ({
-    value,
-}: {
-    value: string | number | Decimal | null | undefined;
-}) => {
-    if (value === null || value === undefined) return null;
-    return new DecimalNumber(value);
-};
 
 @Exclude()
 export class TaxCalculationDto {
