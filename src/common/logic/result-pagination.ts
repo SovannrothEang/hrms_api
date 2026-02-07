@@ -7,7 +7,7 @@ export class ResultPagination<T, S = undefined> {
         totalPages: number;
         hasNext: boolean;
         hasPrevious: boolean;
-    }
+    };
     public readonly summary?: S;
 
     constructor(
@@ -40,7 +40,6 @@ export class ResultPagination<T, S = undefined> {
         return new ResultPagination<U, V>(data, total, page, limit, summary);
     }
 }
-
 
 export class PaginationOption {
     public page?: number = 1;

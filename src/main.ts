@@ -23,8 +23,10 @@ async function bootstrap() {
         }),
     );
 
+    const isDev = process.env.NODE_ENV !== 'production';
     app.enableCors({
-        origin: APP_URL,
+        // origin: isDev ? true : APP_URL, // Allow all origins in dev for network access
+        origin: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: [
             'Content-Type',
@@ -56,13 +58,18 @@ async function bootstrap() {
         .addBearerAuth()
         .build();
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/swagger', app, document);
+    const swaggerPath = 'api/docs';
+    SwaggerModule.setup(swaggerPath, app, document);
 
     const port = process.env.PORT ?? 3001;
-    await app.listen(port);
+    await app.listen(port, '0.0.0.0');
 
     const logger = new Logger('Bootstrap');
     logger.log(`Application is running on: http://localhost:${port}`);
-    logger.log(`Swagger documentation: http://localhost:${port}/api`);
+    logger.log(`Local Network: http://0.0.0.0:${port}`);
+    logger.log(
+        `Swagger documentation: http://localhost:${port}/${swaggerPath}`,
+    );
+    logger.log(`Network Access: http://<YOUR_IP>:${port}/${swaggerPath}`);
 }
 void bootstrap();

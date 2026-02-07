@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { DashboardStatsDto } from './dtos/dashboard-stats.dto';
+import { DashboardTodayStateDto } from './dtos/dashboard-today-state.dto';
 import {
     AttendanceTrendDto,
     AttendanceTrendItemDto,
@@ -17,12 +18,16 @@ export class DashboardService {
     constructor(private readonly prisma: PrismaService) {}
 
     async getStatsAsync(): Promise<DashboardStatsDto> {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const now = new Date();
+        const today = new Date(
+            Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+        );
         const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const startOfMonth = new Date(
+            Date.UTC(now.getFullYear(), now.getMonth(), 1),
+        );
 
         try {
             const [
@@ -94,6 +99,54 @@ export class DashboardService {
             };
         } catch (error) {
             this.logger.error('Failed to fetch dashboard stats', error);
+            throw error;
+        }
+    }
+
+    async getTodayStateAsync(): Promise<DashboardTodayStateDto> {
+        const now = new Date();
+        const today = new Date(
+            Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()),
+        );
+        const tomorrow = new Date(today);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+
+        try {
+            const [presentToday, onLeaveToday, pendingRequests] =
+                await Promise.all([
+                    this.prisma.client.attendance.count({
+                        where: {
+                            date: { gte: today, lt: tomorrow },
+                            status: { in: ['PRESENT', 'LATE'] },
+                            isDeleted: false,
+                            isActive: true,
+                        },
+                    }),
+                    this.prisma.client.leaveRequest.count({
+                        where: {
+                            status: 'APPROVED',
+                            startDate: { lte: today },
+                            endDate: { gte: today },
+                            isDeleted: false,
+                            isActive: true,
+                        },
+                    }),
+                    this.prisma.client.leaveRequest.count({
+                        where: {
+                            status: 'PENDING',
+                            isDeleted: false,
+                            isActive: true,
+                        },
+                    }),
+                ]);
+
+            return {
+                presentCount: presentToday,
+                onLeaveCount: onLeaveToday,
+                pendingRequestsCount: pendingRequests,
+            };
+        } catch (error) {
+            this.logger.error('Failed to fetch dashboard today state', error);
             throw error;
         }
     }

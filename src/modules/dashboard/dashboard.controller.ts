@@ -10,10 +10,10 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { DashboardStatsDto } from './dtos/dashboard-stats.dto';
+import { DashboardTodayStateDto } from './dtos/dashboard-today-state.dto';
 import { AttendanceTrendDto } from './dtos/attendance-trend.dto';
 import { DepartmentDistributionDto } from './dtos/department-distribution.dto';
 import { RecentActivitiesDto } from './dtos/recent-activity.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('dashboard')
 @ApiTags('Dashboard')
@@ -27,6 +27,17 @@ export class DashboardController {
     @ApiResponse({ status: HttpStatus.OK, type: DashboardStatsDto })
     async getStats(): Promise<DashboardStatsDto> {
         return await this.dashboardService.getStatsAsync();
+    }
+
+    @Get('today-state')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary:
+            'Get dashboard today state (present, on leave, pending requests)',
+    })
+    @ApiResponse({ status: HttpStatus.OK, type: DashboardTodayStateDto })
+    async getTodayState(): Promise<DashboardTodayStateDto> {
+        return await this.dashboardService.getTodayStateAsync();
     }
 
     @Get('attendance-trend')

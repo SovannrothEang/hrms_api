@@ -24,7 +24,7 @@ export class AttendancesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly qrManagerService: QrManagerService,
-    ) { }
+    ) {}
 
     async findAllAsync(
         childIncluded?: boolean,
@@ -32,22 +32,22 @@ export class AttendancesService {
         const attendances = await this.prisma.client.attendance.findMany({
             where: { isDeleted: false },
             include: {
-                performer: childIncluded ?
-                    {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                performer: childIncluded
+                    ? {
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
-                employee: childIncluded ?
-                    {
-                        include: {
-                            department: true,
-                            position: true,
-                        },
-                    }
+                employee: childIncluded
+                    ? {
+                          include: {
+                              department: true,
+                              position: true,
+                          },
+                      }
                     : false,
             },
         });
@@ -127,20 +127,20 @@ export class AttendancesService {
                     include: {
                         performer: childIncluded
                             ? {
-                                include: {
-                                    userRoles: {
-                                        include: { role: true },
-                                    },
-                                },
-                            }
+                                  include: {
+                                      userRoles: {
+                                          include: { role: true },
+                                      },
+                                  },
+                              }
                             : false,
                         employee: childIncluded
                             ? {
-                                include: {
-                                    department: true,
-                                    position: true,
-                                },
-                            }
+                                  include: {
+                                      department: true,
+                                      position: true,
+                                  },
+                              }
                             : false,
                     },
                     orderBy,
@@ -173,7 +173,9 @@ export class AttendancesService {
         };
 
         const data = attendances.map((a) => plainToInstance(AttendanceDto, a));
-        return Result.ok(ResultPagination.of(data, total, page, limit, summary));
+        return Result.ok(
+            ResultPagination.of(data, total, page, limit, summary),
+        );
     }
 
     async findOneByIdAsync(
@@ -185,20 +187,20 @@ export class AttendancesService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: {
-                                include: { role: true },
-                            },
-                        },
-                    }
+                          include: {
+                              userRoles: {
+                                  include: { role: true },
+                              },
+                          },
+                      }
                     : false,
                 employee: childIncluded
                     ? {
-                        include: {
-                            department: true,
-                            position: true,
-                        },
-                    }
+                          include: {
+                              department: true,
+                              position: true,
+                          },
+                      }
                     : false,
             },
         });
@@ -408,17 +410,17 @@ export class AttendancesService {
                         isDeleted: false,
                         ...(dateFrom || dateTo
                             ? {
-                                startDate: {
-                                    ...(dateTo
-                                        ? { lte: new Date(dateTo) }
-                                        : {}),
-                                },
-                                endDate: {
-                                    ...(dateFrom
-                                        ? { gte: new Date(dateFrom) }
-                                        : {}),
-                                },
-                            }
+                                  startDate: {
+                                      ...(dateTo
+                                          ? { lte: new Date(dateTo) }
+                                          : {}),
+                                  },
+                                  endDate: {
+                                      ...(dateFrom
+                                          ? { gte: new Date(dateFrom) }
+                                          : {}),
+                                  },
+                              }
                             : {}),
                     },
                 }),
@@ -470,9 +472,9 @@ export class AttendancesService {
                 },
                 clockOut: r.checkOutTime
                     ? {
-                        time: formatTime(r.checkOutTime),
-                        isEarly: r.status === 'EARLY_OUT',
-                    }
+                          time: formatTime(r.checkOutTime),
+                          isEarly: r.status === 'EARLY_OUT',
+                      }
                     : null,
                 hoursWorked: Number(r.workHours || 0),
                 overtimeHours: Number(r.overtime || 0),

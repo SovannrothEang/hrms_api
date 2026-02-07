@@ -1,6 +1,7 @@
 ﻿# --- Base ---
 FROM node:20-alpine AS base
-RUN npm install -g pnpm
+RUN apk add --no-cache libc6-compat python3 build-base
+RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
@@ -19,6 +20,7 @@ COPY prisma ./prisma
 RUN pnpm exec prisma generate
 
 COPY . .
+EXPOSE 3001
 CMD ["pnpm", "start:dev"]
 
 # --- Builder Stage (for Production) ---

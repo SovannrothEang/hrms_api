@@ -80,6 +80,7 @@ export class AuthController {
 
         return {
             accessToken: data.tokens.accessToken,
+            refreshToken: data.tokens.refreshToken,
             user: data.user,
             expiresAt: data.tokens.expiresAt,
         };
@@ -180,6 +181,7 @@ export class AuthController {
 
         return {
             accessToken: data.tokens.accessToken,
+            refreshToken: refreshToken,
             user: data.user,
             expiresAt: data.tokens.expiresAt,
         };

@@ -40,7 +40,7 @@ export class AttendancesController {
     constructor(
         private readonly attendancesService: AttendancesService,
         private readonly qrManagerService: QrManagerService,
-    ) { }
+    ) {}
 
     @Auth([RoleName.ADMIN, RoleName.HR])
     @Get('qr/in')

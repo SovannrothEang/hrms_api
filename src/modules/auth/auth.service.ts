@@ -44,7 +44,7 @@ export class AuthService {
         private readonly securityEventService: SecurityEventService,
         @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
-    ) { }
+    ) {}
 
     async signInAsync(
         email: string,
