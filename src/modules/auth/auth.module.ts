@@ -7,11 +7,13 @@ import { JwtStrategy } from './jwt.strategy';
 import { UserContextService } from './user-context.service';
 import { UsersService } from '../iam/users/users.service';
 import { AttendancesModule } from '../attendances/attendances.module';
+import { EmployeesModule } from '../employees/employees.module';
 
 @Module({
     imports: [
         PassportModule,
         forwardRef(() => AttendancesModule),
+        EmployeesModule,
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'superSecretKey',
             signOptions: {
@@ -26,4 +28,4 @@ import { AttendancesModule } from '../attendances/attendances.module';
     controllers: [AuthController],
     exports: [AuthService, UserContextService, JwtModule],
 })
-export class AuthModule {}
+export class AuthModule { }

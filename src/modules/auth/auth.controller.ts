@@ -3,6 +3,7 @@ import {
     Controller,
     Get,
     Post,
+    Patch,
     HttpCode,
     HttpStatus,
     UnauthorizedException,
@@ -25,6 +26,7 @@ import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { MeProfileUpdateDto } from './dtos/me-profile-update.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Auth, AuthWithCsrf } from 'src/common/decorators/auth.decorator';
 import { CookieService } from 'src/common/security/services/cookie.service';
@@ -43,7 +45,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
-    ) {}
+    ) { }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -310,6 +312,28 @@ export class AuthController {
         const result = await this.authService.getMe(userId);
         if (!result.isSuccess)
             throw new UnauthorizedException('User is not authenticated!');
+        return result.getData();
+    }
+
+    @Patch('me/profile')
+    @Auth()
+    @ApiOperation({ summary: 'Update current user profile' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'Profile updated successfully',
+    })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Invalid input',
+    })
+    async patchMeProfile(
+        @CurrentUser('sub') userId: string,
+        @Body() dto: MeProfileUpdateDto,
+    ) {
+        const result = await this.authService.updateMeProfileAsync(userId, dto);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
         return result.getData();
     }
 

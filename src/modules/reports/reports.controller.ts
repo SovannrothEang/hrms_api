@@ -205,7 +205,7 @@ export class ReportsController {
         res.end();
     }
 
-    @Get('payroll')
+    @Get('payrolls')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get payroll report with filters' })
     @ApiQuery({ name: 'year', required: false, type: Number })
@@ -230,7 +230,7 @@ export class ReportsController {
         });
     }
 
-    @Get('payroll/export')
+    @Get('payrolls/export')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Export payroll report (xlsx/csv)' })
     @ApiProduces(

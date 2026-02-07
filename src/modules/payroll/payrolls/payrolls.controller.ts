@@ -35,8 +35,8 @@ import {
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
-@ApiTags('Payroll - Payrolls')
-@Controller(['payrolls', 'payroll'])
+@ApiTags('Payrolls')
+@Controller('payrolls')
 @Auth()
 export class PayrollsController {
     constructor(private readonly service: PayrollsService) {}

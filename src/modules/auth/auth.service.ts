@@ -25,6 +25,8 @@ import {
 import { SECURITY_CONFIG } from 'src/common/security/constants/security.constants';
 import { AttendanceDto } from '../attendances/dtos/attendance.dto';
 import { AttendancesService } from '../attendances/attendances.service';
+import { EmployeesService } from '../employees/employees.service';
+import { MeProfileUpdateDto } from './dtos/me-profile-update.dto';
 
 export interface SecureAuthResult {
     tokens: AuthTokens;
@@ -44,7 +46,8 @@ export class AuthService {
         private readonly securityEventService: SecurityEventService,
         @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
-    ) {}
+        private readonly employeesService: EmployeesService,
+    ) { }
 
     async signInAsync(
         email: string,
@@ -570,5 +573,37 @@ export class AuthService {
                 lastAccessedAt: s.lastAccessedAt,
             })),
         );
+    }
+
+    async updateMeProfileAsync(
+        userId: string,
+        dto: MeProfileUpdateDto,
+    ): Promise<Result<UserDto>> {
+        this.logger.log(`Updating profile for user ${userId}`);
+
+        const user = await this.prisma.client.user.findUnique({
+            where: { id: userId },
+            include: { employee: true },
+        });
+
+        if (!user) {
+            return Result.fail('User not found');
+        }
+
+        if (!user.employee) {
+            return Result.fail('User does not have an employee profile');
+        }
+
+        const employeeUpdateResult = await this.employeesService.updateAsync(
+            user.employee.id,
+            dto as any,
+            userId,
+        );
+
+        if (!employeeUpdateResult.isSuccess) {
+            return Result.fail(employeeUpdateResult.error || 'Failed to update profile');
+        }
+
+        return await this.getMe(userId);
     }
 }

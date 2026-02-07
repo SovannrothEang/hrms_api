@@ -33,7 +33,7 @@ import { QrManagerService } from './services/qr-manager.service';
 
 @ApiTags('Attendances')
 @Auth()
-@Controller(['attendances'])
+@Controller('attendances')
 export class AttendancesController {
     private readonly _logger = new Logger(AttendancesController.name);
     constructor(
