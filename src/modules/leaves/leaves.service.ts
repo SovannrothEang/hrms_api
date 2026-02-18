@@ -26,7 +26,6 @@ export class LeavesService {
         private readonly emailService: EmailService,
     ) {}
 
-
     async findAllAsync(
         childIncluded: boolean = false,
     ): Promise<Result<LeaveRequestDto[]>> {
@@ -86,7 +85,8 @@ export class LeavesService {
             employeeCode: e.employeeCode,
             firstname: e.firstname,
             lastname: e.lastname,
-            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            gender:
+                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
             dateOfBirth: e.dob?.toISOString().split('T')[0],
             userId: e.userId,
             address: e.address,

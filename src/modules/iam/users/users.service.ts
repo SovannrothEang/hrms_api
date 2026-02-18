@@ -55,7 +55,8 @@ export class UsersService {
             employeeCode: e.employeeCode,
             firstname: e.firstname,
             lastname: e.lastname,
-            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            gender:
+                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
             dateOfBirth: e.dob?.toISOString().split('T')[0],
             userId: e.userId,
             address: e.address,
@@ -85,6 +86,7 @@ export class UsersService {
             isActive,
             createdAtFrom,
             createdAtTo,
+            includeEmployees,
             sortBy = 'username',
             sortOrder = 'asc',
         } = query;
@@ -151,6 +153,7 @@ export class UsersService {
                             role: true,
                         },
                     },
+                    employee: includeEmployees ? true : false,
                 },
                 orderBy,
             }),

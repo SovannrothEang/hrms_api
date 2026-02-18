@@ -27,7 +27,7 @@ import { LeaveReportQueryDto } from './dtos/leave-report.dto';
 @ApiTags('Reports')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class ReportsController {
-    constructor(private readonly reportsService: ReportsService) { }
+    constructor(private readonly reportsService: ReportsService) {}
 
     @Get('attendance-summary')
     @HttpCode(HttpStatus.OK)
@@ -153,7 +153,8 @@ export class ReportsController {
         name: 'startDate',
         required: false,
         type: String,
-        description: 'Start date (ISO 8601). Defaults to start of current month.',
+        description:
+            'Start date (ISO 8601). Defaults to start of current month.',
     })
     @ApiQuery({
         name: 'endDate',
@@ -203,9 +204,8 @@ export class ReportsController {
         @Query('format') format: 'xlsx' | 'csv',
         @Res() res: Response,
     ) {
-        const workbook = await this.reportsService.exportAttendanceReport(
-            query,
-        );
+        const workbook =
+            await this.reportsService.exportAttendanceReport(query);
 
         if (format === 'csv') {
             res.header('Content-Type', 'text/csv');
@@ -313,13 +313,15 @@ export class ReportsController {
         name: 'startDate',
         required: false,
         type: String,
-        description: 'Start date for payroll filter (ISO 8601). Defaults to start of current month.',
+        description:
+            'Start date for payroll filter (ISO 8601). Defaults to start of current month.',
     })
     @ApiQuery({
         name: 'endDate',
         required: false,
         type: String,
-        description: 'End date for payroll filter (ISO 8601). Defaults to end of current month.',
+        description:
+            'End date for payroll filter (ISO 8601). Defaults to end of current month.',
     })
     async getPayrollSummaryReport(
         @Query() query: PayrollReportQueryDto,
@@ -386,13 +388,15 @@ export class ReportsController {
         name: 'startDate',
         required: false,
         type: String,
-        description: 'Start date for leave filter (ISO 8601). Defaults to start of current month.',
+        description:
+            'Start date for leave filter (ISO 8601). Defaults to start of current month.',
     })
     @ApiQuery({
         name: 'endDate',
         required: false,
         type: String,
-        description: 'End date for leave filter (ISO 8601). Defaults to end of current month.',
+        description:
+            'End date for leave filter (ISO 8601). Defaults to end of current month.',
     })
     async getLeaveReport(
         @Query() query: LeaveReportQueryDto,

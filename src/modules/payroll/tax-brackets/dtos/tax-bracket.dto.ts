@@ -6,7 +6,7 @@ import {
     TransformFnParams,
     Type,
 } from 'class-transformer';
-import {DecimalNumber, toDecimal} from '../../../../config/decimal-number';
+import { DecimalNumber, toDecimal } from '../../../../config/decimal-number';
 
 @Exclude()
 export class TaxBracketDto {

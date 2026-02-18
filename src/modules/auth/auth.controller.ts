@@ -45,7 +45,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
-    ) { }
+    ) {}
 
     @Post('login')
     @HttpCode(HttpStatus.OK)

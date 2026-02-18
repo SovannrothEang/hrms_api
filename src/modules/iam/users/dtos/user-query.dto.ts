@@ -28,7 +28,8 @@ export class UserQueryDto {
     limit?: number = 10;
 
     @ApiPropertyOptional({
-        description: 'Search in username or email (partial match, case-insensitive)',
+        description:
+            'Search in username or email (partial match, case-insensitive)',
     })
     @IsOptional()
     @IsString()
@@ -64,6 +65,14 @@ export class UserQueryDto {
     @IsOptional()
     @IsDateString()
     createdAtTo?: string;
+
+    @ApiPropertyOptional({
+        description: 'Include employees',
+    })
+    @IsOptional()
+    @Type(() => Boolean)
+    @IsBoolean()
+    includeEmployees?: boolean;
 
     @ApiPropertyOptional({
         description: 'Sort by field',

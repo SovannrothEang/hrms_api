@@ -35,13 +35,24 @@ export class UsersController {
     @ApiQuery({ name: 'page', required: false, type: Number })
     @ApiQuery({ name: 'limit', required: false, type: Number })
     @ApiQuery({ name: 'search', required: false, type: String })
-    @ApiQuery({ name: 'role', required: false, enum: ['ADMIN', 'HR_MANAGER', 'EMPLOYEE'] })
+    @ApiQuery({
+        name: 'role',
+        required: false,
+        enum: ['ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
+    })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean })
     @ApiQuery({ name: 'createdAtFrom', required: false, type: String })
     @ApiQuery({ name: 'createdAtTo', required: false, type: String })
-    @ApiQuery({ name: 'sortBy', required: false, enum: ['username', 'email', 'createdAt', 'updatedAt'] })
+    @ApiQuery({
+        name: 'sortBy',
+        required: false,
+        enum: ['username', 'email', 'createdAt', 'updatedAt'],
+    })
     @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
-    @ApiResponse({ status: HttpStatus.OK, description: 'Paginated list of users' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'Paginated list of users',
+    })
     async findAll(
         @Query() query: UserQueryDto,
     ): Promise<ResultPagination<UserDto>> {

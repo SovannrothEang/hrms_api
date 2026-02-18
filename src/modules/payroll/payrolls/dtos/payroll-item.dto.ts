@@ -1,11 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-    Exclude,
-    Expose,
-    Transform,
-    Type,
-} from 'class-transformer';
-import {DecimalNumber, toDecimal} from '../../../../config/decimal-number';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import { DecimalNumber, toDecimal } from '../../../../config/decimal-number';
 
 @Exclude()
 export class PayrollItemDto {

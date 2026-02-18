@@ -96,7 +96,7 @@ export interface LeaveReportData {
 
 @Injectable()
 export class ReportsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async getAttendanceSummaryData(month: number, year: number) {
         const startDate = new Date(year, month - 1, 1);
@@ -116,7 +116,10 @@ export class ReportsService {
         }));
     }
 
-    private normalizeDateRange(startDate?: string, endDate?: string): {
+    private normalizeDateRange(
+        startDate?: string,
+        endDate?: string,
+    ): {
         start: Date;
         end: Date;
     } {
@@ -126,7 +129,15 @@ export class ReportsService {
             : new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
         const end = endDate
             ? new Date(new Date(endDate).setHours(23, 59, 59, 999))
-            : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            : new Date(
+                  now.getFullYear(),
+                  now.getMonth() + 1,
+                  0,
+                  23,
+                  59,
+                  59,
+                  999,
+              );
         return { start, end };
     }
 
@@ -185,14 +196,13 @@ export class ReportsService {
             leaveWhereClause.employeeId = params.employeeId;
         }
 
-        const approvedLeaves =
-            await this.prisma.client.leaveRequest.findMany({
-                where: leaveWhereClause,
-                select: {
-                    startDate: true,
-                    endDate: true,
-                },
-            });
+        const approvedLeaves = await this.prisma.client.leaveRequest.findMany({
+            where: leaveWhereClause,
+            select: {
+                startDate: true,
+                endDate: true,
+            },
+        });
 
         // Calculate total leave days (considering overlap with date range)
         let leaveDays = 0;
@@ -223,7 +233,7 @@ export class ReportsService {
         const attendanceRate =
             totalDays > 0
                 ? Math.round(((presentDays + lateDays) / totalDays) * 10000) /
-                100
+                  100
                 : 0;
 
         return {
@@ -234,9 +244,8 @@ export class ReportsService {
             leaveDays,
             attendanceRate,
             averageWorkHours:
-                Math.round(
-                    Number(workHoursAgg._avg?.workHours ?? 0) * 100,
-                ) / 100,
+                Math.round(Number(workHoursAgg._avg?.workHours ?? 0) * 100) /
+                100,
             totalOvertimeHours: Number(workHoursAgg._sum?.overtime ?? 0),
         };
     }
@@ -358,11 +367,11 @@ export class ReportsService {
             isDeleted: boolean;
             departmentId?: string;
             status?:
-            | 'ACTIVE'
-            | 'INACTIVE'
-            | 'ON_LEAVE'
-            | 'PROBATION'
-            | 'TERMINATED';
+                | 'ACTIVE'
+                | 'INACTIVE'
+                | 'ON_LEAVE'
+                | 'PROBATION'
+                | 'TERMINATED';
         } = {
             isDeleted: false,
         };
@@ -414,11 +423,11 @@ export class ReportsService {
             isDeleted: boolean;
             departmentId?: string;
             status?:
-            | 'ACTIVE'
-            | 'INACTIVE'
-            | 'ON_LEAVE'
-            | 'PROBATION'
-            | 'TERMINATED';
+                | 'ACTIVE'
+                | 'INACTIVE'
+                | 'ON_LEAVE'
+                | 'PROBATION'
+                | 'TERMINATED';
         } = {
             isDeleted: false,
         };
@@ -1002,7 +1011,9 @@ export class ReportsService {
             include: {
                 employee: {
                     select: {
-                        department: { select: { id: true, departmentName: true } },
+                        department: {
+                            select: { id: true, departmentName: true },
+                        },
                     },
                 },
             },
@@ -1013,7 +1024,10 @@ export class ReportsService {
         for (const p of payrolls) {
             const deptId = p.employee.department.id;
             const deptName = p.employee.department.departmentName;
-            const current = deptTotals.get(deptId) ?? { name: deptName, total: 0 };
+            const current = deptTotals.get(deptId) ?? {
+                name: deptName,
+                total: 0,
+            };
             current.total += Number(p.netSalary);
             deptTotals.set(deptId, current);
         }
@@ -1024,7 +1038,11 @@ export class ReportsService {
         const now = new Date();
 
         for (let i = trendMonths - 1; i >= 0; i--) {
-            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthStart = new Date(
+                now.getFullYear(),
+                now.getMonth() - i,
+                1,
+            );
             const monthEnd = new Date(
                 now.getFullYear(),
                 now.getMonth() - i + 1,
@@ -1099,13 +1117,15 @@ export class ReportsService {
 
         let totalLeaveDays = 0;
         for (const leave of approvedLeaves) {
-            const diffTime = leave.endDate.getTime() - leave.startDate.getTime();
+            const diffTime =
+                leave.endDate.getTime() - leave.startDate.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
             totalLeaveDays += diffDays;
         }
         const averageLeaveDays =
             approvedLeaves.length > 0
-                ? Math.round((totalLeaveDays / approvedLeaves.length) * 100) / 100
+                ? Math.round((totalLeaveDays / approvedLeaves.length) * 100) /
+                  100
                 : 0;
 
         // Monthly trend (last 6 months)
@@ -1114,7 +1134,11 @@ export class ReportsService {
         const now = new Date();
 
         for (let i = trendMonths - 1; i >= 0; i--) {
-            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthStart = new Date(
+                now.getFullYear(),
+                now.getMonth() - i,
+                1,
+            );
             const monthEnd = new Date(
                 now.getFullYear(),
                 now.getMonth() - i + 1,
@@ -1214,10 +1238,7 @@ export class ReportsService {
         return workbook;
     }
 
-    async exportLeaveReport(params?: {
-        startDate?: string;
-        endDate?: string;
-    }) {
+    async exportLeaveReport(params?: { startDate?: string; endDate?: string }) {
         const data = await this.getLeaveReportData(params);
         const workbook = new ExcelJS.Workbook();
 

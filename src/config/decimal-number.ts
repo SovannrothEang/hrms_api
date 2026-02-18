@@ -1,5 +1,5 @@
 import { Decimal } from '@prisma/client/runtime/client';
-import { TransformFnParams } from "class-transformer";
+import { TransformFnParams } from 'class-transformer';
 
 export const toDecimal = ({ value }: TransformFnParams) => {
     if (value === null || value === undefined || value === '') return null;

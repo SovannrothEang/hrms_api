@@ -34,7 +34,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Auth()
 @Controller('leave-requests')
 export class LeavesController {
-    constructor(private readonly leavesService: LeavesService) { }
+    constructor(private readonly leavesService: LeavesService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)

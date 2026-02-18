@@ -47,7 +47,7 @@ export class AuthService {
         @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
         private readonly employeesService: EmployeesService,
-    ) { }
+    ) {}
 
     async signInAsync(
         email: string,
@@ -601,7 +601,9 @@ export class AuthService {
         );
 
         if (!employeeUpdateResult.isSuccess) {
-            return Result.fail(employeeUpdateResult.error || 'Failed to update profile');
+            return Result.fail(
+                employeeUpdateResult.error || 'Failed to update profile',
+            );
         }
 
         return await this.getMe(userId);

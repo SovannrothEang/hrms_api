@@ -46,8 +46,12 @@ export class EmployeePositionsService {
             id: p.id,
             title: p.title,
             description: p.description,
-            salaryRangeMin: p.salaryRangeMin ? new DecimalNumber(p.salaryRangeMin) : null,
-            salaryRangeMax: p.salaryRangeMax ? new DecimalNumber(p.salaryRangeMax) : null,
+            salaryRangeMin: p.salaryRangeMin
+                ? new DecimalNumber(p.salaryRangeMin)
+                : null,
+            salaryRangeMax: p.salaryRangeMax
+                ? new DecimalNumber(p.salaryRangeMax)
+                : null,
             performBy: p.performBy,
             performer: p.performer ? this.mapToUserDto(p.performer) : null,
             isActive: p.isActive,

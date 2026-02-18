@@ -91,7 +91,8 @@ export class AttendancesService {
             employeeCode: e.employeeCode,
             firstname: e.firstname,
             lastname: e.lastname,
-            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            gender:
+                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
             dateOfBirth: e.dob?.toISOString().split('T')[0],
             userId: e.userId,
             address: e.address,

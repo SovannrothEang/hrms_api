@@ -334,7 +334,9 @@ export class PayrollsService {
             deductions: new DecimalNumber(p.deductions),
             netSalary: new DecimalNumber(p.netSalary),
             status: p.status,
-            exchangeRate: p.exchangeRate ? new DecimalNumber(p.exchangeRate) : null,
+            exchangeRate: p.exchangeRate
+                ? new DecimalNumber(p.exchangeRate)
+                : null,
             baseCurrencyAmount: p.baseCurrencyAmount
                 ? new DecimalNumber(p.baseCurrencyAmount)
                 : null,

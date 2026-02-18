@@ -34,7 +34,7 @@ import { DepartmentDto } from './dtos/department.dto';
 @Auth(RoleName.ADMIN)
 @ApiTags('Departments')
 export class DepartmentsController {
-    constructor(private readonly departmentsService: DepartmentsService) { }
+    constructor(private readonly departmentsService: DepartmentsService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)

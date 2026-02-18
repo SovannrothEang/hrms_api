@@ -28,4 +28,4 @@ import { EmployeesModule } from '../employees/employees.module';
     controllers: [AuthController],
     exports: [AuthService, UserContextService, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

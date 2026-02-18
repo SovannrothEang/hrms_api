@@ -15,17 +15,19 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
     createAsync: jest.fn(),
-    findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     updateAsync: jest.fn(),
     deleteAsync: jest.fn(),
@@ -37,9 +39,7 @@ describe('UsersController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [UsersController],
-            providers: [
-                { provide: UsersService, useValue: mockService },
-            ],
+            providers: [{ provide: UsersService, useValue: mockService }],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -51,8 +51,14 @@ describe('UsersController (Feature)', () => {
     });
 
     it('/users (POST) should create user', () => {
-        const dto = { username: 'john', email: 'john@example.com', password: 'password' };
-        mockService.createAsync.mockResolvedValue(Result.ok({ id: '1', ...dto }));
+        const dto = {
+            username: 'john',
+            email: 'john@example.com',
+            password: 'password',
+        };
+        mockService.createAsync.mockResolvedValue(
+            Result.ok({ id: '1', ...dto }),
+        );
 
         return request(app.getHttpServer())
             .post('/users')
@@ -61,9 +67,9 @@ describe('UsersController (Feature)', () => {
     });
 
     it('/users (GET) should return list', () => {
-        mockService.findAllAsync.mockResolvedValue([]);
-        return request(app.getHttpServer())
-            .get('/users')
-            .expect(200);
+        mockService.findAllFilteredAsync.mockResolvedValue(
+            Result.ok({ items: [], total: 0 }),
+        );
+        return request(app.getHttpServer()).get('/users').expect(200);
     });
 });

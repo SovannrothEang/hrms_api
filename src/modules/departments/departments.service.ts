@@ -13,7 +13,7 @@ import { DecimalNumber } from 'src/config/decimal-number';
 export class DepartmentsService {
     private readonly logger = new Logger(DepartmentsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -24,17 +24,15 @@ export class DepartmentsService {
             include: {
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: { include: { role: true } },
-                        },
-                    }
+                          include: {
+                              userRoles: { include: { role: true } },
+                          },
+                      }
                     : false,
             },
             orderBy: { departmentName: 'asc' },
         });
-        return Result.ok(
-            departments.map((d) => this.mapToDepartmentDto(d)),
-        );
+        return Result.ok(departments.map((d) => this.mapToDepartmentDto(d)));
     }
 
     private mapToDepartmentDto(d: any): DepartmentDto {
@@ -57,7 +55,8 @@ export class DepartmentsService {
             employeeCode: e.employeeCode,
             firstname: e.firstname,
             lastname: e.lastname,
-            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            gender:
+                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
             dateOfBirth: e.dob?.toISOString().split('T')[0],
             userId: e.userId,
             address: e.address,
@@ -129,14 +128,14 @@ export class DepartmentsService {
 
         const include = {
             employees: includeEmployees
-                ? { include: { position: true, }, }
+                ? { include: { position: true } }
                 : false,
             performer: includeEmployees
                 ? {
-                    include: {
-                        userRoles: { include: { role: true } },
-                    },
-                }
+                      include: {
+                          userRoles: { include: { role: true } },
+                      },
+                  }
                 : false,
         };
 
@@ -204,10 +203,10 @@ export class DepartmentsService {
                 employees: childIncluded,
                 performer: childIncluded
                     ? {
-                        include: {
-                            userRoles: { include: { role: true } },
-                        },
-                    }
+                          include: {
+                              userRoles: { include: { role: true } },
+                          },
+                      }
                     : false,
             },
         });

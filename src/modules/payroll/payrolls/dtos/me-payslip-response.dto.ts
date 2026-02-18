@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {Transform, Type} from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { DecimalNumber } from '../../../../config/decimal-number';
-import {isDecimal} from "class-validator";
+import { isDecimal } from 'class-validator';
 
 export class MePayslipSummaryDto {
     @ApiProperty({ example: 2850000 })
