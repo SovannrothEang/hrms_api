@@ -20,7 +20,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) { }
 
     async findAllAsync(): Promise<Result<UserDto[]>> {
         this.logger.log('Getting all users');

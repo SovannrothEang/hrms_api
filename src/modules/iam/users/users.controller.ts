@@ -27,7 +27,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 @Controller('users')
 @Auth(RoleName.ADMIN)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+    constructor(private readonly usersService: UsersService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)

@@ -68,7 +68,7 @@ export class PrismaService
         return this.$extends({
             query: {
                 $allModels: {
-                    async delete({ model, args }) {
+                    async delete({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
                             return (this as unknown as SoftDeleteCapable)[
                                 model
@@ -80,11 +80,9 @@ export class PrismaService
                                 },
                             });
                         }
-                        return (this as unknown as SoftDeleteCapable)[
-                            model
-                        ].delete(args);
+                        return query(args);
                     },
-                    async deleteMany({ model, args }) {
+                    async deleteMany({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
                             return (this as unknown as SoftDeleteCapable)[
                                 model
@@ -96,9 +94,7 @@ export class PrismaService
                                 },
                             });
                         }
-                        return (this as unknown as SoftDeleteCapable)[
-                            model
-                        ].deleteMany(args);
+                        return query(args);
                     },
                     async findMany({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {

@@ -39,7 +39,7 @@ export class UserUpdateDto {
 
     @IsOptional()
     @IsArray()
-    @IsEnum(RoleName, { each: true })
+    // @IsEnum(RoleName, { each: true })
     @ApiProperty({
         example: [RoleName.ADMIN],
         description: 'Roles to assign to the user',
