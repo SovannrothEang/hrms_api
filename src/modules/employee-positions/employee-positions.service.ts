@@ -27,6 +27,7 @@ export class EmployeePositionsService {
         this._logger.log('Get all positions');
         const positions = await this.prisma.client.employeePosition.findMany({
             include: {
+                _count: { select: { employees: true } },
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {
@@ -54,6 +55,7 @@ export class EmployeePositionsService {
                 : null,
             performBy: p.performBy,
             performer: p.performer ? this.mapToUserDto(p.performer) : null,
+            employeeCount: p._count?.employees ?? 0,
             isActive: p.isActive,
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
@@ -105,6 +107,7 @@ export class EmployeePositionsService {
                 skip,
                 take: limit,
                 include: {
+                    _count: { select: { employees: true } },
                     employees: childIncluded ? true : false,
                     performer: childIncluded
                         ? {
@@ -145,6 +148,7 @@ export class EmployeePositionsService {
         const position = await this.prisma.client.employeePosition.findFirst({
             where: { id },
             include: {
+                _count: { select: { employees: true } },
                 employees: childIncluded ? true : false,
                 performer: childIncluded
                     ? {

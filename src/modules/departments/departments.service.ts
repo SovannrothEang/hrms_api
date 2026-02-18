@@ -22,6 +22,7 @@ export class DepartmentsService {
         const departments = await this.prisma.client.department.findMany({
             where: { isDeleted: false },
             include: {
+                _count: { select: { employees: true } },
                 performer: childIncluded
                     ? {
                           include: {
@@ -41,6 +42,7 @@ export class DepartmentsService {
             departmentName: d.departmentName,
             description: d.description,
             employees: d.employees?.map((e: any) => this.mapToEmployeeDto(e)),
+            employeeCount: d._count?.employees ?? 0,
             performBy: d.performBy,
             performer: d.performer ? this.mapToUserDto(d.performer) : null,
             isActive: d.isActive,
@@ -127,6 +129,7 @@ export class DepartmentsService {
         }
 
         const include = {
+            _count: { select: { employees: true } },
             employees: includeEmployees
                 ? { include: { position: true } }
                 : false,
@@ -200,6 +203,7 @@ export class DepartmentsService {
         const department = await this.prisma.client.department.findFirst({
             where: { id },
             include: {
+                _count: { select: { employees: true } },
                 employees: childIncluded,
                 performer: childIncluded
                     ? {

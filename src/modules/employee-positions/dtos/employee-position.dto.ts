@@ -47,6 +47,9 @@ export class EmployeePositionDto {
     @Type(() => EmployeeDto)
     employees: EmployeeDto[];
 
+    @Expose()
+    employeeCount: number;
+
     @Expose({ name: 'is_active' })
     isActive: boolean;
 
