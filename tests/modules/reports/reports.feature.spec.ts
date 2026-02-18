@@ -29,6 +29,13 @@ const mockService = {
     exportAttendanceSummary: jest.fn(),
     getPaginatedLeaveUtilization: jest.fn(),
     exportLeaveUtilization: jest.fn(),
+    getAttendanceReportData: jest.fn(),
+    exportAttendanceReport: jest.fn(),
+    getEmployeeSummaryReportData: jest.fn(),
+    exportEmployeeSummaryReport: jest.fn(),
+    getPayrollReportData: jest.fn(),
+    exportPayrollReport: jest.fn(),
+    getComprehensiveReportData: jest.fn(),
 };
 
 describe('ReportsController (Feature)', () => {

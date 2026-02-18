@@ -10,18 +10,24 @@ import {
 import { ApiOperation, ApiTags, ApiQuery, ApiProduces } from '@nestjs/swagger';
 import type { Response } from 'express';
 import {
-    EmployeeReportData,
-    PayrollReportData,
+    AttendanceReportData,
+    EmployeeSummaryReportData,
+    LeaveReportData,
+    PayrollSummaryReportData,
     ReportsService,
 } from './reports.service';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { RoleName } from '../../common/enums/roles.enum';
+import { AttendanceReportQueryDto } from './dtos/attendance-report.dto';
+import { EmployeeSummaryReportQueryDto } from './dtos/employee-summary-report.dto';
+import { PayrollReportQueryDto } from './dtos/payroll-report.dto';
+import { LeaveReportQueryDto } from './dtos/leave-report.dto';
 
 @Controller('reports')
 @ApiTags('Reports')
 @Auth(RoleName.ADMIN, RoleName.HR)
 export class ReportsController {
-    constructor(private readonly reportsService: ReportsService) {}
+    constructor(private readonly reportsService: ReportsService) { }
 
     @Get('attendance-summary')
     @HttpCode(HttpStatus.OK)
@@ -140,55 +146,72 @@ export class ReportsController {
         res.end();
     }
 
-    @Get('employee')
+    @Get('attendances')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get employee report with filters' })
-    @ApiQuery({ name: 'departmentId', required: false, type: String })
+    @ApiOperation({ summary: 'Get attendance report with aggregated metrics' })
     @ApiQuery({
-        name: 'status',
+        name: 'startDate',
         required: false,
-        enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
+        type: String,
+        description: 'Start date (ISO 8601). Defaults to start of current month.',
     })
-    async getEmployeeReport(
-        @Query('departmentId') departmentId?: string,
-        @Query('status') status?: string,
-    ): Promise<EmployeeReportData[]> {
-        return await this.reportsService.getEmployeeReportData({
-            departmentId,
-            status,
-        });
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date (ISO 8601). Defaults to end of current month.',
+    })
+    @ApiQuery({
+        name: 'employeeId',
+        required: false,
+        type: String,
+        description: 'Filter by specific employee',
+    })
+    async getAttendanceReport(
+        @Query() query: AttendanceReportQueryDto,
+    ): Promise<AttendanceReportData> {
+        return await this.reportsService.getAttendanceReportData(query);
     }
 
-    @Get('employee/export')
+    @Get('attendances/export')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Export employee report (xlsx/csv)' })
+    @ApiOperation({ summary: 'Export attendance report (xlsx/csv)' })
     @ApiProduces(
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'text/csv',
     )
-    @ApiQuery({ name: 'departmentId', required: false, type: String })
     @ApiQuery({
-        name: 'status',
+        name: 'startDate',
         required: false,
-        enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE', 'PROBATION', 'TERMINATED'],
+        type: String,
+        description: 'Start date (ISO 8601)',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date (ISO 8601)',
+    })
+    @ApiQuery({
+        name: 'employeeId',
+        required: false,
+        type: String,
     })
     @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
-    async exportEmployeeReport(
-        @Query('departmentId') departmentId: string | undefined,
-        @Query('status') status: string | undefined,
+    async exportAttendanceReport(
+        @Query() query: AttendanceReportQueryDto,
         @Query('format') format: 'xlsx' | 'csv',
         @Res() res: Response,
     ) {
-        const workbook = await this.reportsService.exportEmployeeReport({
-            departmentId,
-            status,
-        });
+        const workbook = await this.reportsService.exportAttendanceReport(
+            query,
+        );
 
         if (format === 'csv') {
             res.header('Content-Type', 'text/csv');
             res.header(
                 'Content-Disposition',
-                'attachment; filename=employee_report.csv',
+                'attachment; filename=attendance_report.csv',
             );
             await workbook.csv.write(res);
         } else {
@@ -198,7 +221,82 @@ export class ReportsController {
             );
             res.header(
                 'Content-Disposition',
-                'attachment; filename=employee_report.xlsx',
+                'attachment; filename=attendance_report.xlsx',
+            );
+            await workbook.xlsx.write(res);
+        }
+        res.end();
+    }
+
+    @Get('employees')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary:
+            'Get employee summary report with aggregated counts and breakdowns',
+    })
+    @ApiQuery({
+        name: 'startDate',
+        required: false,
+        type: String,
+        description:
+            'Start date for newHires/terminated filter (ISO 8601). Defaults to start of current month.',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description:
+            'End date for newHires/terminated filter (ISO 8601). Defaults to end of current month.',
+    })
+    async getEmployeeSummaryReport(
+        @Query() query: EmployeeSummaryReportQueryDto,
+    ): Promise<EmployeeSummaryReportData> {
+        return await this.reportsService.getEmployeeSummaryReportData(query);
+    }
+
+    @Get('employees/export')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Export employee summary report (xlsx/csv)' })
+    @ApiProduces(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
+    )
+    @ApiQuery({
+        name: 'startDate',
+        required: false,
+        type: String,
+        description: 'Start date for newHires/terminated filter',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date for newHires/terminated filter',
+    })
+    @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
+    async exportEmployeeSummaryReport(
+        @Query() query: EmployeeSummaryReportQueryDto,
+        @Query('format') format: 'xlsx' | 'csv',
+        @Res() res: Response,
+    ) {
+        const workbook =
+            await this.reportsService.exportEmployeeSummaryReport(query);
+
+        if (format === 'csv') {
+            res.header('Content-Type', 'text/csv');
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=employee_summary_report.csv',
+            );
+            await workbook.csv.write(res);
+        } else {
+            res.header(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=employee_summary_report.xlsx',
             );
             await workbook.xlsx.write(res);
         }
@@ -207,67 +305,61 @@ export class ReportsController {
 
     @Get('payrolls')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Get payroll report with filters' })
-    @ApiQuery({ name: 'year', required: false, type: Number })
-    @ApiQuery({ name: 'month', required: false, type: Number })
-    @ApiQuery({ name: 'departmentId', required: false, type: String })
-    @ApiQuery({
-        name: 'status',
-        required: false,
-        enum: ['PENDING', 'PROCESSED', 'PAID', 'CANCELLED'],
+    @ApiOperation({
+        summary:
+            'Get payroll summary report with aggregated metrics and breakdowns',
     })
-    async getPayrollReport(
-        @Query('year', new ParseIntPipe({ optional: true })) year?: number,
-        @Query('month', new ParseIntPipe({ optional: true })) month?: number,
-        @Query('departmentId') departmentId?: string,
-        @Query('status') status?: string,
-    ): Promise<PayrollReportData[]> {
-        return await this.reportsService.getPayrollReportData({
-            year,
-            month,
-            departmentId,
-            status,
-        });
+    @ApiQuery({
+        name: 'startDate',
+        required: false,
+        type: String,
+        description: 'Start date for payroll filter (ISO 8601). Defaults to start of current month.',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date for payroll filter (ISO 8601). Defaults to end of current month.',
+    })
+    async getPayrollSummaryReport(
+        @Query() query: PayrollReportQueryDto,
+    ): Promise<PayrollSummaryReportData> {
+        return await this.reportsService.getPayrollSummaryReportData(query);
     }
 
     @Get('payrolls/export')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Export payroll report (xlsx/csv)' })
+    @ApiOperation({ summary: 'Export payroll summary report (xlsx/csv)' })
     @ApiProduces(
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'text/csv',
     )
-    @ApiQuery({ name: 'year', required: false, type: Number })
-    @ApiQuery({ name: 'month', required: false, type: Number })
-    @ApiQuery({ name: 'departmentId', required: false, type: String })
     @ApiQuery({
-        name: 'status',
+        name: 'startDate',
         required: false,
-        enum: ['PENDING', 'PROCESSED', 'PAID', 'CANCELLED'],
+        type: String,
+        description: 'Start date',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date',
     })
     @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
-    async exportPayrollReport(
-        @Query('year', new ParseIntPipe({ optional: true }))
-        year: number | undefined,
-        @Query('month', new ParseIntPipe({ optional: true }))
-        month: number | undefined,
-        @Query('departmentId') departmentId: string | undefined,
-        @Query('status') status: string | undefined,
+    async exportPayrollSummaryReport(
+        @Query() query: PayrollReportQueryDto,
         @Query('format') format: 'xlsx' | 'csv',
         @Res() res: Response,
     ) {
-        const workbook = await this.reportsService.exportPayrollReport({
-            year,
-            month,
-            departmentId,
-            status,
-        });
+        const workbook =
+            await this.reportsService.exportPayrollSummaryReport(query);
 
         if (format === 'csv') {
             res.header('Content-Type', 'text/csv');
             res.header(
                 'Content-Disposition',
-                'attachment; filename=payroll_report.csv',
+                'attachment; filename=payroll_summary_report.csv',
             );
             await workbook.csv.write(res);
         } else {
@@ -277,7 +369,79 @@ export class ReportsController {
             );
             res.header(
                 'Content-Disposition',
-                'attachment; filename=payroll_report.xlsx',
+                'attachment; filename=payroll_summary_report.xlsx',
+            );
+            await workbook.xlsx.write(res);
+        }
+        res.end();
+    }
+
+    @Get('leaves')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary:
+            'Get leave report with aggregated metrics, type breakdown, and trends',
+    })
+    @ApiQuery({
+        name: 'startDate',
+        required: false,
+        type: String,
+        description: 'Start date for leave filter (ISO 8601). Defaults to start of current month.',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date for leave filter (ISO 8601). Defaults to end of current month.',
+    })
+    async getLeaveReport(
+        @Query() query: LeaveReportQueryDto,
+    ): Promise<LeaveReportData> {
+        return await this.reportsService.getLeaveReportData(query);
+    }
+
+    @Get('leaves/export')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Export leave report (xlsx/csv)' })
+    @ApiProduces(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/csv',
+    )
+    @ApiQuery({
+        name: 'startDate',
+        required: false,
+        type: String,
+        description: 'Start date',
+    })
+    @ApiQuery({
+        name: 'endDate',
+        required: false,
+        type: String,
+        description: 'End date',
+    })
+    @ApiQuery({ name: 'format', enum: ['xlsx', 'csv'], required: true })
+    async exportLeaveReport(
+        @Query() query: LeaveReportQueryDto,
+        @Query('format') format: 'xlsx' | 'csv',
+        @Res() res: Response,
+    ) {
+        const workbook = await this.reportsService.exportLeaveReport(query);
+
+        if (format === 'csv') {
+            res.header('Content-Type', 'text/csv');
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=leave_report.csv',
+            );
+            await workbook.csv.write(res);
+        } else {
+            res.header(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            res.header(
+                'Content-Disposition',
+                'attachment; filename=leave_report.xlsx',
             );
             await workbook.xlsx.write(res);
         }

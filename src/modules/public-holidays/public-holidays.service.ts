@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Result } from 'src/common/logic/result';
 import { CreatePublicHolidayDto } from './dtos/create-public-holiday.dto';
 import { PublicHolidayDto } from './dtos/public-holiday.dto';
-import { plainToInstance } from 'class-transformer';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
@@ -23,7 +22,16 @@ export class PublicHolidaysService {
                 performBy,
             },
         });
-        return Result.ok(plainToInstance(PublicHolidayDto, holiday));
+        return Result.ok(this.mapToPublicHolidayDto(holiday));
+    }
+
+    private mapToPublicHolidayDto(h: any): PublicHolidayDto {
+        return {
+            id: h.id,
+            name: h.name,
+            date: h.date,
+            isRecurring: h.isRecurring,
+        };
     }
 
     async findAllAsync(): Promise<Result<PublicHolidayDto[]>> {
@@ -31,9 +39,7 @@ export class PublicHolidaysService {
             where: { isDeleted: false },
             orderBy: { date: 'asc' },
         });
-        return Result.ok(
-            holidays.map((h) => plainToInstance(PublicHolidayDto, h)),
-        );
+        return Result.ok(holidays.map((h) => this.mapToPublicHolidayDto(h)));
     }
 
     async findAllPaginatedAsync(
@@ -54,7 +60,7 @@ export class PublicHolidaysService {
             }),
         ]);
 
-        const dtos = holidays.map((h) => plainToInstance(PublicHolidayDto, h));
+        const dtos = holidays.map((h) => this.mapToPublicHolidayDto(h));
         return ResultPagination.of(dtos, total, page, limit);
     }
 
@@ -64,7 +70,7 @@ export class PublicHolidaysService {
         });
         if (!holiday || holiday.isDeleted)
             return Result.fail('Holiday not found');
-        return Result.ok(plainToInstance(PublicHolidayDto, holiday));
+        return Result.ok(this.mapToPublicHolidayDto(holiday));
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {

@@ -3,7 +3,6 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { AttendanceDto } from './dtos/attendance.dto';
 import { AttendanceQueryDto } from './dtos/attendance-query.dto';
-import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import { AttendanceStatus } from 'src/common/enums/attendance-status.enum';
 
@@ -18,6 +17,7 @@ import { QrManagerService } from './services/qr-manager.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
 import { AttendanceSummaryDto } from './dtos/attendance-summary.dto';
+import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class AttendancesService {
@@ -51,9 +51,62 @@ export class AttendancesService {
                     : false,
             },
         });
-        return Result.ok(
-            attendances.map((a) => plainToInstance(AttendanceDto, a)),
-        );
+        return Result.ok(attendances.map((a) => this.mapToAttendanceDto(a)));
+    }
+
+    private mapToAttendanceDto(a: any): AttendanceDto {
+        return {
+            id: a.id,
+            employeeId: a.employeeId,
+            status: a.status,
+            date: a.date,
+            checkInTime: a.checkInTime,
+            checkOutTime: a.checkOutTime,
+            workHours: a.workHours ? new DecimalNumber(a.workHours) : null,
+            overtime: a.overtime ? new DecimalNumber(a.overtime) : null,
+            notes: a.notes,
+            performBy: a.performBy,
+            performer: a.performer ? this.mapToUserDto(a.performer) : null,
+            employee: a.employee ? this.mapToEmployeeDto(a.employee) : null,
+            isActive: a.isActive,
+            createdAt: a.createdAt,
+            updatedAt: a.updatedAt,
+        } as any;
+    }
+
+    private mapToUserDto(u: any): any {
+        return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+        };
+    }
+
+    private mapToEmployeeDto(e: any): any {
+        return {
+            id: e.id,
+            employeeCode: e.employeeCode,
+            firstname: e.firstname,
+            lastname: e.lastname,
+            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            dateOfBirth: e.dob?.toISOString().split('T')[0],
+            userId: e.userId,
+            address: e.address,
+            phoneNumber: e.phone,
+            profileImage: e.profileImage,
+            hireDate: e.hireDate,
+            positionId: e.positionId,
+            departmentId: e.departmentId,
+            employmentType: e.employmentType,
+            status: e.status,
+            salary: e.salary ? new DecimalNumber(e.salary) : null,
+            isActive: e.isActive,
+            createdAt: e.createdAt,
+            updatedAt: e.updatedAt,
+        };
     }
 
     async findAllFilteredAsync(
@@ -172,7 +225,7 @@ export class AttendancesService {
             totalOvertimeHours: Number(aggregates._sum.overtime || 0),
         };
 
-        const data = attendances.map((a) => plainToInstance(AttendanceDto, a));
+        const data = attendances.map((a) => this.mapToAttendanceDto(a));
         return Result.ok(
             ResultPagination.of(data, total, page, limit, summary),
         );
@@ -205,7 +258,7 @@ export class AttendancesService {
             },
         });
         if (!attendance) return Result.fail('Attendance not found');
-        return Result.ok(plainToInstance(AttendanceDto, attendance));
+        return Result.ok(this.mapToAttendanceDto(attendance));
     }
 
     async checkIn(
@@ -283,7 +336,7 @@ export class AttendancesService {
             include: { employee: true },
         });
 
-        return Result.ok(plainToInstance(AttendanceDto, attendance));
+        return Result.ok(this.mapToAttendanceDto(attendance));
     }
 
     async checkOut(
@@ -346,7 +399,7 @@ export class AttendancesService {
             include: { employee: true },
         });
 
-        return Result.ok(plainToInstance(AttendanceDto, updatedAttendance));
+        return Result.ok(this.mapToAttendanceDto(updatedAttendance));
     }
 
     async getMeAttendance(

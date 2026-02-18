@@ -3,13 +3,13 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { EmployeeCreateDto } from './dtos/employee-create.dto';
 import { EmployeeUpdateDto } from './dtos/employee-update.dto';
 import { EmployeeDto } from './dtos/employee.dto';
-import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import * as bcrypt from 'bcrypt';
 import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
+import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class EmployeesService {
@@ -104,12 +104,70 @@ export class EmployeesService {
                 },
             );
 
-            return Result.ok(plainToInstance(EmployeeDto, employee));
+            return Result.ok(this.mapToEmployeeDto(employee));
         } catch (e) {
             return Result.fail(
                 e instanceof Error ? e.message : 'Transaction failed',
             );
         }
+    }
+
+    private mapToEmployeeDto(e: any): EmployeeDto {
+        return {
+            id: e.id,
+            employeeCode: e.employeeCode,
+            firstname: e.firstname,
+            lastname: e.lastname,
+            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            dateOfBirth: e.dob?.toISOString().split('T')[0],
+            userId: e.userId,
+            user: e.user ? this.mapToUserDto(e.user) : null,
+            address: e.address,
+            phoneNumber: e.phone,
+            profileImage: e.profileImage,
+            hireDate: e.hireDate,
+            positionId: e.positionId,
+            position: e.position ? this.mapToPositionDto(e.position) : null,
+            departmentId: e.departmentId,
+            department: e.department ? this.mapToDepartmentDto(e.department) : null,
+            employmentType: e.employmentType,
+            status: e.status,
+            salary: e.salary ? new DecimalNumber(e.salary) : null,
+            emergencyContact: e.emergencyContact,
+            bankDetails: e.bankDetails,
+            isActive: e.isActive,
+            createdAt: e.createdAt,
+            updatedAt: e.updatedAt,
+        } as any;
+    }
+
+    private mapToUserDto(u: any): any {
+        return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+        };
+    }
+
+    private mapToPositionDto(p: any): any {
+        return {
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            salaryRangeMin: p.salaryRangeMin ? new DecimalNumber(p.salaryRangeMin) : null,
+            salaryRangeMax: p.salaryRangeMax ? new DecimalNumber(p.salaryRangeMax) : null,
+        };
+    }
+
+    private mapToDepartmentDto(d: any): any {
+        return {
+            id: d.id,
+            departmentName: d.departmentName,
+            description: d.description,
+        };
     }
 
     async findAllAsync(
@@ -136,7 +194,7 @@ export class EmployeesService {
             },
             orderBy: { employeeCode: 'asc' },
         });
-        return Result.ok(employees.map((e) => plainToInstance(EmployeeDto, e)));
+        return Result.ok(employees.map((e) => this.mapToEmployeeDto(e)));
     }
 
     async findAllPaginatedAsync(
@@ -287,7 +345,7 @@ export class EmployeesService {
                 }),
             ]);
 
-            const data = employees.map((e) => plainToInstance(EmployeeDto, e));
+            const data = employees.map((e) => this.mapToEmployeeDto(e));
 
             return ResultPagination.of(data, total, page, limit);
         } catch (error) {
@@ -335,7 +393,7 @@ export class EmployeesService {
             },
         });
         if (!employee) return Result.fail('Employee not found');
-        return Result.ok(plainToInstance(EmployeeDto, employee));
+        return Result.ok(this.mapToEmployeeDto(employee));
     }
 
     async updateAsync(
@@ -382,7 +440,7 @@ export class EmployeesService {
             },
         });
 
-        return Result.ok(plainToInstance(EmployeeDto, updated));
+        return Result.ok(this.mapToEmployeeDto(updated));
     }
 
     async deleteAsync(id: string, performerId: string): Promise<Result<void>> {

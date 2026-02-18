@@ -4,7 +4,6 @@ import { CreateCurrencyDto } from './dtos/create-currency.dto';
 import { CurrencyDto } from './dtos/currency.dto';
 import { CurrencyQueryDto } from './dtos/currency-query.dto';
 import { Result } from '../../../common/logic/result';
-import { plainToInstance } from 'class-transformer';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { Prisma } from '@prisma/client';
@@ -40,7 +39,7 @@ export class CurrenciesService {
                                 performBy: userId,
                             },
                         });
-                    return Result.ok(plainToInstance(CurrencyDto, reactivated));
+                    return Result.ok(this.mapToCurrencyDto(reactivated));
                 }
                 return Result.fail('Currency code already exists');
             }
@@ -52,11 +51,22 @@ export class CurrenciesService {
                 },
             });
 
-            return Result.ok(plainToInstance(CurrencyDto, newValue));
+            return Result.ok(this.mapToCurrencyDto(newValue));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to create currency');
         }
+    }
+
+    private mapToCurrencyDto(c: any): CurrencyDto {
+        return {
+            id: c.id,
+            code: c.code,
+            name: c.name,
+            symbol: c.symbol,
+            country: c.country,
+            isActive: c.isActive,
+        };
     }
 
     async findAllAsync(): Promise<Result<CurrencyDto[]>> {
@@ -64,9 +74,7 @@ export class CurrenciesService {
             const values = await this.prisma.client.currency.findMany({
                 where: { isDeleted: false },
             });
-            return Result.ok(
-                values.map((v) => plainToInstance(CurrencyDto, v)),
-            );
+            return Result.ok(values.map((v) => this.mapToCurrencyDto(v)));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch currencies');
@@ -110,7 +118,7 @@ export class CurrenciesService {
                 }),
             ]);
 
-            const dtos = values.map((v) => plainToInstance(CurrencyDto, v));
+            const dtos = values.map((v) => this.mapToCurrencyDto(v));
             return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);
@@ -144,7 +152,7 @@ export class CurrenciesService {
                 where: { id, isDeleted: false },
             });
             if (!value) return Result.fail('Currency not found');
-            return Result.ok(plainToInstance(CurrencyDto, value));
+            return Result.ok(this.mapToCurrencyDto(value));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch currency');

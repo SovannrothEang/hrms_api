@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Result } from 'src/common/logic/result';
 import { DepartmentDto, DepartmentDtoField } from './dtos/department.dto';
-import { plainToInstance } from 'class-transformer';
 import { DepartmentUpdateDto } from './dtos/department-update.dto';
 import { DepartmentCreateDto } from './dtos/department-create.dto';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { DepartmentQueryDto } from './dtos/department-query.dto';
 import { Prisma } from '@prisma/client';
+import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class DepartmentsService {
@@ -22,7 +22,6 @@ export class DepartmentsService {
         const departments = await this.prisma.client.department.findMany({
             where: { isDeleted: false },
             include: {
-                employees: childIncluded,
                 performer: childIncluded
                     ? {
                         include: {
@@ -34,8 +33,57 @@ export class DepartmentsService {
             orderBy: { departmentName: 'asc' },
         });
         return Result.ok(
-            departments.map((d) => plainToInstance(DepartmentDto, d)),
+            departments.map((d) => this.mapToDepartmentDto(d)),
         );
+    }
+
+    private mapToDepartmentDto(d: any): DepartmentDto {
+        return {
+            id: d.id,
+            departmentName: d.departmentName,
+            description: d.description,
+            employees: d.employees?.map((e: any) => this.mapToEmployeeDto(e)),
+            performBy: d.performBy,
+            performer: d.performer ? this.mapToUserDto(d.performer) : null,
+            isActive: d.isActive,
+            createdAt: d.createdAt,
+            updatedAt: d.updatedAt,
+        } as any;
+    }
+
+    private mapToEmployeeDto(e: any): any {
+        return {
+            id: e.id,
+            employeeCode: e.employeeCode,
+            firstname: e.firstname,
+            lastname: e.lastname,
+            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            dateOfBirth: e.dob?.toISOString().split('T')[0],
+            userId: e.userId,
+            address: e.address,
+            phoneNumber: e.phone,
+            profileImage: e.profileImage,
+            hireDate: e.hireDate,
+            positionId: e.positionId,
+            departmentId: e.departmentId,
+            employmentType: e.employmentType,
+            status: e.status,
+            salary: e.salary ? new DecimalNumber(e.salary) : null,
+            isActive: e.isActive,
+            createdAt: e.createdAt,
+            updatedAt: e.updatedAt,
+        };
+    }
+
+    private mapToUserDto(u: any): any {
+        return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+        };
     }
 
     async findAllPaginatedAsync(
@@ -119,7 +167,7 @@ export class DepartmentsService {
             }
 
             const data = filteredDepartments.map((d) =>
-                plainToInstance(DepartmentDto, d),
+                this.mapToDepartmentDto(d),
             );
 
             return ResultPagination.of(data, total, page, limit);
@@ -166,7 +214,7 @@ export class DepartmentsService {
         if (!department) {
             return Result.fail(`Department not found with id: ${id}`);
         }
-        return Result.ok(plainToInstance(DepartmentDto, department));
+        return Result.ok(this.mapToDepartmentDto(department));
     }
 
     async createAsync(
@@ -188,7 +236,7 @@ export class DepartmentsService {
             },
             select: DepartmentDtoField,
         });
-        return Result.ok(plainToInstance(DepartmentDto, department));
+        return Result.ok(this.mapToDepartmentDto(department));
     }
 
     async updateAsync(

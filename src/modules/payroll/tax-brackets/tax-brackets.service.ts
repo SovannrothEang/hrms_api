@@ -5,9 +5,9 @@ import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';
 import { TaxBracketQueryDto } from './dtos/tax-bracket-query.dto';
 import { Result } from '../../../common/logic/result';
-import { plainToInstance } from 'class-transformer';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
+import { DecimalNumber } from '../../../config/decimal-number';
 
 @Injectable()
 export class TaxBracketsService {
@@ -33,11 +33,25 @@ export class TaxBracketsService {
                 },
             });
 
-            return Result.ok(plainToInstance(TaxBracketDto, newValue));
+            return Result.ok(this.mapToTaxBracketDto(newValue));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to create tax bracket');
         }
+    }
+
+    private mapToTaxBracketDto(tb: any): TaxBracketDto {
+        return {
+            id: tb.id,
+            currencyCode: tb.currencyCode,
+            countryCode: tb.countryCode,
+            taxYear: tb.taxYear,
+            bracketName: tb.bracketName,
+            minAmount: new DecimalNumber(tb.minAmount),
+            maxAmount: new DecimalNumber(tb.maxAmount),
+            taxRate: new DecimalNumber(tb.taxRate),
+            fixedAmount: new DecimalNumber(tb.fixedAmount),
+        };
     }
 
     async findAllAsync(
@@ -55,9 +69,7 @@ export class TaxBracketsService {
                 where: whereClause,
                 orderBy: { minAmount: 'asc' },
             });
-            return Result.ok(
-                values.map((v) => plainToInstance(TaxBracketDto, v)),
-            );
+            return Result.ok(values.map((v) => this.mapToTaxBracketDto(v)));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch tax brackets');
@@ -111,7 +123,7 @@ export class TaxBracketsService {
                 }),
             ]);
 
-            const dtos = values.map((v) => plainToInstance(TaxBracketDto, v));
+            const dtos = values.map((v) => this.mapToTaxBracketDto(v));
             return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);

@@ -31,6 +31,7 @@ import { LeaveQueryDto } from '../leaves/dtos/leave-query.dto';
 import { MeLeaveRequestResponseDto } from '../leaves/dtos/me-leave-request-response.dto';
 import { PayrollDto } from '../payroll/payrolls/dtos/payroll.dto';
 import { LeaveRequestDto } from '../leaves/dtos/leave-request.dto';
+import { BusinessError } from '../../common/exceptions/business-error.exception';
 
 @ApiTags('Me')
 @Auth()
@@ -126,7 +127,10 @@ export class MeController {
             year,
         );
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
         return result.getData();
     }
@@ -147,7 +151,10 @@ export class MeController {
             query,
         );
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
         return result.getData();
     }
@@ -202,7 +209,10 @@ export class MeController {
             leaveRequestId,
         );
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
         return result.getData();
     }

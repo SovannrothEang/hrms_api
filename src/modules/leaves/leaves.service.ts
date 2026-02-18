@@ -6,7 +6,6 @@ import { LeaveRequestDto } from './dtos/leave-request.dto';
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
 import { LeaveQueryDto } from './dtos/leave-query.dto';
-import { plainToInstance } from 'class-transformer';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
 import { ResultPagination } from '../../common/logic/result-pagination';
 import { MeLeaveBalanceResponseDto } from './dtos/me-leave-balance-response.dto';
@@ -16,6 +15,9 @@ import {
 } from './dtos/me-leave-request-response.dto';
 
 import { EmailService } from '../notifications/email.service';
+import { DecimalNumber } from 'src/config/decimal-number';
+import { ErrorCode } from 'src/common/enums/error-codes.enum';
+import { BusinessError } from 'src/common/exceptions/business-error.exception';
 
 @Injectable()
 export class LeavesService {
@@ -23,6 +25,7 @@ export class LeavesService {
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
     ) {}
+
 
     async findAllAsync(
         childIncluded: boolean = false,
@@ -42,9 +45,63 @@ export class LeavesService {
                     : false,
             },
         });
-        return Result.ok(
-            leaves.map((l) => plainToInstance(LeaveRequestDto, l)),
-        );
+        return Result.ok(leaves.map((l) => this.mapToLeaveRequestDto(l)));
+    }
+
+    private mapToLeaveRequestDto(l: any): LeaveRequestDto {
+        return {
+            id: l.id,
+            employeeId: l.employeeId,
+            approvedBy: l.approvedBy,
+            startDate: l.startDate,
+            endDate: l.endDate,
+            leaveType: l.leaveType,
+            status: l.status,
+            requestDate: l.requestDate,
+            reason: l.reason,
+            employee: l.requester ? this.mapToEmployeeDto(l.requester) : null,
+            approver: l.approver ? this.mapToEmployeeDto(l.approver) : null,
+            performBy: l.performBy,
+            performer: l.performer ? this.mapToUserDto(l.performer) : null,
+            isActive: l.isActive,
+            createdAt: l.createdAt,
+            updatedAt: l.updatedAt,
+        } as any;
+    }
+
+    private mapToUserDto(u: any): any {
+        return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+        };
+    }
+
+    private mapToEmployeeDto(e: any): any {
+        return {
+            id: e.id,
+            employeeCode: e.employeeCode,
+            firstname: e.firstname,
+            lastname: e.lastname,
+            gender: e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
+            dateOfBirth: e.dob?.toISOString().split('T')[0],
+            userId: e.userId,
+            address: e.address,
+            phoneNumber: e.phone,
+            profileImage: e.profileImage,
+            hireDate: e.hireDate,
+            positionId: e.positionId,
+            departmentId: e.departmentId,
+            employmentType: e.employmentType,
+            status: e.status,
+            salary: e.salary ? new DecimalNumber(e.salary) : null,
+            isActive: e.isActive,
+            createdAt: e.createdAt,
+            updatedAt: e.updatedAt,
+        };
     }
 
     async findAllPaginatedAsync(
@@ -108,7 +165,7 @@ export class LeavesService {
             }),
         ]);
 
-        const dtos = leaves.map((l) => plainToInstance(LeaveRequestDto, l));
+        const dtos = leaves.map((l) => this.mapToLeaveRequestDto(l));
         return Result.ok(ResultPagination.of(dtos, total, page, limit));
     }
 
@@ -147,8 +204,9 @@ export class LeavesService {
                     : false,
             },
         });
-        if (!leave) return Result.fail('Leave request not found');
-        return Result.ok(plainToInstance(LeaveRequestDto, leave));
+        if (!leave)
+            return Result.fail('Leave request not found', ErrorCode.NOT_FOUND);
+        return Result.ok(this.mapToLeaveRequestDto(leave));
     }
 
     async createAsync(
@@ -188,6 +246,7 @@ export class LeavesService {
         if (overlaps) {
             return Result.fail(
                 'Leave request overlaps with an existing request.',
+                ErrorCode.LEAVE_REQUEST_OVERLAP,
             );
         }
 
@@ -217,8 +276,9 @@ export class LeavesService {
                         Number(balance.pendingDays);
 
                     if (available < requestedDays) {
-                        throw new Error(
+                        throw new BusinessError(
                             `Insufficient leave balance. Available: ${available}, Requested: ${requestedDays}`,
+                            ErrorCode.LEAVE_BALANCE_INSUFFICIENT,
                         );
                     }
 
@@ -266,8 +326,12 @@ export class LeavesService {
                 leave.id,
             );
 
-            return Result.ok(plainToInstance(LeaveRequestDto, leave));
+            return Result.ok(this.mapToLeaveRequestDto(leave));
         } catch (e) {
+            if (e instanceof BusinessError) {
+                const res = e.getResponse() as any;
+                return Result.fail(res.message, res.code);
+            }
             return Result.fail(
                 e instanceof Error
                     ? e.message
@@ -285,10 +349,12 @@ export class LeavesService {
             where: { id },
         });
 
-        if (!leave) return Result.fail('Leave request not found');
+        if (!leave)
+            return Result.fail('Leave request not found', ErrorCode.NOT_FOUND);
         if (leave.status !== (LeaveStatus.PENDING as any)) {
             return Result.fail(
                 `Cannot update status from ${leave.status}. Only PENDING requests can be processed.`,
+                ErrorCode.INVALID_LEAVE_STATUS,
             );
         }
 
@@ -351,7 +417,7 @@ export class LeavesService {
                 dto.status,
             );
 
-            return Result.ok(plainToInstance(LeaveRequestDto, updatedLeave));
+            return Result.ok(this.mapToLeaveRequestDto(updatedLeave));
         } catch (e) {
             return Result.fail(
                 e instanceof Error ? e.message : 'Transaction failed',
@@ -364,9 +430,13 @@ export class LeavesService {
             where: { id },
         });
 
-        if (!leave) return Result.fail('Leave request not found');
+        if (!leave)
+            return Result.fail('Leave request not found', ErrorCode.NOT_FOUND);
         if (leave.status !== (LeaveStatus.PENDING as any))
-            return Result.fail('Cannot delete processed leave request');
+            return Result.fail(
+                'Cannot delete processed leave request',
+                ErrorCode.INVALID_LEAVE_STATUS,
+            );
 
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
@@ -409,7 +479,10 @@ export class LeavesService {
         });
 
         if (!employee) {
-            return Result.fail('Employee record not found for user');
+            return Result.fail(
+                'Employee record not found for user',
+                ErrorCode.NOT_FOUND,
+            );
         }
 
         const balances = await this.prisma.client.leaveBalance.findMany({
@@ -463,7 +536,10 @@ export class LeavesService {
         });
 
         if (!employee) {
-            return Result.fail('Employee record not found for user');
+            return Result.fail(
+                'Employee record not found for user',
+                ErrorCode.NOT_FOUND,
+            );
         }
 
         const whereClause: Prisma.LeaveRequestWhereInput = {
@@ -561,7 +637,10 @@ export class LeavesService {
         });
 
         if (!employee) {
-            return Result.fail('Employee record not found for user');
+            return Result.fail(
+                'Employee record not found for user',
+                ErrorCode.NOT_FOUND,
+            );
         }
 
         const leaveRequest = await this.prisma.client.leaveRequest.findFirst({
@@ -577,9 +656,12 @@ export class LeavesService {
         });
 
         if (!leaveRequest) {
-            return Result.fail('Leave request not found or access denied');
+            return Result.fail(
+                'Leave request not found or access denied',
+                ErrorCode.NOT_FOUND,
+            );
         }
 
-        return Result.ok(plainToInstance(LeaveRequestDto, leaveRequest));
+        return Result.ok(this.mapToLeaveRequestDto(leaveRequest));
     }
 }

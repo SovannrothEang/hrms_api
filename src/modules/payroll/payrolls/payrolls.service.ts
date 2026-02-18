@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
-import { PayrollDto } from './dtos/payroll.dto';
+import { PayrollDto, TaxCalculationDto } from './dtos/payroll.dto';
+import { PayrollItemDto } from './dtos/payroll-item.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
 import {
     PayrollSummaryDto,
@@ -19,7 +20,6 @@ import {
     MePayslipYtdDto,
 } from './dtos/me-payslip-response.dto';
 import { Result } from '../../../common/logic/result';
-import { plainToInstance } from 'class-transformer';
 import { Decimal } from '@prisma/client/runtime/client';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from '../../../common/logic/result-pagination';
@@ -311,11 +311,64 @@ export class PayrollsService {
                 return Result.fail('Payroll not found');
             }
 
-            return Result.ok(plainToInstance(PayrollDto, payroll));
+            return Result.ok(this.mapToPayrollDto(payroll));
         } catch (error) {
             this.logger.error('Failed to fetch payroll', error);
             return Result.fail('Failed to fetch payroll');
         }
+    }
+
+    private mapToPayrollDto(p: any): PayrollDto {
+        return {
+            id: p.id,
+            employeeId: p.employeeId,
+            currencyCode: p.currencyCode,
+            baseCurrencyCode: p.baseCurrencyCode,
+            payPeriodStart: p.payPeriodStart,
+            payPeriodEnd: p.payPeriodEnd,
+            paymentDate: p.paymentDate,
+            basicSalary: new DecimalNumber(p.basicSalary),
+            overtimeHrs: new DecimalNumber(p.overtimeHrs),
+            overtimeRate: new DecimalNumber(p.overtimeRate),
+            bonus: new DecimalNumber(p.bonus),
+            deductions: new DecimalNumber(p.deductions),
+            netSalary: new DecimalNumber(p.netSalary),
+            status: p.status,
+            exchangeRate: p.exchangeRate ? new DecimalNumber(p.exchangeRate) : null,
+            baseCurrencyAmount: p.baseCurrencyAmount
+                ? new DecimalNumber(p.baseCurrencyAmount)
+                : null,
+            processedAt: p.processedAt,
+            items: p.items?.map((item: any) => this.mapToPayrollItemDto(item)),
+            taxCalculation: p.taxCalculation
+                ? this.mapToTaxCalculationDto(p.taxCalculation)
+                : undefined,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+        };
+    }
+
+    private mapToPayrollItemDto(item: any): PayrollItemDto {
+        return {
+            id: item.id,
+            payrollId: item.payrollId,
+            itemType: item.itemType,
+            itemName: item.itemName,
+            amount: new DecimalNumber(item.amount),
+            currencyCode: item.currencyCode,
+            description: item.description,
+        };
+    }
+
+    private mapToTaxCalculationDto(tc: any): TaxCalculationDto {
+        return {
+            id: tc.id,
+            grossIncome: new DecimalNumber(tc.grossIncome),
+            taxableIncome: new DecimalNumber(tc.taxableIncome),
+            taxAmount: new DecimalNumber(tc.taxAmount),
+            taxRateUsed: new DecimalNumber(tc.taxRateUsed),
+            taxBracketId: tc.taxBracketId,
+        };
     }
 
     /**
@@ -358,9 +411,7 @@ export class PayrollsService {
                 orderBy: { createdAt: 'desc' },
             });
 
-            return Result.ok(
-                payrolls.map((p) => plainToInstance(PayrollDto, p)),
-            );
+            return Result.ok(payrolls.map((p) => this.mapToPayrollDto(p)));
         } catch (error) {
             this.logger.error('Failed to fetch payrolls', error);
             return Result.fail('Failed to fetch payrolls');
@@ -426,7 +477,7 @@ export class PayrollsService {
                 this.prisma.client.payroll.count({ where }),
             ]);
 
-            const data = payrolls.map((p) => plainToInstance(PayrollDto, p));
+            const data = payrolls.map((p) => this.mapToPayrollDto(p));
 
             return Result.ok(ResultPagination.of(data, total, page, limit));
         } catch (error) {
@@ -902,7 +953,7 @@ export class PayrollsService {
                 return Result.fail('Payroll not found or access denied');
             }
 
-            return Result.ok(plainToInstance(PayrollDto, payroll));
+            return Result.ok(this.mapToPayrollDto(payroll));
         } catch (error) {
             this.logger.error('Failed to fetch personal payroll', error);
             return Result.fail('Failed to fetch payroll');

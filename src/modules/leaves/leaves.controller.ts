@@ -20,6 +20,7 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import { LeavesService } from './leaves.service';
+import { BusinessError } from '../../common/exceptions/business-error.exception';
 
 import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
@@ -31,9 +32,9 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Leaves')
 @Auth()
-@Controller(['takeleave', 'leave-requests'])
+@Controller('leave-requests')
 export class LeavesController {
-    constructor(private readonly leavesService: LeavesService) {}
+    constructor(private readonly leavesService: LeavesService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -57,7 +58,17 @@ export class LeavesController {
         @Query('childIncluded', new ParseBoolPipe({ optional: true }))
         childIncluded?: boolean,
     ) {
-        return await this.leavesService.findOneByIdAsync(id, childIncluded);
+        const result = await this.leavesService.findOneByIdAsync(
+            id,
+            childIncluded,
+        );
+        if (!result.isSuccess) {
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
+        }
+        return result.getData();
     }
 
     @Post()
@@ -71,7 +82,10 @@ export class LeavesController {
     ) {
         const result = await this.leavesService.createAsync(dto, performerId);
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
         return result.getData();
     }
@@ -92,7 +106,10 @@ export class LeavesController {
             performerId,
         );
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
         return result.getData();
     }
@@ -105,7 +122,10 @@ export class LeavesController {
     async delete(@Param('id') id: string) {
         const result = await this.leavesService.deleteAsync(id);
         if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
         }
     }
 }

@@ -3,6 +3,7 @@ import { LeavesService } from '../../../src/modules/leaves/leaves.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { EmailService } from '../../../src/modules/notifications/email.service';
 import { LeaveStatus } from '../../../src/common/enums/leave-status.enum';
+import { ErrorCode } from '../../../src/common/enums/error-codes.enum';
 
 const mockPrismaClient = {
     leaveBalance: {
@@ -207,6 +208,7 @@ describe('LeavesService', () => {
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toContain('overlaps');
+            expect(result.errorCode).toBe(ErrorCode.LEAVE_REQUEST_OVERLAP);
         });
 
         it('should fail when insufficient balance', async () => {
@@ -238,6 +240,7 @@ describe('LeavesService', () => {
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toContain('Insufficient leave balance');
+            expect(result.errorCode).toBe(ErrorCode.LEAVE_BALANCE_INSUFFICIENT);
         });
     });
 
@@ -270,6 +273,7 @@ describe('LeavesService', () => {
             const result = await service.findOneByIdAsync('non-existent');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
+            expect(result.errorCode).toBe(ErrorCode.NOT_FOUND);
         });
     });
 
@@ -348,6 +352,7 @@ describe('LeavesService', () => {
             );
             expect(result.isSuccess).toBe(false);
             expect(result.error).toContain('Only PENDING');
+            expect(result.errorCode).toBe(ErrorCode.INVALID_LEAVE_STATUS);
         });
 
         it('should fail when not found', async () => {
@@ -364,6 +369,7 @@ describe('LeavesService', () => {
             );
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
+            expect(result.errorCode).toBe(ErrorCode.NOT_FOUND);
         });
     });
 
@@ -400,6 +406,7 @@ describe('LeavesService', () => {
             const result = await service.deleteAsync('non-existent');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toBe('Leave request not found');
+            expect(result.errorCode).toBe(ErrorCode.NOT_FOUND);
         });
 
         it('should fail when leave is not pending', async () => {
@@ -412,6 +419,7 @@ describe('LeavesService', () => {
             const result = await service.deleteAsync('1');
             expect(result.isSuccess).toBe(false);
             expect(result.error).toContain('Cannot delete');
+            expect(result.errorCode).toBe(ErrorCode.INVALID_LEAVE_STATUS);
         });
     });
 });

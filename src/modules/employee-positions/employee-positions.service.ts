@@ -7,13 +7,13 @@ import {
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionDto } from './dtos/employee-position.dto';
-import { plainToInstance } from 'class-transformer';
 import { Result } from 'src/common/logic/result';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
 import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
 import { Prisma } from '@prisma/client';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
+import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class EmployeePositionsService {
@@ -38,9 +38,33 @@ export class EmployeePositionsService {
         });
         this._logger.log(`Positions: ${JSON.stringify(positions)}`);
 
-        return Result.ok(
-            positions.map((p) => plainToInstance(EmployeePositionDto, p)),
-        );
+        return Result.ok(positions.map((p) => this.mapToPositionDto(p)));
+    }
+
+    private mapToPositionDto(p: any): EmployeePositionDto {
+        return {
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            salaryRangeMin: p.salaryRangeMin ? new DecimalNumber(p.salaryRangeMin) : null,
+            salaryRangeMax: p.salaryRangeMax ? new DecimalNumber(p.salaryRangeMax) : null,
+            performBy: p.performBy,
+            performer: p.performer ? this.mapToUserDto(p.performer) : null,
+            isActive: p.isActive,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+        } as any;
+    }
+
+    private mapToUserDto(u: any): any {
+        return {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+        };
     }
 
     async findAllPaginatedAsync(
@@ -90,9 +114,7 @@ export class EmployeePositionsService {
             }),
         ]);
 
-        const dtos = positions.map((p) =>
-            plainToInstance(EmployeePositionDto, p),
-        );
+        const dtos = positions.map((p) => this.mapToPositionDto(p));
         return Result.ok(ResultPagination.of(dtos, total, page, limit));
     }
 
@@ -130,7 +152,7 @@ export class EmployeePositionsService {
         if (!position) {
             return Result.notFound(`No position was found with id: ${id}`);
         }
-        return Result.ok(plainToInstance(EmployeePositionDto, position));
+        return Result.ok(this.mapToPositionDto(position));
     }
 
     async createEmployeePosition(
@@ -155,7 +177,7 @@ export class EmployeePositionsService {
                     : undefined,
             },
         });
-        return Result.ok(plainToInstance(EmployeePositionDto, position));
+        return Result.ok(this.mapToPositionDto(position));
     }
 
     async updateEmployeePosition(

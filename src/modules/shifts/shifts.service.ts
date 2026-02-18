@@ -3,7 +3,6 @@ import { PrismaService } from 'src/common/services/prisma/prisma.service';
 import { Result } from 'src/common/logic/result';
 import { CreateShiftDto } from './dtos/create-shift.dto';
 import { ShiftDto } from './dtos/shift.dto';
-import { plainToInstance } from 'class-transformer';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
@@ -31,14 +30,28 @@ export class ShiftsService {
             },
         });
 
-        return Result.ok(plainToInstance(ShiftDto, shift));
+        return Result.ok(this.mapToShiftDto(shift));
+    }
+
+    private mapToShiftDto(s: any): ShiftDto {
+        return {
+            id: s.id,
+            name: s.name,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            gracePeriodMins: s.gracePeriodMins,
+            description: s.description,
+            isActive: s.isActive,
+            createdAt: s.createdAt,
+            updatedAt: s.updatedAt,
+        } as any;
     }
 
     async findAllAsync(): Promise<Result<ShiftDto[]>> {
         const shifts = await this.prisma.client.shift.findMany({
             where: { isDeleted: false },
         });
-        return Result.ok(shifts.map((s) => plainToInstance(ShiftDto, s)));
+        return Result.ok(shifts.map((s) => this.mapToShiftDto(s)));
     }
 
     async findAllPaginatedAsync(
@@ -57,7 +70,7 @@ export class ShiftsService {
             }),
         ]);
 
-        const dtos = shifts.map((s) => plainToInstance(ShiftDto, s));
+        const dtos = shifts.map((s) => this.mapToShiftDto(s));
         return ResultPagination.of(dtos, total, page, limit);
     }
 
@@ -66,7 +79,7 @@ export class ShiftsService {
             where: { id },
         });
         if (!shift || shift.isDeleted) return Result.fail('Shift not found');
-        return Result.ok(plainToInstance(ShiftDto, shift));
+        return Result.ok(this.mapToShiftDto(shift));
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {
