@@ -15,17 +15,19 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
             req.user = { sub: 'admin-id', roles: ['ADMIN'] };
             return true;
         }
-    }
+    },
 }));
 jest.mock('src/common/guards/roles.guard', () => ({
     RolesGuard: class {
-        canActivate() { return true; }
-    }
+        canActivate() {
+            return true;
+        }
+    },
 }));
 
 const mockService = {
     createEmployeePosition: jest.fn(),
-    findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     updateEmployeePosition: jest.fn(),
     deleteEmployeePositionAsync: jest.fn(),
@@ -50,20 +52,26 @@ describe('EmployeePositionsController (Feature)', () => {
         jest.clearAllMocks();
     });
 
-    it('/employees/positions (POST) should create position', () => {
-        const dto = { title: 'Developer', salaryRangeMin: 1000, salaryRangeMax: 2000 };
-        mockService.createEmployeePosition.mockResolvedValue(Result.ok({ id: '1', ...dto }));
+    it('/positions (POST) should create position', () => {
+        const dto = {
+            title: 'Developer',
+            salaryRangeMin: 1000,
+            salaryRangeMax: 2000,
+        };
+        mockService.createEmployeePosition.mockResolvedValue(
+            Result.ok({ id: '1', ...dto }),
+        );
 
         return request(app.getHttpServer())
-            .post('/employees/positions')
+            .post('/positions')
             .send(dto)
             .expect(201);
     });
 
-    it('/employees/positions (GET) should return list', () => {
-        mockService.findAllAsync.mockResolvedValue(Result.ok([]));
-        return request(app.getHttpServer())
-            .get('/employees/positions')
-            .expect(200);
+    it('/positions (GET) should return list', () => {
+        mockService.findAllFilteredAsync.mockResolvedValue(
+            Result.ok({ items: [], total: 0 }),
+        );
+        return request(app.getHttpServer()).get('/positions').expect(200);
     });
 });

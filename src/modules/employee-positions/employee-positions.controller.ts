@@ -33,7 +33,7 @@ import { Auth } from 'src/common/decorators/auth.decorator';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
-@Controller('employees/positions')
+@Controller('positions')
 @ApiTags('Employee Positions')
 @Auth(RoleName.ADMIN)
 export class EmployeePositionsController {
