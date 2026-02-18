@@ -6,6 +6,9 @@ import { LeaveStatus } from '../../../src/common/enums/leave-status.enum';
 import { ErrorCode } from '../../../src/common/enums/error-codes.enum';
 
 const mockPrismaClient = {
+    employee: {
+        findFirst: jest.fn(),
+    },
     leaveBalance: {
         findUnique: jest.fn(),
         create: jest.fn(),
@@ -291,6 +294,9 @@ describe('LeavesService', () => {
             (
                 prismaClient.leaveRequest.findUnique as jest.Mock
             ).mockResolvedValue(mockLeave);
+            (prismaClient.employee.findFirst as jest.Mock).mockResolvedValue({
+                id: 'emp-admin',
+            });
             (
                 prismaClient.leaveBalance.updateMany as jest.Mock
             ).mockResolvedValue({});
@@ -303,7 +309,6 @@ describe('LeavesService', () => {
                 '1',
                 {
                     status: LeaveStatus.APPROVED,
-                    approverId: 'admin',
                 },
                 'admin',
             );
@@ -315,6 +320,9 @@ describe('LeavesService', () => {
             (
                 prismaClient.leaveRequest.findUnique as jest.Mock
             ).mockResolvedValue(mockLeave);
+            (prismaClient.employee.findFirst as jest.Mock).mockResolvedValue({
+                id: 'emp-admin',
+            });
             (
                 prismaClient.leaveBalance.updateMany as jest.Mock
             ).mockResolvedValue({});
@@ -327,7 +335,6 @@ describe('LeavesService', () => {
                 '1',
                 {
                     status: LeaveStatus.REJECTED,
-                    approverId: 'admin',
                 },
                 'admin',
             );
@@ -346,7 +353,6 @@ describe('LeavesService', () => {
                 '1',
                 {
                     status: LeaveStatus.REJECTED,
-                    approverId: 'admin',
                 },
                 'admin',
             );
@@ -363,7 +369,6 @@ describe('LeavesService', () => {
                 'non-existent',
                 {
                     status: LeaveStatus.APPROVED,
-                    approverId: 'admin',
                 },
                 'admin',
             );

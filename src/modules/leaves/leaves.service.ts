@@ -358,6 +358,11 @@ export class LeavesService {
             );
         }
 
+        const approverEmployee = await this.prisma.client.employee.findFirst({
+            where: { userId: performerId },
+            select: { id: true },
+        });
+
         const startDate = new Date(leave.startDate);
         const endDate = new Date(leave.endDate);
         const year = startDate.getFullYear(); // Assuming simple single-year requests for MVP
@@ -399,7 +404,7 @@ export class LeavesService {
                         where: { id },
                         data: {
                             status: dto.status,
-                            approvedBy: dto.approverId,
+                            approvedBy: approverEmployee.id,
                             performBy: performerId,
                         },
                         include: {
