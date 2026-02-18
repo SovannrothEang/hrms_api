@@ -41,14 +41,14 @@ export class AttendancesController {
         private readonly qrManagerService: QrManagerService,
     ) {}
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Get('qr/in')
     @ApiOperation({ summary: 'Generate QR code for clock-in' })
     async generateQrIn() {
         return { token: await this.qrManagerService.generateToken('IN') };
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Get('qr/out')
     @ApiOperation({ summary: 'Generate QR code for clock-out' })
     async generateQrOut() {

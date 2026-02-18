@@ -38,7 +38,7 @@ export class UsersController {
     @ApiQuery({
         name: 'role',
         required: false,
-        enum: ['ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
+        enum: RoleName,
     })
     @ApiQuery({ name: 'isActive', required: false, type: Boolean })
     @ApiQuery({ name: 'createdAtFrom', required: false, type: String })
@@ -116,8 +116,12 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
-    async update(@Param('id') id: string, @Body() dto: UserUpdateDto) {
-        await this.usersService.updateAsync(id, dto);
+    async update(
+        @Param('id') id: string,
+        @Body() dto: UserUpdateDto,
+        @CurrentUser('sub') userId: string,
+    ) {
+        await this.usersService.updateAsync(id, dto, userId);
     }
 
     @Patch(':id')
@@ -129,8 +133,12 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
-    async patch(@Param('id') id: string, @Body() dto: UserUpdateDto) {
-        await this.usersService.updateAsync(id, dto);
+    async patch(
+        @Param('id') id: string,
+        @Body() dto: UserUpdateDto,
+        @CurrentUser('sub') userId: string,
+    ) {
+        await this.usersService.updateAsync(id, dto, userId);
     }
 
     @Delete(':id')

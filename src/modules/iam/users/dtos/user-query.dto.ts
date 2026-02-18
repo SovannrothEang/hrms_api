@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
     IsOptional,
     IsString,
@@ -10,6 +10,7 @@ import {
     IsIn,
     IsDateString,
 } from 'class-validator';
+import { RoleName } from 'src/common/enums/roles.enum';
 
 export class UserQueryDto {
     @ApiPropertyOptional({ description: 'Page number (1-based)', example: 1 })
@@ -37,11 +38,14 @@ export class UserQueryDto {
 
     @ApiPropertyOptional({
         description: 'Filter by role name',
-        enum: ['ADMIN', 'HR_MANAGER', 'EMPLOYEE'],
+        enum: RoleName,
     })
     @IsOptional()
     @IsString()
-    @IsIn(['ADMIN', 'HR_MANAGER', 'EMPLOYEE'])
+    @Transform(({ value }) =>
+        typeof value === 'string' ? value.toUpperCase() : value,
+    )
+    @IsIn(Object.values(RoleName))
     role?: string;
 
     @ApiPropertyOptional({

@@ -41,7 +41,7 @@ import { ResultPagination } from '../../../common/logic/result-pagination';
 export class PayrollsController {
     constructor(private readonly service: PayrollsService) {}
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Post('process')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create a draft payroll with calculated values' })
@@ -63,7 +63,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Get('summary')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get payroll summary with totals and breakdowns' })
@@ -103,7 +103,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Post('generate')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({
@@ -127,7 +127,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
@@ -141,7 +141,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get payroll by ID with items and tax details' })
@@ -159,7 +159,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Patch(':id/finalize')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
@@ -188,7 +188,7 @@ export class PayrollsController {
         return result.getData();
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a pending payroll' })

@@ -20,7 +20,7 @@ import { ShiftDto } from './dtos/shift.dto';
 
 @ApiTags('Shifts')
 @Controller('shifts')
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
 export class ShiftsController {
     constructor(private readonly shiftsService: ShiftsService) {}
 

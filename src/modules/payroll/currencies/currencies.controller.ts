@@ -23,7 +23,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @ApiTags('Payroll - Currencies')
 @Controller('currencies')
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
 export class CurrenciesController {
     constructor(private readonly service: CurrenciesService) {}
 

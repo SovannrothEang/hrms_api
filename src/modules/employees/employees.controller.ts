@@ -92,7 +92,7 @@ export class EmployeesController {
 
     @Post()
     @HttpCode(HttpStatus.CREATED)
-    @Auth(RoleName.ADMIN, RoleName.HR)
+    @Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
     @ApiOperation({ summary: 'Create new employee (Admin/HR only)' })
     @ApiResponse({ status: HttpStatus.CREATED })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad Request' })
@@ -112,7 +112,7 @@ export class EmployeesController {
 
     @Patch(':id')
     @HttpCode(HttpStatus.OK)
-    @Auth(RoleName.ADMIN, RoleName.HR)
+    @Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
     @ApiParam({ name: 'id', required: true, description: 'Employee ID' })
     @ApiOperation({ summary: 'Update employee details' })
     @ApiResponse({ status: HttpStatus.OK })
@@ -150,7 +150,7 @@ export class EmployeesController {
 
     @Post(':id/image')
     @HttpCode(HttpStatus.OK)
-    @Auth(RoleName.ADMIN, RoleName.HR)
+    @Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
     @UseInterceptors(FileInterceptor('file'))
     @ApiConsumes('multipart/form-data')
     @ApiBody({
@@ -183,7 +183,7 @@ export class EmployeesController {
 
     @Delete(':id/image')
     @HttpCode(HttpStatus.NO_CONTENT)
-    @Auth(RoleName.ADMIN, RoleName.HR)
+    @Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
     @ApiOperation({ summary: 'Remove employee profile image' })
     @ApiResponse({
         status: HttpStatus.NO_CONTENT,

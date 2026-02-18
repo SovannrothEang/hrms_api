@@ -111,7 +111,12 @@ export class UsersService {
             where.userRoles = {
                 some: {
                     role: {
-                        name: role,
+                        name: {
+                            equals: role,
+                            mode: 'insensitive',
+                        },
+                        isDeleted: false,
+                        isActive: true,
                     },
                 },
             };
@@ -234,12 +239,21 @@ export class UsersService {
             dto.username,
             dto.email,
         );
-        const role = await this.prisma.client.role.findFirst({
-            where: { name: roleName.toUpperCase(), isActive: true },
+        const normalizedRoleName = roleName.toUpperCase();
+        let role = await this.prisma.client.role.findFirst({
+            where: { name: normalizedRoleName, isActive: true },
         });
         if (!role) {
-            this.logger.warn(`Role not found: {roleName}`, roleName);
-            return Result.fail(`Role '${roleName}' does not exist!`);
+            this.logger.warn(
+                'Role not found: {roleName}. Creating it.',
+                roleName,
+            );
+            role = await this.prisma.client.role.create({
+                data: {
+                    name: normalizedRoleName,
+                    performBy: performBy,
+                },
+            });
         }
 
         const existingUser = await this.isExistAsync(dto.username, dto.email);
@@ -268,10 +282,14 @@ export class UsersService {
         return Result.ok(this.mapToUserDto(user));
     }
 
-    async updateAsync(id: string, dto: UserUpdateDto): Promise<void> {
+    async updateAsync(
+        id: string,
+        dto: UserUpdateDto,
+        performBy?: string,
+    ): Promise<void> {
         this.logger.log('Update user with id: {id}.', id);
         const user = await this.prisma.client.user.findFirst({
-            where: { id },
+            where: { id, isDeleted: false },
             select: { id: true },
         });
         if (!user) {
@@ -279,25 +297,70 @@ export class UsersService {
             throw new NotFoundException('User not found!');
         }
 
-        // Exclude current user from duplicate check (self-update scenario)
-        const existingUser = await this.isExistAsync(
-            dto.username,
-            dto.email,
-            id,
-        );
-        if (existingUser) {
-            this.logger.warn(
-                'Username or email already taken by another user!',
+        if (dto.username || dto.email) {
+            const existingUser = await this.isExistAsync(
+                dto.username,
+                dto.email,
+                id,
             );
-            throw new BadRequestException('Username or Email already exists!');
+            if (existingUser) {
+                this.logger.warn(
+                    'Username or email already taken by another user!',
+                );
+                throw new BadRequestException(
+                    'Username or Email already exists!',
+                );
+            }
         }
 
-        await this.prisma.client.user.update({
-            where: { id, isDeleted: false },
-            data: {
-                email: dto.email,
-                username: dto.username,
-            },
+        await this.prisma.client.$transaction(async (tx) => {
+            const userData: Prisma.UserUpdateInput = {};
+            if (dto.username !== undefined) {
+                userData.username = dto.username;
+            }
+            if (dto.email !== undefined) {
+                userData.email = dto.email;
+            }
+
+            if (Object.keys(userData).length > 0) {
+                await tx.user.update({
+                    where: { id, isDeleted: false },
+                    data: userData,
+                });
+            }
+
+            if (dto.roles !== undefined) {
+                const roleNames = dto.roles.map((r) => r.toUpperCase());
+                const roles = await tx.role.findMany({
+                    where: {
+                        name: { in: roleNames },
+                        isActive: true,
+                        isDeleted: false,
+                    },
+                });
+
+                if (roles.length !== roleNames.length) {
+                    const foundNames = roles.map((r) => r.name);
+                    const missing = roleNames.filter(
+                        (n) => !foundNames.includes(n),
+                    );
+                    throw new BadRequestException(
+                        `Roles not found: ${missing.join(', ')}`,
+                    );
+                }
+
+                await tx.userRole.deleteMany({
+                    where: { userId: id },
+                });
+
+                await tx.userRole.createMany({
+                    data: roles.map((role) => ({
+                        userId: id,
+                        roleId: role.id,
+                        performBy: performBy,
+                    })),
+                });
+            }
         });
     }
 

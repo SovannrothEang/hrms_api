@@ -5,7 +5,7 @@ export const toDecimal = ({ value }: TransformFnParams) => {
     if (value === null || value === undefined || value === '') return null;
 
     try {
-        return new DecimalNumber(value as any);
+        return new DecimalNumber(value);
     } catch {
         return null;
     }

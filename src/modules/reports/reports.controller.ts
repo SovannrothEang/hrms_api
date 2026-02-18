@@ -25,7 +25,7 @@ import { LeaveReportQueryDto } from './dtos/leave-report.dto';
 
 @Controller('reports')
 @ApiTags('Reports')
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService) {}
 

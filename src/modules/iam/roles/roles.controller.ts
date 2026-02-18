@@ -9,6 +9,7 @@ import {
     NotFoundException,
     Param,
     ParseBoolPipe,
+    Patch,
     Post,
     Put,
     Query,
@@ -92,7 +93,7 @@ export class RolesController {
         return result.getData();
     }
 
-    @Put(':id')
+    @Patch(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Update a role' })
     @ApiParam({ name: 'id', required: true, description: 'Role ID' })

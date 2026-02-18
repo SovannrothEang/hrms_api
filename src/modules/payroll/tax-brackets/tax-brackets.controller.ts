@@ -24,7 +24,7 @@ import { TaxBracketDto } from './dtos/tax-bracket.dto';
 
 @ApiTags('Payroll - Tax Brackets')
 @Controller('tax-brackets')
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
 export class TaxBracketsController {
     constructor(private readonly service: TaxBracketsService) {}
 

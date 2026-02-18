@@ -404,7 +404,7 @@ export class LeavesService {
                         where: { id },
                         data: {
                             status: dto.status,
-                            approvedBy: approverEmployee.id,
+                            approvedBy: approverEmployee?.id,
                             performBy: performerId,
                         },
                         include: {

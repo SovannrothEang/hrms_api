@@ -1,7 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+    IsArray,
+    IsEmail,
+    IsEnum,
+    IsOptional,
+    IsString,
+    MaxLength,
+    MinLength,
+} from 'class-validator';
+import { RoleName } from 'src/common/enums/roles.enum';
 
 export class UserUpdateDto {
+    @IsOptional()
     @IsString()
     @MinLength(3)
     @MaxLength(50)
@@ -15,6 +25,7 @@ export class UserUpdateDto {
     })
     username?: string;
 
+    @IsOptional()
     @IsEmail()
     @MaxLength(100)
     @ApiProperty({
@@ -25,4 +36,16 @@ export class UserUpdateDto {
         maxLength: 100,
     })
     email?: string;
+
+    @IsOptional()
+    @IsArray()
+    @IsEnum(RoleName, { each: true })
+    @ApiProperty({
+        example: [RoleName.ADMIN],
+        description: 'Roles to assign to the user',
+        required: false,
+        isArray: true,
+        enum: RoleName,
+    })
+    roles?: RoleName[];
 }

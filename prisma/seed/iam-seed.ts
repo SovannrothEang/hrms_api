@@ -6,7 +6,7 @@ export async function seedIam(prisma: PrismaClient) {
     console.log('--- Seeding IAM (Roles & Admin) ---');
 
     // 1. Roles
-    const roles = [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.HR];
+    const roles = [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.HR_MANAGER];
     const roleIds: Record<string, string> = {};
 
     for (const roleName of roles) {

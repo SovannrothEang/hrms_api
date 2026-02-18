@@ -22,7 +22,7 @@ import { PublicHolidayDto } from './dtos/public-holiday.dto';
 
 @ApiTags('Public Holidays')
 @Controller('public-holidays')
-@Auth(RoleName.ADMIN, RoleName.HR)
+@Auth(RoleName.ADMIN, RoleName.HR_MANAGER)
 export class PublicHolidaysController {
     constructor(private readonly service: PublicHolidaysService) {}
 
