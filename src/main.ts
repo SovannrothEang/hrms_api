@@ -9,11 +9,15 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { PrismaExceptionFilter } from './filters/prisma-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { SECURITY_HEADERS } from './common/security/constants/security.constants';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 const APP_URL = process.env.NEXT_APP_URL || ('http://localhost:3000' as string);
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+        bufferLogs: true,
+    });
 
     app.useLogger(app.get(PinoLogger));
     app.use(cookieParser());

@@ -1,0 +1,312 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reporting API Specification",
+  "description": "JSON Schemas for the HR Management System Reporting Module",
+  "definitions": {
+    "attendanceReport": {
+      "type": "object",
+      "required": [
+        "totalDays",
+        "presentDays",
+        "absentDays",
+        "lateDays",
+        "leaveDays",
+        "attendanceRate",
+        "averageWorkHours",
+        "totalOvertimeHours"
+      ],
+      "properties": {
+        "totalDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "presentDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "absentDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lateDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "leaveDays": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attendanceRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "averageWorkHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "totalOvertimeHours": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "employeeReport": {
+      "type": "object",
+      "required": [
+        "totalEmployees",
+        "activeEmployees",
+        "onLeaveEmployees",
+        "newHires",
+        "terminatedEmployees",
+        "departmentBreakdown",
+        "positionBreakdown"
+      ],
+      "properties": {
+        "totalEmployees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeEmployees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "onLeaveEmployees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "newHires": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "terminatedEmployees": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "departmentBreakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "department",
+              "count"
+            ],
+            "properties": {
+              "department": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "positionBreakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "position",
+              "count"
+            ],
+            "properties": {
+              "position": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "payrollReport": {
+      "type": "object",
+      "required": [
+        "totalPayroll",
+        "averageSalary",
+        "totalDeductions",
+        "totalAllowances",
+        "departmentPayroll",
+        "payrollTrend"
+      ],
+      "properties": {
+        "totalPayroll": {
+          "type": "number",
+          "minimum": 0
+        },
+        "averageSalary": {
+          "type": "number",
+          "minimum": 0
+        },
+        "totalDeductions": {
+          "type": "number",
+          "minimum": 0
+        },
+        "totalAllowances": {
+          "type": "number",
+          "minimum": 0
+        },
+        "departmentPayroll": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "department",
+              "total"
+            ],
+            "properties": {
+              "department": {
+                "type": "string"
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "payrollTrend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "period",
+              "amount"
+            ],
+            "properties": {
+              "period": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "leaveReport": {
+      "type": "object",
+      "required": [
+        "totalRequests",
+        "approvedRequests",
+        "rejectedRequests",
+        "pendingRequests",
+        "averageLeaveDays",
+        "leaveTypeBreakdown",
+        "monthlyTrend"
+      ],
+      "properties": {
+        "totalRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "approvedRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejectedRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pendingRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "averageLeaveDays": {
+          "type": "number",
+          "minimum": 0
+        },
+        "leaveTypeBreakdown": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "count"
+            ],
+            "properties": {
+              "type": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "monthlyTrend": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "month",
+              "count"
+            ],
+            "properties": {
+              "month": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "comprehensiveReport": {
+      "type": "object",
+      "required": [
+        "attendance",
+        "employee",
+        "payroll",
+        "leave",
+        "generatedAt"
+      ],
+      "properties": {
+        "attendance": {
+          "$ref": "#/definitions/attendanceReport"
+        },
+        "employee": {
+          "$ref": "#/definitions/employeeReport"
+        },
+        "payroll": {
+          "$ref": "#/definitions/payrollReport"
+        },
+        "leave": {
+          "$ref": "#/definitions/leaveReport"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "attendance": {
+      "$ref": "#/definitions/attendanceReport"
+    },
+    "employee": {
+      "$ref": "#/definitions/employeeReport"
+    },
+    "payroll": {
+      "$ref": "#/definitions/payrollReport"
+    },
+    "leave": {
+      "$ref": "#/definitions/leaveReport"
+    },
+    "comprehensive": {
+      "$ref": "#/definitions/comprehensiveReport"
+    }
+  }
+}
