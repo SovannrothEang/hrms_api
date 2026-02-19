@@ -31,10 +31,10 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 import { DepartmentDto } from './dtos/department.dto';
 
 @Controller('departments')
-@Auth(RoleName.ADMIN)
+@Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
 @ApiTags('Departments')
 export class DepartmentsController {
-    constructor(private readonly departmentsService: DepartmentsService) {}
+    constructor(private readonly departmentsService: DepartmentsService) { }
 
     @Get()
     @HttpCode(HttpStatus.OK)
