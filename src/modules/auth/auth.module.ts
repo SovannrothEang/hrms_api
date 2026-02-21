@@ -8,12 +8,14 @@ import { UserContextService } from './user-context.service';
 import { UsersService } from '../iam/users/users.service';
 import { AttendancesModule } from '../attendances/attendances.module';
 import { EmployeesModule } from '../employees/employees.module';
+import { FileStorageModule } from 'src/common/services/file-storage/file-storage.module';
 
 @Module({
     imports: [
         PassportModule,
         forwardRef(() => AttendancesModule),
         EmployeesModule,
+        FileStorageModule,
         JwtModule.register({
             secret: process.env.JWT_SECRET || 'superSecretKey',
             signOptions: {
@@ -28,4 +30,4 @@ import { EmployeesModule } from '../employees/employees.module';
     controllers: [AuthController],
     exports: [AuthService, UserContextService, JwtModule],
 })
-export class AuthModule {}
+export class AuthModule { }

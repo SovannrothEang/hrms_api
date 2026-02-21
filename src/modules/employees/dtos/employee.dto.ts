@@ -72,9 +72,6 @@ export class EmployeeDto {
     @Expose({ name: 'phone' })
     phoneNumber: string;
 
-    @Expose({ name: 'profileImage' })
-    profileImage: string | null;
-
     @Expose({ name: 'hireDate' })
     hireDate: Date;
 

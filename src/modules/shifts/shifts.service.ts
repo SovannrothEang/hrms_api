@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { Result } from 'src/common/logic/result';
 import { CreateShiftDto } from './dtos/create-shift.dto';
 import { ShiftDto } from './dtos/shift.dto';
@@ -30,28 +31,14 @@ export class ShiftsService {
             },
         });
 
-        return Result.ok(this.mapToShiftDto(shift));
-    }
-
-    private mapToShiftDto(s: any): ShiftDto {
-        return {
-            id: s.id,
-            name: s.name,
-            startTime: s.startTime,
-            endTime: s.endTime,
-            gracePeriodMins: s.gracePeriodMins,
-            description: s.description,
-            isActive: s.isActive,
-            createdAt: s.createdAt,
-            updatedAt: s.updatedAt,
-        } as any;
+        return Result.ok(CommonMapper.mapToShiftDto(shift)!);
     }
 
     async findAllAsync(): Promise<Result<ShiftDto[]>> {
         const shifts = await this.prisma.client.shift.findMany({
             where: { isDeleted: false },
         });
-        return Result.ok(shifts.map((s) => this.mapToShiftDto(s)));
+        return Result.ok(shifts.map((s) => CommonMapper.mapToShiftDto(s)!));
     }
 
     async findAllPaginatedAsync(
@@ -70,7 +57,7 @@ export class ShiftsService {
             }),
         ]);
 
-        const dtos = shifts.map((s) => this.mapToShiftDto(s));
+        const dtos = shifts.map((s) => CommonMapper.mapToShiftDto(s)!);
         return ResultPagination.of(dtos, total, page, limit);
     }
 
@@ -79,7 +66,7 @@ export class ShiftsService {
             where: { id },
         });
         if (!shift || shift.isDeleted) return Result.fail('Shift not found');
-        return Result.ok(this.mapToShiftDto(shift));
+        return Result.ok(CommonMapper.mapToShiftDto(shift)!);
     }
 
     async deleteAsync(id: string, performBy: string): Promise<Result<void>> {

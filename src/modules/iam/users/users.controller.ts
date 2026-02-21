@@ -12,9 +12,12 @@ import {
     Post,
     Put,
     Query,
+    UploadedFile,
+    UseInterceptors,
+    Res,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
@@ -23,6 +26,9 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UserUpdateDto } from './dtos/user-update.dto';
 import { UserQueryDto } from './dtos/user-query.dto';
 import { ResultPagination } from 'src/common/logic/result-pagination';
+import { FileInterceptor } from '@nestjs/platform-express';
+import express from 'express';
+import { join } from 'path';
 
 @Controller('users')
 @Auth(RoleName.ADMIN)
@@ -152,5 +158,71 @@ export class UsersController {
     })
     async delete(@Param('id') id: string) {
         await this.usersService.deleteAsync(id);
+    }
+
+    @Get(':id/image')
+    @Auth()
+    @ApiOperation({ summary: 'Get user profile image file' })
+    @ApiParam({ name: 'id', required: true, description: 'User ID' })
+    async getImage(@Param('id') id: string, @Res() res: express.Response) {
+        const result = await this.usersService.findOneByIdAsync(id);
+        if (!result.isSuccess) throw new NotFoundException(result.error);
+
+        const user = result.getData();
+        if (!user.profileImage) {
+            throw new NotFoundException('Profile image not found');
+        }
+
+        const filePath = join(
+            process.cwd(),
+            'public',
+            user.profileImage,
+        );
+        return res.sendFile(filePath);
+    }
+
+    @Post(':id/image')
+    @HttpCode(HttpStatus.OK)
+    @UseInterceptors(FileInterceptor('file'))
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+        },
+    })
+    @ApiOperation({ summary: 'Upload user profile image' })
+    @ApiResponse({ status: HttpStatus.OK, description: 'Image uploaded' })
+    async uploadImage(
+        @Param('id') id: string,
+        @UploadedFile() file: Express.Multer.File,
+        @CurrentUser('sub') performerId: string,
+    ) {
+        const result = await this.usersService.uploadImageAsync(
+            id,
+            file,
+            performerId,
+        );
+        if (!result.isSuccess) throw new BadRequestException(result.error);
+        return { imagePath: result.getData() };
+    }
+
+    @Delete(':id/image')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete user image by id' })
+    @ApiParam({ name: 'id', required: true, description: 'User ID' })
+    @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'User image deleted' })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'User not found',
+    })
+    async deleteImage(@Param('id') id: string, @CurrentUser('sub') performerId: string) {
+        const result = await this.usersService.removeImageAsync(id, performerId);
+        if (!result.isSuccess) throw new BadRequestException(result.error);
     }
 }

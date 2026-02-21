@@ -10,16 +10,13 @@ import { Prisma } from '@prisma/client';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
 import { DecimalNumber } from 'src/config/decimal-number';
-import { FileStorageService } from '../../common/services/file-storage/file-storage.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 
 @Injectable()
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(
-        private prisma: PrismaService,
-        private fileStorage: FileStorageService,
-    ) {}
+    constructor(private prisma: PrismaService) {}
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -108,77 +105,12 @@ export class EmployeesService {
                 },
             );
 
-            return Result.ok(this.mapToEmployeeDto(employee));
+            return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
         } catch (e) {
             return Result.fail(
                 e instanceof Error ? e.message : 'Transaction failed',
             );
         }
-    }
-
-    private mapToEmployeeDto(e: any): EmployeeDto {
-        return {
-            id: e.id,
-            employeeCode: e.employeeCode,
-            firstname: e.firstname,
-            lastname: e.lastname,
-            gender:
-                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
-            dateOfBirth: e.dob?.toISOString().split('T')[0],
-            userId: e.userId,
-            user: e.user ? this.mapToUserDto(e.user) : null,
-            address: e.address,
-            phoneNumber: e.phone,
-            profileImage: e.profileImage,
-            hireDate: e.hireDate,
-            positionId: e.positionId,
-            position: e.position ? this.mapToPositionDto(e.position) : null,
-            departmentId: e.departmentId,
-            department: e.department
-                ? this.mapToDepartmentDto(e.department)
-                : null,
-            employmentType: e.employmentType,
-            status: e.status,
-            salary: e.salary ? new DecimalNumber(e.salary) : null,
-            emergencyContact: e.emergencyContact,
-            bankDetails: e.bankDetails,
-            isActive: e.isActive,
-            createdAt: e.createdAt,
-            updatedAt: e.updatedAt,
-        } as any;
-    }
-
-    private mapToUserDto(u: any): any {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        };
-    }
-
-    private mapToPositionDto(p: any): any {
-        return {
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            salaryRangeMin: p.salaryRangeMin
-                ? new DecimalNumber(p.salaryRangeMin)
-                : null,
-            salaryRangeMax: p.salaryRangeMax
-                ? new DecimalNumber(p.salaryRangeMax)
-                : null,
-        };
-    }
-
-    private mapToDepartmentDto(d: any): any {
-        return {
-            id: d.id,
-            departmentName: d.departmentName,
-            description: d.description,
-        };
     }
 
     async findAllAsync(
@@ -205,7 +137,9 @@ export class EmployeesService {
             },
             orderBy: { employeeCode: 'asc' },
         });
-        return Result.ok(employees.map((e) => this.mapToEmployeeDto(e)));
+        return Result.ok(
+            employees.map((e) => CommonMapper.mapToEmployeeDto(e)!),
+        );
     }
 
     async findAllPaginatedAsync(
@@ -356,7 +290,9 @@ export class EmployeesService {
                 }),
             ]);
 
-            const data = employees.map((e) => this.mapToEmployeeDto(e));
+            const data = employees.map(
+                (e) => CommonMapper.mapToEmployeeDto(e)!,
+            );
 
             return ResultPagination.of(data, total, page, limit);
         } catch (error) {
@@ -404,7 +340,7 @@ export class EmployeesService {
             },
         });
         if (!employee) return Result.fail('Employee not found');
-        return Result.ok(this.mapToEmployeeDto(employee));
+        return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
     }
 
     async updateAsync(
@@ -414,7 +350,11 @@ export class EmployeesService {
     ): Promise<Result<EmployeeDto>> {
         const employee = await this.prisma.client.employee.findFirst({
             where: { id },
-            select: { id: true, profileImage: true },
+            select: {
+                id: true,
+                userId: true,
+                user: { select: { profileImage: true } },
+            },
         });
         if (!employee) return Result.fail('Employee not found');
 
@@ -423,20 +363,13 @@ export class EmployeesService {
             status,
             emergencyContact,
             bankDetails,
-            profileImage,
             ...rest
         } = dto;
-
-        // Handle image cleanup if profileImage is explicitly set to null
-        if (profileImage === null && employee.profileImage) {
-            await this.fileStorage.deleteFileAsync(employee.profileImage);
-        }
 
         const updated = await this.prisma.client.employee.update({
             where: { id },
             data: {
                 ...rest,
-                profileImage,
                 ...(employmentType && {
                     employmentType:
                         employmentType as Prisma.EmployeeUpdateInput['employmentType'],
@@ -455,10 +388,11 @@ export class EmployeesService {
             include: {
                 department: true,
                 position: true,
+                user: true,
             },
         });
 
-        return Result.ok(this.mapToEmployeeDto(updated));
+        return Result.ok(CommonMapper.mapToEmployeeDto(updated)!);
     }
 
     async deleteAsync(id: string, performerId: string): Promise<Result<void>> {
@@ -480,69 +414,6 @@ export class EmployeesService {
             },
         });
         // Ideally we should also soft-delete the linked User, but that depends on requirements.
-        return Result.ok();
-    }
-
-    async uploadImageAsync(
-        id: string,
-        file: Express.Multer.File,
-        performerId: string,
-    ): Promise<Result<string>> {
-        const employee = await this.prisma.client.employee.findUnique({
-            where: { id },
-            select: { id: true, profileImage: true },
-        });
-
-        if (!employee) return Result.fail('Employee not found');
-
-        // 1. Save new file
-        const imagePath = await this.fileStorage.saveFileAsync(
-            'employees',
-            id,
-            file,
-        );
-
-        // 2. Update database
-        await this.prisma.client.employee.update({
-            where: { id },
-            data: {
-                profileImage: imagePath,
-                performBy: performerId,
-            },
-        });
-
-        // 3. Clean up old file if exists
-        if (employee.profileImage) {
-            await this.fileStorage.deleteFileAsync(employee.profileImage);
-        }
-
-        return Result.ok(imagePath);
-    }
-
-    async removeImageAsync(
-        id: string,
-        performerId: string,
-    ): Promise<Result<void>> {
-        const employee = await this.prisma.client.employee.findUnique({
-            where: { id },
-            select: { id: true, profileImage: true },
-        });
-
-        if (!employee) return Result.fail('Employee not found');
-        if (!employee.profileImage) return Result.ok();
-
-        // 1. Update database
-        await this.prisma.client.employee.update({
-            where: { id },
-            data: {
-                profileImage: null,
-                performBy: performerId,
-            },
-        });
-
-        // 2. Clean up file
-        await this.fileStorage.deleteFileAsync(employee.profileImage);
-
         return Result.ok();
     }
 }

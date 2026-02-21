@@ -19,6 +19,8 @@ const mockPrismaClient = {
     $transaction: jest.fn((callback) => callback(mockPrismaClient)),
 };
 
+import { FileStorageService } from '../../../src/common/services/file-storage/file-storage.service';
+
 const mockPrismaService = {
     client: mockPrismaClient,
 };
@@ -32,6 +34,13 @@ describe('EmployeesService', () => {
             providers: [
                 EmployeesService,
                 { provide: PrismaService, useValue: mockPrismaService },
+                {
+                    provide: FileStorageService,
+                    useValue: {
+                        saveFileAsync: jest.fn(),
+                        deleteFileAsync: jest.fn(),
+                    },
+                },
             ],
         }).compile();
 

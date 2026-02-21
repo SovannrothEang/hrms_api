@@ -13,6 +13,9 @@ export class UserDto {
     @Expose({ name: 'email' })
     email: string;
 
+    @Expose({ name: 'profileImage' })
+    profileImage: string | null;
+
     @Expose()
     @Transform(
         ({

@@ -8,6 +8,7 @@ import { RoleDto } from './dtos/roles.dto';
 import { Result } from 'src/common/logic/result';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
@@ -36,30 +37,7 @@ export class RolesService {
                     : false,
             },
         });
-        return Result.ok(roles.map((e) => this.mapToRoleDto(e)));
-    }
-
-    private mapToRoleDto(r: any): RoleDto {
-        return {
-            id: r.id,
-            name: r.name,
-            isActive: r.isActive,
-            performBy: r.performBy,
-            performer: r.performer ? this.mapToUserDto(r.performer) : null,
-            createdAt: r.createdAt,
-            updatedAt: r.updatedAt,
-        } as any;
-    }
-
-    private mapToUserDto(u: any): any {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        };
+        return Result.ok(roles.map((e) => CommonMapper.mapToRoleDto(e)!));
     }
 
     async findAllPaginatedAsync(
@@ -95,7 +73,7 @@ export class RolesService {
             }),
         ]);
 
-        const dtos = roles.map((e) => this.mapToRoleDto(e));
+        const dtos = roles.map((e) => CommonMapper.mapToRoleDto(e)!);
         return ResultPagination.of(dtos, total, page, limit);
     }
 
@@ -124,7 +102,7 @@ export class RolesService {
             this.logger.warn('Role not found!');
             return Result.notFound(`No role was found with id: ${id}`);
         }
-        return Result.ok(this.mapToRoleDto(role));
+        return Result.ok(CommonMapper.mapToRoleDto(role)!);
     }
 
     async isExistAsync(roleName: string, excludeId?: string): Promise<boolean> {
@@ -164,7 +142,7 @@ export class RolesService {
                 },
             },
         });
-        return Result.ok(this.mapToRoleDto(role));
+        return Result.ok(CommonMapper.mapToRoleDto(role)!);
     }
 
     async updateAsync(id: string, roleName: string, userId: string) {

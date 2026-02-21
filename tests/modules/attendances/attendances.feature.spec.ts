@@ -6,6 +6,7 @@ import { AttendancesController } from '../../../src/modules/attendances/attendan
 import { AttendancesService } from '../../../src/modules/attendances/attendances.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { QrManagerService } from '../../../src/modules/attendances/services/qr-manager.service';
 
 // Mock Guards
 jest.mock('src/common/guards/jwt-auth.guard', () => ({
@@ -29,6 +30,7 @@ const mockService = {
     checkIn: jest.fn(),
     checkOut: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findAllPaginatedAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
 };
@@ -39,7 +41,10 @@ describe('AttendancesController (Feature)', () => {
     beforeEach(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             controllers: [AttendancesController],
-            providers: [{ provide: AttendancesService, useValue: mockService }],
+            providers: [
+                { provide: AttendancesService, useValue: mockService },
+                { provide: QrManagerService, useValue: {} },
+            ],
         }).compile();
 
         app = moduleFixture.createNestApplication();
@@ -71,7 +76,7 @@ describe('AttendancesController (Feature)', () => {
     });
 
     it('/attendances (GET) should list', () => {
-        mockService.findAllPaginatedAsync.mockResolvedValue(
+        mockService.findAllFilteredAsync.mockResolvedValue(
             Result.ok({ data: [], totalPages: 0, totalCount: 0, page: 1 }),
         );
         return request(app.getHttpServer()).get('/attendances').expect(200);

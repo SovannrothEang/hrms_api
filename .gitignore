@@ -8,7 +8,7 @@ docs/
 /node_modules
 /build
 
-public/images/employees/
+public/images/
 
 # Logs
 logs

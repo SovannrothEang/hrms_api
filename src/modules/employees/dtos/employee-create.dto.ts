@@ -88,11 +88,6 @@ export class EmployeeCreateDto {
     @MaxLength(20)
     phone?: string;
 
-    @ApiProperty({ example: 'https://example.com/image.jpg', required: false })
-    @IsOptional()
-    @IsString()
-    profileImage?: string | null;
-
     @ApiProperty({ example: '2023-01-01' })
     @IsNotEmpty()
     @IsDateString()

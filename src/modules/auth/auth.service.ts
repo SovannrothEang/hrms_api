@@ -594,9 +594,18 @@ export class AuthService {
             return Result.fail('User does not have an employee profile');
         }
 
+        const { profileImage, ...employeeDto } = dto;
+
+        if (profileImage !== undefined) {
+            await this.prisma.client.user.update({
+                where: { id: userId },
+                data: { profileImage },
+            });
+        }
+
         const employeeUpdateResult = await this.employeesService.updateAsync(
             user.employee.id,
-            dto as any,
+            employeeDto as any,
             userId,
         );
 

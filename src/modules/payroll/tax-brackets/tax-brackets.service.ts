@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';
@@ -33,25 +34,11 @@ export class TaxBracketsService {
                 },
             });
 
-            return Result.ok(this.mapToTaxBracketDto(newValue));
+            return Result.ok(CommonMapper.mapToTaxBracketDto(newValue)!);
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to create tax bracket');
         }
-    }
-
-    private mapToTaxBracketDto(tb: any): TaxBracketDto {
-        return {
-            id: tb.id,
-            currencyCode: tb.currencyCode,
-            countryCode: tb.countryCode,
-            taxYear: tb.taxYear,
-            bracketName: tb.bracketName,
-            minAmount: new DecimalNumber(tb.minAmount),
-            maxAmount: new DecimalNumber(tb.maxAmount),
-            taxRate: new DecimalNumber(tb.taxRate),
-            fixedAmount: new DecimalNumber(tb.fixedAmount),
-        };
     }
 
     async findAllAsync(
@@ -69,7 +56,9 @@ export class TaxBracketsService {
                 where: whereClause,
                 orderBy: { minAmount: 'asc' },
             });
-            return Result.ok(values.map((v) => this.mapToTaxBracketDto(v)));
+            return Result.ok(
+                values.map((v) => CommonMapper.mapToTaxBracketDto(v)!),
+            );
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch tax brackets');
@@ -123,7 +112,7 @@ export class TaxBracketsService {
                 }),
             ]);
 
-            const dtos = values.map((v) => this.mapToTaxBracketDto(v));
+            const dtos = values.map((v) => CommonMapper.mapToTaxBracketDto(v)!);
             return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);

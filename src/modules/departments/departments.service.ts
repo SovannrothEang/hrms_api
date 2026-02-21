@@ -8,6 +8,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 import { DepartmentQueryDto } from './dtos/department-query.dto';
 import { Prisma } from '@prisma/client';
 import { DecimalNumber } from 'src/config/decimal-number';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 
 @Injectable()
 export class DepartmentsService {
@@ -33,58 +34,9 @@ export class DepartmentsService {
             },
             orderBy: { departmentName: 'asc' },
         });
-        return Result.ok(departments.map((d) => this.mapToDepartmentDto(d)));
-    }
-
-    private mapToDepartmentDto(d: any): DepartmentDto {
-        return {
-            id: d.id,
-            departmentName: d.departmentName,
-            description: d.description,
-            employees: d.employees?.map((e: any) => this.mapToEmployeeDto(e)),
-            employeeCount: d._count?.employees ?? 0,
-            performBy: d.performBy,
-            performer: d.performer ? this.mapToUserDto(d.performer) : null,
-            isActive: d.isActive,
-            createdAt: d.createdAt,
-            updatedAt: d.updatedAt,
-        } as any;
-    }
-
-    private mapToEmployeeDto(e: any): any {
-        return {
-            id: e.id,
-            employeeCode: e.employeeCode,
-            firstname: e.firstname,
-            lastname: e.lastname,
-            gender:
-                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
-            dateOfBirth: e.dob?.toISOString().split('T')[0],
-            userId: e.userId,
-            address: e.address,
-            phoneNumber: e.phone,
-            profileImage: e.profileImage,
-            hireDate: e.hireDate,
-            positionId: e.positionId,
-            departmentId: e.departmentId,
-            employmentType: e.employmentType,
-            status: e.status,
-            salary: e.salary ? new DecimalNumber(e.salary) : null,
-            isActive: e.isActive,
-            createdAt: e.createdAt,
-            updatedAt: e.updatedAt,
-        };
-    }
-
-    private mapToUserDto(u: any): any {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        };
+        return Result.ok(
+            departments.map((d) => CommonMapper.mapToDepartmentDto(d)!),
+        );
     }
 
     async findAllPaginatedAsync(
@@ -131,7 +83,12 @@ export class DepartmentsService {
         const include = {
             _count: { select: { employees: true } },
             employees: includeEmployees
-                ? { include: { position: true } }
+                ? {
+                      include: {
+                          position: true,
+                          user: { select: { profileImage: true } },
+                      },
+                  }
                 : false,
             performer: includeEmployees
                 ? {
@@ -168,8 +125,8 @@ export class DepartmentsService {
                 });
             }
 
-            const data = filteredDepartments.map((d) =>
-                this.mapToDepartmentDto(d),
+            const data = filteredDepartments.map(
+                (d) => CommonMapper.mapToDepartmentDto(d)!,
             );
 
             return ResultPagination.of(data, total, page, limit);
@@ -204,7 +161,14 @@ export class DepartmentsService {
             where: { id },
             include: {
                 _count: { select: { employees: true } },
-                employees: childIncluded,
+                employees: childIncluded
+                    ? {
+                          include: {
+                              position: true,
+                              user: { select: { profileImage: true } },
+                          },
+                      }
+                    : false,
                 performer: childIncluded
                     ? {
                           include: {
@@ -217,7 +181,7 @@ export class DepartmentsService {
         if (!department) {
             return Result.fail(`Department not found with id: ${id}`);
         }
-        return Result.ok(this.mapToDepartmentDto(department));
+        return Result.ok(CommonMapper.mapToDepartmentDto(department)!);
     }
 
     async createAsync(
@@ -239,7 +203,7 @@ export class DepartmentsService {
             },
             select: DepartmentDtoField,
         });
-        return Result.ok(this.mapToDepartmentDto(department));
+        return Result.ok(CommonMapper.mapToDepartmentDto(department)!);
     }
 
     async updateAsync(

@@ -28,6 +28,7 @@ jest.mock('src/common/guards/roles.guard', () => ({
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findAllPaginatedAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     updateAsync: jest.fn(),
@@ -75,7 +76,7 @@ describe('EmployeesController (Feature)', () => {
     });
 
     it('/employees (GET) should return list', () => {
-        mockService.findAllPaginatedAsync.mockResolvedValue(
+        mockService.findAllFilteredAsync.mockResolvedValue(
             Result.ok({ data: [], totalPages: 0, totalCount: 0, page: 1 }),
         );
         return request(app.getHttpServer()).get('/employees').expect(200);

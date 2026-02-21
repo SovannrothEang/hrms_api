@@ -26,11 +26,6 @@ export class EmployeeUpdateDto {
 
     @ApiProperty({ required: false })
     @IsOptional()
-    @IsString()
-    profileImage?: string | null;
-
-    @ApiProperty({ required: false })
-    @IsOptional()
     gender?: number;
 
     @ApiProperty({ required: false })

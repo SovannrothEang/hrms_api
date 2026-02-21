@@ -5,6 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionDto } from './dtos/employee-position.dto';
 import { Result } from 'src/common/logic/result';
@@ -39,38 +40,9 @@ export class EmployeePositionsService {
         });
         this._logger.log(`Positions: ${JSON.stringify(positions)}`);
 
-        return Result.ok(positions.map((p) => this.mapToPositionDto(p)));
-    }
-
-    private mapToPositionDto(p: any): EmployeePositionDto {
-        return {
-            id: p.id,
-            title: p.title,
-            description: p.description,
-            salaryRangeMin: p.salaryRangeMin
-                ? new DecimalNumber(p.salaryRangeMin)
-                : null,
-            salaryRangeMax: p.salaryRangeMax
-                ? new DecimalNumber(p.salaryRangeMax)
-                : null,
-            performBy: p.performBy,
-            performer: p.performer ? this.mapToUserDto(p.performer) : null,
-            employeeCount: p._count?.employees ?? 0,
-            isActive: p.isActive,
-            createdAt: p.createdAt,
-            updatedAt: p.updatedAt,
-        } as any;
-    }
-
-    private mapToUserDto(u: any): any {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        };
+        return Result.ok(
+            positions.map((p) => CommonMapper.mapToPositionDto(p)!),
+        );
     }
 
     async findAllPaginatedAsync(
@@ -121,7 +93,7 @@ export class EmployeePositionsService {
             }),
         ]);
 
-        const dtos = positions.map((p) => this.mapToPositionDto(p));
+        const dtos = positions.map((p) => CommonMapper.mapToPositionDto(p)!);
         return Result.ok(ResultPagination.of(dtos, total, page, limit));
     }
 
@@ -160,7 +132,7 @@ export class EmployeePositionsService {
         if (!position) {
             return Result.notFound(`No position was found with id: ${id}`);
         }
-        return Result.ok(this.mapToPositionDto(position));
+        return Result.ok(CommonMapper.mapToPositionDto(position)!);
     }
 
     async createEmployeePosition(
@@ -185,7 +157,7 @@ export class EmployeePositionsService {
                     : undefined,
             },
         });
-        return Result.ok(this.mapToPositionDto(position));
+        return Result.ok(CommonMapper.mapToPositionDto(position)!);
     }
 
     async updateEmployeePosition(

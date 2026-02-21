@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { CreateCurrencyDto } from './dtos/create-currency.dto';
 import { CurrencyDto } from './dtos/currency.dto';
 import { CurrencyQueryDto } from './dtos/currency-query.dto';
@@ -39,7 +40,9 @@ export class CurrenciesService {
                                 performBy: userId,
                             },
                         });
-                    return Result.ok(this.mapToCurrencyDto(reactivated));
+                    return Result.ok(
+                        CommonMapper.mapToCurrencyDto(reactivated)!,
+                    );
                 }
                 return Result.fail('Currency code already exists');
             }
@@ -51,22 +54,11 @@ export class CurrenciesService {
                 },
             });
 
-            return Result.ok(this.mapToCurrencyDto(newValue));
+            return Result.ok(CommonMapper.mapToCurrencyDto(newValue)!);
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to create currency');
         }
-    }
-
-    private mapToCurrencyDto(c: any): CurrencyDto {
-        return {
-            id: c.id,
-            code: c.code,
-            name: c.name,
-            symbol: c.symbol,
-            country: c.country,
-            isActive: c.isActive,
-        };
     }
 
     async findAllAsync(): Promise<Result<CurrencyDto[]>> {
@@ -74,7 +66,9 @@ export class CurrenciesService {
             const values = await this.prisma.client.currency.findMany({
                 where: { isDeleted: false },
             });
-            return Result.ok(values.map((v) => this.mapToCurrencyDto(v)));
+            return Result.ok(
+                values.map((v) => CommonMapper.mapToCurrencyDto(v)!),
+            );
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch currencies');
@@ -118,7 +112,7 @@ export class CurrenciesService {
                 }),
             ]);
 
-            const dtos = values.map((v) => this.mapToCurrencyDto(v));
+            const dtos = values.map((v) => CommonMapper.mapToCurrencyDto(v)!);
             return Result.ok(ResultPagination.of(dtos, total, page, limit));
         } catch (error) {
             this.logger.error(error);
@@ -152,7 +146,7 @@ export class CurrenciesService {
                 where: { id, isDeleted: false },
             });
             if (!value) return Result.fail('Currency not found');
-            return Result.ok(this.mapToCurrencyDto(value));
+            return Result.ok(CommonMapper.mapToCurrencyDto(value)!);
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch currency');

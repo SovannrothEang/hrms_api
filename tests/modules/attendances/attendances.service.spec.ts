@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AttendancesService } from '../../../src/modules/attendances/attendances.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { AttendanceStatus } from '../../../src/common/enums/attendance-status.enum';
+import { QrManagerService } from '../../../src/modules/attendances/services/qr-manager.service';
 
 const mockPrismaClient = {
     attendance: {
@@ -28,6 +29,12 @@ describe('AttendancesService', () => {
             providers: [
                 AttendancesService,
                 { provide: PrismaService, useValue: mockPrismaService },
+                {
+                    provide: QrManagerService,
+                    useValue: {
+                        verifyToken: jest.fn().mockResolvedValue(true),
+                    },
+                },
             ],
         }).compile();
 

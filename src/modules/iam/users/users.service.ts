@@ -5,6 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { UserDto } from './dtos/user.dto';
 import UserCreateDto from './dtos/user-create.dto';
@@ -13,6 +14,7 @@ import { UserUpdateDto } from './dtos/user-update.dto';
 import { UserQueryDto } from './dtos/user-query.dto';
 import { Result } from 'src/common/logic/result';
 import { RoleName } from 'src/common/enums/roles.enum';
+import { FileStorageService } from 'src/common/services/file-storage/file-storage.service';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
@@ -20,7 +22,10 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly fileStorage: FileStorageService,
+    ) {}
 
     async findAllAsync(): Promise<Result<UserDto[]>> {
         this.logger.log('Getting all users');
@@ -34,44 +39,7 @@ export class UsersService {
                 },
             },
         });
-        return Result.ok(users.map((u) => this.mapToUserDto(u)));
-    }
-
-    private mapToUserDto(u: any): UserDto {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            employees: u.employee ? this.mapToEmployeeDto(u.employee) : null,
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        } as any;
-    }
-
-    private mapToEmployeeDto(e: any): any {
-        return {
-            id: e.id,
-            employeeCode: e.employeeCode,
-            firstname: e.firstname,
-            lastname: e.lastname,
-            gender:
-                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
-            dateOfBirth: e.dob?.toISOString().split('T')[0],
-            userId: e.userId,
-            address: e.address,
-            phoneNumber: e.phone,
-            profileImage: e.profileImage,
-            hireDate: e.hireDate,
-            positionId: e.positionId,
-            departmentId: e.departmentId,
-            employmentType: e.employmentType,
-            status: e.status,
-            salary: e.salary, // UserDto might not need DecimalNumber if it's just passing through
-            isActive: e.isActive,
-            createdAt: e.createdAt,
-            updatedAt: e.updatedAt,
-        };
+        return Result.ok(users.map((u) => CommonMapper.mapToUserDto(u)!));
     }
 
     async findAllPaginatedAsync(
@@ -164,7 +132,7 @@ export class UsersService {
             }),
         ]);
 
-        const dtos = users.map((u) => this.mapToUserDto(u));
+        const dtos = users.map((u) => CommonMapper.mapToUserDto(u)!);
         return ResultPagination.of(dtos, total, page, limit);
     }
 
@@ -198,7 +166,7 @@ export class UsersService {
             return Result.fail('User not found!');
         }
 
-        return Result.ok(this.mapToUserDto(user));
+        return Result.ok(CommonMapper.mapToUserDto(user)!);
     }
 
     async isExistAsync(
@@ -279,7 +247,7 @@ export class UsersService {
                 userRoles: { include: { role: true } },
             },
         });
-        return Result.ok(this.mapToUserDto(user));
+        return Result.ok(CommonMapper.mapToUserDto(user)!);
     }
 
     async updateAsync(
@@ -380,5 +348,67 @@ export class UsersService {
                 deletedAt: new Date(),
             },
         });
+    }
+
+    async uploadImageAsync(
+        userId: string,
+        file: Express.Multer.File,
+        performerId: string,
+    ): Promise<Result<string>> {
+        const user = await this.prisma.client.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                profileImage: true,
+            },
+        });
+
+        if (!user) return Result.fail('User not found');
+
+        const imagePath = await this.fileStorage.saveFileAsync(
+            'users',
+            userId,
+            file,
+        );
+
+        await this.prisma.client.user.update({
+            where: { id: userId },
+            data: {
+                profileImage: imagePath,
+            },
+        });
+
+        if (user.profileImage) {
+            await this.fileStorage.deleteFileAsync(user.profileImage);
+        }
+
+        return Result.ok(imagePath);
+    }
+
+    async removeImageAsync(
+        userId: string,
+        performerId: string,
+    ): Promise<Result<void>> {
+        const user = await this.prisma.client.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                profileImage: true,
+            },
+        });
+
+        if (!user) return Result.fail('User not found');
+        if (!user.profileImage) return Result.ok();
+
+        await this.prisma.client.user.update({
+            where: { id: userId },
+            data: {
+                profileImage: null,
+            },
+        });
+
+        await this.fileStorage.deleteFileAsync(user.profileImage);
+
+        return Result.ok();
     }
 }

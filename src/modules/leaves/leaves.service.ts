@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
+import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { Result } from 'src/common/logic/result';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
@@ -31,8 +32,15 @@ export class LeavesService {
     ): Promise<Result<LeaveRequestDto[]>> {
         const leaves = await this.prisma.client.leaveRequest.findMany({
             include: {
-                requester: { include: { department: true } },
-                approver: childIncluded ? true : false,
+                requester: {
+                    include: {
+                        department: true,
+                        user: { select: { profileImage: true } },
+                    },
+                },
+                approver: childIncluded
+                    ? { include: { user: { select: { profileImage: true } } } }
+                    : false,
                 performer: childIncluded
                     ? {
                           include: {
@@ -44,64 +52,9 @@ export class LeavesService {
                     : false,
             },
         });
-        return Result.ok(leaves.map((l) => this.mapToLeaveRequestDto(l)));
-    }
-
-    private mapToLeaveRequestDto(l: any): LeaveRequestDto {
-        return {
-            id: l.id,
-            employeeId: l.employeeId,
-            approvedBy: l.approvedBy,
-            startDate: l.startDate,
-            endDate: l.endDate,
-            leaveType: l.leaveType,
-            status: l.status,
-            requestDate: l.requestDate,
-            reason: l.reason,
-            employee: l.requester ? this.mapToEmployeeDto(l.requester) : null,
-            approver: l.approver ? this.mapToEmployeeDto(l.approver) : null,
-            performBy: l.performBy,
-            performer: l.performer ? this.mapToUserDto(l.performer) : null,
-            isActive: l.isActive,
-            createdAt: l.createdAt,
-            updatedAt: l.updatedAt,
-        } as any;
-    }
-
-    private mapToUserDto(u: any): any {
-        return {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.userRoles?.map((ur: any) => ur.role.name) || [],
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-        };
-    }
-
-    private mapToEmployeeDto(e: any): any {
-        return {
-            id: e.id,
-            employeeCode: e.employeeCode,
-            firstname: e.firstname,
-            lastname: e.lastname,
-            gender:
-                e.gender === 0 ? 'male' : e.gender === 1 ? 'female' : 'unknown',
-            dateOfBirth: e.dob?.toISOString().split('T')[0],
-            userId: e.userId,
-            address: e.address,
-            phoneNumber: e.phone,
-            profileImage: e.profileImage,
-            hireDate: e.hireDate,
-            positionId: e.positionId,
-            departmentId: e.departmentId,
-            employmentType: e.employmentType,
-            status: e.status,
-            salary: e.salary ? new DecimalNumber(e.salary) : null,
-            isActive: e.isActive,
-            createdAt: e.createdAt,
-            updatedAt: e.updatedAt,
-        };
+        return Result.ok(
+            leaves.map((l) => CommonMapper.mapToLeaveRequestDto(l)!),
+        );
     }
 
     async findAllPaginatedAsync(
@@ -150,8 +103,19 @@ export class LeavesService {
                 take: limit,
                 orderBy,
                 include: {
-                    requester: { include: { department: true } },
-                    approver: childIncluded ? true : false,
+                    requester: {
+                        include: {
+                            department: true,
+                            user: { select: { profileImage: true } },
+                        },
+                    },
+                    approver: childIncluded
+                        ? {
+                              include: {
+                                  user: { select: { profileImage: true } },
+                              },
+                          }
+                        : false,
                     performer: childIncluded
                         ? {
                               include: {
@@ -165,7 +129,7 @@ export class LeavesService {
             }),
         ]);
 
-        const dtos = leaves.map((l) => this.mapToLeaveRequestDto(l));
+        const dtos = leaves.map((l) => CommonMapper.mapToLeaveRequestDto(l)!);
         return Result.ok(ResultPagination.of(dtos, total, page, limit));
     }
 
@@ -191,8 +155,15 @@ export class LeavesService {
         const leave = await this.prisma.client.leaveRequest.findFirst({
             where: { id },
             include: {
-                requester: { include: { department: true } },
-                approver: childIncluded ? true : false,
+                requester: {
+                    include: {
+                        department: true,
+                        user: { select: { profileImage: true } },
+                    },
+                },
+                approver: childIncluded
+                    ? { include: { user: { select: { profileImage: true } } } }
+                    : false,
                 performer: childIncluded
                     ? {
                           include: {
@@ -206,7 +177,7 @@ export class LeavesService {
         });
         if (!leave)
             return Result.fail('Leave request not found', ErrorCode.NOT_FOUND);
-        return Result.ok(this.mapToLeaveRequestDto(leave));
+        return Result.ok(CommonMapper.mapToLeaveRequestDto(leave)!);
     }
 
     async createAsync(
@@ -314,7 +285,14 @@ export class LeavesService {
                         status: LeaveStatus.PENDING,
                         performBy: performerId,
                     },
-                    include: { requester: { include: { department: true } } },
+                    include: {
+                        requester: {
+                            include: {
+                                department: true,
+                                user: { select: { profileImage: true } },
+                            },
+                        },
+                    },
                 });
             });
 
@@ -326,7 +304,7 @@ export class LeavesService {
                 leave.id,
             );
 
-            return Result.ok(this.mapToLeaveRequestDto(leave));
+            return Result.ok(CommonMapper.mapToLeaveRequestDto(leave)!);
         } catch (e) {
             if (e instanceof BusinessError) {
                 const res = e.getResponse() as any;
@@ -408,8 +386,17 @@ export class LeavesService {
                             performBy: performerId,
                         },
                         include: {
-                            requester: { include: { department: true } },
-                            approver: true,
+                            requester: {
+                                include: {
+                                    department: true,
+                                    user: { select: { profileImage: true } },
+                                },
+                            },
+                            approver: {
+                                include: {
+                                    user: { select: { profileImage: true } },
+                                },
+                            },
                         },
                     });
                 },
@@ -422,7 +409,7 @@ export class LeavesService {
                 dto.status,
             );
 
-            return Result.ok(this.mapToLeaveRequestDto(updatedLeave));
+            return Result.ok(CommonMapper.mapToLeaveRequestDto(updatedLeave)!);
         } catch (e) {
             return Result.fail(
                 e instanceof Error ? e.message : 'Transaction failed',
@@ -655,8 +642,15 @@ export class LeavesService {
                 isDeleted: false,
             },
             include: {
-                requester: { include: { department: true } },
-                approver: true,
+                requester: {
+                    include: {
+                        department: true,
+                        user: { select: { profileImage: true } },
+                    },
+                },
+                approver: {
+                    include: { user: { select: { profileImage: true } } },
+                },
             },
         });
 
@@ -667,6 +661,6 @@ export class LeavesService {
             );
         }
 
-        return Result.ok(this.mapToLeaveRequestDto(leaveRequest));
+        return Result.ok(CommonMapper.mapToLeaveRequestDto(leaveRequest)!);
     }
 }
