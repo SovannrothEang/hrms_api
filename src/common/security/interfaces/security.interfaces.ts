@@ -66,6 +66,8 @@ export interface AuthTokens {
 export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
+    csrfToken: string;
+    sessionId: string;
     user: {
         id: string;
         email: string;

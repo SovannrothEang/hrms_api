@@ -45,7 +45,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
-    ) {}
+    ) { }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
@@ -83,6 +83,8 @@ export class AuthController {
         return {
             accessToken: data.tokens.accessToken,
             refreshToken: data.tokens.refreshToken,
+            csrfToken: data.tokens.csrfToken,
+            sessionId: data.tokens.sessionId,
             user: data.user,
             expiresAt: data.tokens.expiresAt,
         };
@@ -184,6 +186,8 @@ export class AuthController {
         return {
             accessToken: data.tokens.accessToken,
             refreshToken: refreshToken,
+            csrfToken: data.tokens.csrfToken,
+            sessionId: data.tokens.sessionId,
             user: data.user,
             expiresAt: data.tokens.expiresAt,
         };
