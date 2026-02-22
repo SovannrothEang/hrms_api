@@ -8,6 +8,7 @@ import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
 import { LeaveQueryDto } from './dtos/leave-query.dto';
 import { LeaveStatus } from 'src/common/enums/leave-status.enum';
+import { LeaveType } from 'src/common/enums/leave-type.enum';
 import { ResultPagination } from '../../common/logic/result-pagination';
 import { MeLeaveBalanceResponseDto } from './dtos/me-leave-balance-response.dto';
 import {
@@ -260,21 +261,23 @@ export class LeavesService {
                             pendingDays: { increment: requestedDays },
                         },
                     });
-                } else {
-                    // For MVP/Transition: If no balance record exists, we might want to fail OR allow (creating a negative/tracking record).
-                    // Let's create a 0-based record which will effectively act as "unpaid" or tracked but not strictly limited if we didn't seed balances.
-                    // But strictly speaking, we should fail or auto-create. Let's auto-create with 0 total for now to track usage.
+                } else if (dto.leaveType === LeaveType.UNPAID_LEAVE) {
+                    // UNPAID_LEAVE: Allow without allocation, create tracking record
                     balance = await tx.leaveBalance.create({
                         data: {
                             employeeId: dto.employeeId,
                             leaveType: dto.leaveType,
                             year: year,
-                            totalDays: 0, // Or some default
+                            totalDays: 0,
                             pendingDays: requestedDays,
                         },
                     });
-                    // Optional: If we want to enforcing strict 0 limit -> verify negative?
-                    // For now, let's assume if it didn't exist, we track it.
+                } else {
+                    // Other leave types require balance allocation
+                    throw new BusinessError(
+                        `No leave balance allocated for ${dto.leaveType} in year ${year}. Please contact HR.`,
+                        ErrorCode.LEAVE_BALANCE_NOT_ALLOCATED,
+                    );
                 }
 
                 return await tx.leaveRequest.create({

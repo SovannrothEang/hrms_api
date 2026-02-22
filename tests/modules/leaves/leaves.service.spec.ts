@@ -3,6 +3,7 @@ import { LeavesService } from '../../../src/modules/leaves/leaves.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { EmailService } from '../../../src/modules/notifications/email.service';
 import { LeaveStatus } from '../../../src/common/enums/leave-status.enum';
+import { LeaveType } from '../../../src/common/enums/leave-type.enum';
 import { ErrorCode } from '../../../src/common/enums/error-codes.enum';
 
 const mockPrismaClient = {
@@ -110,8 +111,7 @@ describe('LeavesService', () => {
             expect(prismaClient.leaveBalance.update).toHaveBeenCalled(); // Should increment pending
         });
 
-        it('should create leave request with auto check balance (no balance record)', async () => {
-            // Use future dates to pass validation
+        it('should create UNPAID_LEAVE request without balance record', async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const dayAfter = new Date();
@@ -119,21 +119,18 @@ describe('LeavesService', () => {
 
             const dto = {
                 employeeId: 'emp-1',
-                leaveType: 'ANNUAL',
+                leaveType: LeaveType.UNPAID_LEAVE,
                 startDate: tomorrow.toISOString().split('T')[0],
                 endDate: dayAfter.toISOString().split('T')[0],
-                reason: 'Vacation',
+                reason: 'Personal',
             };
 
-            // Mock no overlap
             (
                 prismaClient.leaveRequest.findFirst as jest.Mock
             ).mockResolvedValue(null);
-            // Mock no balance
             (
                 prismaClient.leaveBalance.findUnique as jest.Mock
             ).mockResolvedValue(null);
-            // Mock create request return
             const created = {
                 id: '1',
                 ...dto,
@@ -148,6 +145,34 @@ describe('LeavesService', () => {
             const result = await service.createAsync(dto as any, 'admin-id');
             expect(result.isSuccess).toBe(true);
             expect(prismaClient.leaveBalance.create).toHaveBeenCalled();
+        });
+
+        it('should fail when no balance record exists for non-UNPAID leave', async () => {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dayAfter = new Date();
+            dayAfter.setDate(dayAfter.getDate() + 2);
+
+            const dto = {
+                employeeId: 'emp-1',
+                leaveType: LeaveType.ANNUAL_LEAVE,
+                startDate: tomorrow.toISOString().split('T')[0],
+                endDate: dayAfter.toISOString().split('T')[0],
+                reason: 'Vacation',
+            };
+
+            (
+                prismaClient.leaveRequest.findFirst as jest.Mock
+            ).mockResolvedValue(null);
+            (
+                prismaClient.leaveBalance.findUnique as jest.Mock
+            ).mockResolvedValue(null);
+
+            const result = await service.createAsync(dto as any, 'admin-id');
+            expect(result.isSuccess).toBe(false);
+            expect(result.errorCode).toBe(
+                ErrorCode.LEAVE_BALANCE_NOT_ALLOCATED,
+            );
         });
 
         it('should fail when end date is before start date', async () => {

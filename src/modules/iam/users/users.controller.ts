@@ -17,7 +17,14 @@ import {
     Res,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import {
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiResponse,
+} from '@nestjs/swagger';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import { RoleName } from 'src/common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
@@ -33,7 +40,7 @@ import { join } from 'path';
 @Controller('users')
 @Auth(RoleName.ADMIN)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(private readonly usersService: UsersService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -173,11 +180,7 @@ export class UsersController {
             throw new NotFoundException('Profile image not found');
         }
 
-        const filePath = join(
-            process.cwd(),
-            'public',
-            user.profileImage,
-        );
+        const filePath = join(process.cwd(), 'public', user.profileImage);
         return res.sendFile(filePath);
     }
 
@@ -216,13 +219,22 @@ export class UsersController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete user image by id' })
     @ApiParam({ name: 'id', required: true, description: 'User ID' })
-    @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'User image deleted' })
+    @ApiResponse({
+        status: HttpStatus.NO_CONTENT,
+        description: 'User image deleted',
+    })
     @ApiResponse({
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
-    async deleteImage(@Param('id') id: string, @CurrentUser('sub') performerId: string) {
-        const result = await this.usersService.removeImageAsync(id, performerId);
+    async deleteImage(
+        @Param('id') id: string,
+        @CurrentUser('sub') performerId: string,
+    ) {
+        const result = await this.usersService.removeImageAsync(
+            id,
+            performerId,
+        );
         if (!result.isSuccess) throw new BadRequestException(result.error);
     }
 }

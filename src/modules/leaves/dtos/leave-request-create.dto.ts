@@ -1,11 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
     IsDateString,
+    IsEnum,
     IsNotEmpty,
     IsOptional,
     IsString,
     MaxLength,
 } from 'class-validator';
+import { LeaveType } from 'src/common/enums/leave-type.enum';
 
 export class LeaveRequestCreateDto {
     @IsString()
@@ -24,11 +26,15 @@ export class LeaveRequestCreateDto {
     @ApiProperty({ name: 'endDate', required: true, example: '2023-10-05' })
     endDate: Date;
 
-    @IsString()
+    @IsEnum(LeaveType)
     @IsNotEmpty()
-    @MaxLength(50)
-    @ApiProperty({ name: 'leaveType', required: true, example: 'ANNUAL' })
-    leaveType: string;
+    @ApiProperty({
+        name: 'leaveType',
+        required: true,
+        enum: LeaveType,
+        example: LeaveType.ANNUAL_LEAVE,
+    })
+    leaveType: LeaveType;
 
     @IsString()
     @IsOptional()

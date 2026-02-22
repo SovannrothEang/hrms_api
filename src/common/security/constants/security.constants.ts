@@ -26,7 +26,7 @@ export const SECURITY_CONFIG = {
         lockoutDurationMs: 15 * 60 * 1000, // 15 minutes
     },
     jwt: {
-        accessTokenExpiry: 60 * 60, // 1 hour in seconds
+        accessTokenExpiry: 60 * 5, // 5 minutes in seconds
         refreshTokenExpiry: 7 * 24 * 60 * 60, // 7 days in seconds
     },
 };

@@ -8,4 +8,4 @@ import { EmployeesController } from './employees.controller';
     exports: [EmployeesService],
     controllers: [EmployeesController],
 })
-export class EmployeesModule { }
+export class EmployeesModule {}

@@ -47,7 +47,7 @@ export class AuthService {
         @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
         private readonly employeesService: EmployeesService,
-    ) {}
+    ) { }
 
     async signInAsync(
         email: string,
@@ -308,7 +308,7 @@ export class AuthService {
 
     async refreshToken(
         refreshToken: string,
-    ): Promise<Result<{ token: string }>> {
+    ): Promise<Result<{ accessToken: string }>> {
         this.logger.log('Refreshing token');
 
         try {
@@ -341,7 +341,7 @@ export class AuthService {
             };
 
             return Result.ok({
-                token: await this.jwtService.signAsync(payloads),
+                accessToken: await this.jwtService.signAsync(payloads),
             });
         } catch {
             this.logger.warn('Invalid refresh token');
