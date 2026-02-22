@@ -47,7 +47,7 @@ export class AuthService {
         @Inject(forwardRef(() => AttendancesService))
         private readonly attendanceService: AttendancesService,
         private readonly employeesService: EmployeesService,
-    ) { }
+    ) {}
 
     async signInAsync(
         email: string,
@@ -605,6 +605,7 @@ export class AuthService {
 
         const employeeUpdateResult = await this.employeesService.updateAsync(
             user.employee.id,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             employeeDto as any,
             userId,
         );

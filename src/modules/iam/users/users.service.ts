@@ -353,7 +353,9 @@ export class UsersService {
     async uploadImageAsync(
         userId: string,
         file: Express.Multer.File,
-        performerId: string,
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _performerId: string,
     ): Promise<Result<string>> {
         const user = await this.prisma.client.user.findUnique({
             where: { id: userId },
@@ -387,7 +389,8 @@ export class UsersService {
 
     async removeImageAsync(
         userId: string,
-        performerId: string,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _performerId: string,
     ): Promise<Result<void>> {
         const user = await this.prisma.client.user.findUnique({
             where: { id: userId },

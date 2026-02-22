@@ -11,7 +11,6 @@ import {
     ParseBoolPipe,
     Patch,
     Post,
-    Put,
     Query,
 } from '@nestjs/common';
 import { RolesService } from './roles.service';

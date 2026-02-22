@@ -14,7 +14,6 @@ import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
 import { Prisma } from '@prisma/client';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
-import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class EmployeePositionsService {

@@ -32,6 +32,7 @@ import {
     GeneratePayrollDto,
     GeneratePayrollResultDto,
 } from './dtos/generate-payroll.dto';
+import { MarkPayrollPaidDto } from './dtos/mark-payroll-paid.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
@@ -137,7 +138,8 @@ export class PayrollsController {
     async findAll(
         @Query() query: PayrollQueryDto,
     ): Promise<ResultPagination<PayrollDto>> {
-        const result = await this.service.findAllFilteredAsync(query);
+        const result = await this.service.findAllPaginatedAsync(query);
+        if (!result.isSuccess) throw new BadRequestException(result.error);
         return result.getData();
     }
 
@@ -183,6 +185,40 @@ export class PayrollsController {
         if (!result.isSuccess) {
             throw new BadRequestException(
                 result.error ?? 'Failed to finalize payroll',
+            );
+        }
+        return result.getData();
+    }
+
+    @Auth([RoleName.ADMIN])
+    @Patch(':id/mark-paid')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Mark a processed payroll as paid',
+    })
+    @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
+    @ApiResponse({ status: HttpStatus.OK, type: PayrollDto })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Cannot mark as paid: payroll must be in PROCESSED status',
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Payroll not found',
+    })
+    async markAsPaid(
+        @Param('id') id: string,
+        @Body() dto: MarkPayrollPaidDto,
+        @CurrentUser('sub') userId: string,
+    ) {
+        const result = await this.service.markAsPaidAsync(
+            id,
+            dto.paymentDate ? new Date(dto.paymentDate) : undefined,
+            userId,
+        );
+        if (!result.isSuccess) {
+            throw new BadRequestException(
+                result.error ?? 'Failed to mark payroll as paid',
             );
         }
         return result.getData();

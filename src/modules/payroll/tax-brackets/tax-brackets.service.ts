@@ -8,7 +8,6 @@ import { TaxBracketQueryDto } from './dtos/tax-bracket-query.dto';
 import { Result } from '../../../common/logic/result';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
-import { DecimalNumber } from '../../../config/decimal-number';
 
 @Injectable()
 export class TaxBracketsService {

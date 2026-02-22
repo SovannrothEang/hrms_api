@@ -34,7 +34,7 @@ import { DepartmentDto } from './dtos/department.dto';
 @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
 @ApiTags('Departments')
 export class DepartmentsController {
-    constructor(private readonly departmentsService: DepartmentsService) { }
+    constructor(private readonly departmentsService: DepartmentsService) {}
 
     @Get()
     @HttpCode(HttpStatus.OK)
@@ -49,12 +49,7 @@ export class DepartmentsController {
     async findAllPaginatedAsync(
         @Query() query: DepartmentQueryDto,
     ): Promise<ResultPagination<DepartmentDto>> {
-        const result =
-            await this.departmentsService.findAllFilteredAsync(query);
-        if (!result.isSuccess) {
-            throw new BadRequestException(result.error);
-        }
-        return result.getData();
+        return this.departmentsService.findAllPaginatedAsync(query);
     }
 
     @Get('all')

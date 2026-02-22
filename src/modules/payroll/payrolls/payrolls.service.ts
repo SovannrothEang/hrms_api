@@ -2,8 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
-import { PayrollDto, TaxCalculationDto } from './dtos/payroll.dto';
-import { PayrollItemDto } from './dtos/payroll-item.dto';
+import { PayrollDto } from './dtos/payroll.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
 import {
     PayrollSummaryDto,
@@ -25,7 +24,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
-const PdfPrinter = require('pdfmake/js/printer').default;
+import PdfPrinter from 'pdfmake/js/printer';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import { DecimalNumber } from '../../../config/decimal-number';
 
@@ -290,6 +289,45 @@ export class PayrollsService {
         } catch (error) {
             this.logger.error('Failed to finalize payroll', error);
             return Result.fail('Failed to finalize payroll');
+        }
+    }
+
+    /**
+     * Marks a payroll as PAID.
+     */
+    async markAsPaidAsync(
+        id: string,
+        paymentDate: Date | undefined,
+        performBy: string,
+    ): Promise<Result<PayrollDto>> {
+        try {
+            const payroll = await this.prisma.client.payroll.findUnique({
+                where: { id, isDeleted: false },
+            });
+
+            if (!payroll) {
+                return Result.fail('Payroll not found');
+            }
+
+            if (payroll.status !== (PayrollStatus.PROCESSED as string)) {
+                return Result.fail(
+                    `Cannot mark as paid: payroll status is ${payroll.status}. Only PROCESSED payrolls can be marked as paid.`,
+                );
+            }
+
+            await this.prisma.client.payroll.update({
+                where: { id },
+                data: {
+                    status: PayrollStatus.PAID,
+                    paymentDate: paymentDate || new Date(),
+                    performBy,
+                },
+            });
+
+            return this.findByIdAsync(id);
+        } catch (error) {
+            this.logger.error('Failed to mark payroll as paid', error);
+            return Result.fail('Failed to mark payroll as paid');
         }
     }
 
@@ -946,6 +984,7 @@ export class PayrollsService {
         }
     }
 
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
     private async generatePdfBuffer(payroll: any): Promise<Buffer> {
         const fonts = {
             Helvetica: {
@@ -1143,17 +1182,18 @@ export class PayrollsService {
             },
         };
 
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve, reject) => {
             try {
-                const pdfDoc =
-                    await printer.createPdfKitDocument(docDefinition);
+                const pdfDoc = printer.createPdfKitDocument(docDefinition);
                 const chunks: Buffer[] = [];
-                pdfDoc.on('data', (chunk) => chunks.push(chunk));
+                pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
                 pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-                pdfDoc.on('error', (err) => reject(err));
+                pdfDoc.on('error', (err: any) =>
+                    reject(new Error(err?.message || 'PDF Error')),
+                );
                 pdfDoc.end();
-            } catch (err) {
-                reject(err);
+            } catch (err: any) {
+                reject(new Error(err?.message || 'PDF Error'));
             }
         });
     }

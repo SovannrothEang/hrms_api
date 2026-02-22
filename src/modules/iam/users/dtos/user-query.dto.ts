@@ -42,7 +42,7 @@ export class UserQueryDto {
     })
     @IsOptional()
     @IsString()
-    @Transform(({ value }) =>
+    @Transform(({ value }: { value: unknown }) =>
         typeof value === 'string' ? value.toUpperCase() : value,
     )
     @IsIn(Object.values(RoleName))

@@ -17,7 +17,6 @@ import {
 } from './dtos/me-leave-request-response.dto';
 
 import { EmailService } from '../notifications/email.service';
-import { DecimalNumber } from 'src/config/decimal-number';
 import { ErrorCode } from 'src/common/enums/error-codes.enum';
 import { BusinessError } from 'src/common/exceptions/business-error.exception';
 
@@ -310,7 +309,10 @@ export class LeavesService {
             return Result.ok(CommonMapper.mapToLeaveRequestDto(leave)!);
         } catch (e) {
             if (e instanceof BusinessError) {
-                const res = e.getResponse() as any;
+                const res = e.getResponse() as {
+                    message: string;
+                    code?: ErrorCode;
+                };
                 return Result.fail(res.message, res.code);
             }
             return Result.fail(

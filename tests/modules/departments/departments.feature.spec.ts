@@ -28,6 +28,7 @@ jest.mock('src/common/guards/roles.guard', () => ({
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findAllPaginatedAsync: jest.fn(),
     findAllWithEmployeeAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
@@ -68,9 +69,10 @@ describe('DepartmentsController (Feature)', () => {
         const {
             ResultPagination,
         } = require('../../../src/common/logic/result-pagination');
-        mockService.findAllPaginatedAsync.mockResolvedValue(
-            ResultPagination.of([], 0, 1, 10),
+        mockService.findAllFilteredAsync = jest.fn().mockResolvedValue(Result.ok(ResultPagination.of([], 0, 1, 10)));
+        mockService.findAllPaginatedAsync = jest.fn().mockResolvedValue(
+            Result.ok(ResultPagination.of([], 0, 1, 10))
         );
-        return request(app.getHttpServer()).get('/departments').expect(200);
+        return request(app.getHttpServer()).get('/departments').expect(200).expect({ data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0, hasNext: false, hasPrevious: false } });
     });
 });

@@ -49,7 +49,7 @@ export class CurrenciesController {
     async findAll(
         @Query() query: CurrencyQueryDto,
     ): Promise<ResultPagination<CurrencyDto>> {
-        const result = await this.service.findAllFilteredAsync(query);
+        const result = await this.service.findAllPaginatedAsync(query);
         return result.getData();
     }
 

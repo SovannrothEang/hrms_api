@@ -31,6 +31,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 const mockPayrollsService = {
     createDraftAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
     findAllPaginatedAsync: jest.fn(),
     findByIdAsync: jest.fn(),
     finalizeAsync: jest.fn(),
@@ -123,6 +124,11 @@ describe('PayrollsController (Feature)', () => {
             mockPayrollsService.findAllPaginatedAsync.mockResolvedValue(
                 Result.ok({ data: [], total: 0, page: 1, limit: 10 }),
             );
+            mockPayrollsService.findAllFilteredAsync = jest
+                .fn()
+                .mockResolvedValue(
+                    Result.ok({ data: [], total: 0, page: 1, limit: 10 }),
+                );
 
             await request(app.getHttpServer())
                 .get(
@@ -132,12 +138,14 @@ describe('PayrollsController (Feature)', () => {
 
             expect(
                 mockPayrollsService.findAllPaginatedAsync,
-            ).toHaveBeenCalledWith(1, 10, {
-                employeeId: 'emp-1',
-                status: 'PENDING',
-                year: 2026,
-                month: 1,
-            });
+            ).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    employeeId: 'emp-1',
+                    status: 'PENDING',
+                    year: '2026',
+                    month: '1',
+                }),
+            );
         });
     });
 

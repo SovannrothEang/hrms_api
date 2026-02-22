@@ -9,8 +9,8 @@ import {
     Patch,
     Post,
     Query,
-    BadRequestException,
     ParseBoolPipe,
+    BadRequestException,
 } from '@nestjs/common';
 import {
     ApiOperation,
@@ -43,7 +43,8 @@ export class LeavesController {
     async findAll(
         @Query() query: LeaveQueryDto,
     ): Promise<ResultPagination<LeaveRequestDto>> {
-        const result = await this.leavesService.findAllFilteredAsync(query);
+        const result = await this.leavesService.findAllPaginatedAsync(query);
+        if (!result.isSuccess) throw new BadRequestException(result.error);
         return result.getData();
     }
 

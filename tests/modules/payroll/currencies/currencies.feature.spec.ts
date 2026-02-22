@@ -28,6 +28,8 @@ jest.mock('src/common/guards/roles.guard', () => ({
 const mockService = {
     createAsync: jest.fn(),
     findAllAsync: jest.fn(),
+    findAllFilteredAsync: jest.fn(),
+    findAllPaginatedAsync: jest.fn(),
     findOneByIdAsync: jest.fn(),
     deleteAsync: jest.fn(),
 };
@@ -66,10 +68,29 @@ describe('CurrenciesController (Feature)', () => {
 
     it('/currencies (GET) should return list', () => {
         mockService.findAllAsync.mockResolvedValue(Result.ok([]));
+        const {
+            ResultPagination,
+        } = require('../../../../src/common/logic/result-pagination');
+        mockService.findAllFilteredAsync = jest
+            .fn()
+            .mockResolvedValue(Result.ok(ResultPagination.of([], 0, 1, 10)));
+        mockService.findAllPaginatedAsync = jest
+            .fn()
+            .mockResolvedValue(Result.ok(ResultPagination.of([], 0, 1, 10)));
         return request(app.getHttpServer())
             .get('/currencies')
             .expect(200)
-            .expect([]);
+            .expect({
+                data: [],
+                meta: {
+                    total: 0,
+                    page: 1,
+                    limit: 10,
+                    totalPages: 0,
+                    hasNext: false,
+                    hasPrevious: false,
+                },
+            });
     });
 
     it('/currencies/:id (GET) should return single currency', () => {

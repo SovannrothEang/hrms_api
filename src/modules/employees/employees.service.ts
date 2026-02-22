@@ -9,7 +9,6 @@ import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
-import { DecimalNumber } from 'src/config/decimal-number';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
 
 @Injectable()

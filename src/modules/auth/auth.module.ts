@@ -30,4 +30,4 @@ import { FileStorageModule } from 'src/common/services/file-storage/file-storage
     controllers: [AuthController],
     exports: [AuthService, UserContextService, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

@@ -7,7 +7,6 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { DepartmentQueryDto } from './dtos/department-query.dto';
 import { Prisma } from '@prisma/client';
-import { DecimalNumber } from 'src/config/decimal-number';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
 
 @Injectable()

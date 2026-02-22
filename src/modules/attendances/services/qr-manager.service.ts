@@ -37,7 +37,10 @@ export class QrManagerService {
         expectedType: 'IN' | 'OUT',
     ): Promise<void> {
         try {
-            const payload = await this.jwtService.verifyAsync(token, {
+            const payload = await this.jwtService.verifyAsync<{
+                type: string;
+                jti: string;
+            }>(token, {
                 secret: this.QR_SECRET,
             });
 
@@ -66,7 +69,9 @@ export class QrManagerService {
             ) {
                 throw error;
             }
-            this.logger.error(`QR Verification failed: ${error.message}`);
+            this.logger.error(
+                `QR Verification failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            );
             throw new UnauthorizedException('Invalid or expired QR code');
         }
     }

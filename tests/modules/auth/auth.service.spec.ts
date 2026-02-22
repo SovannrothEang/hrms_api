@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { AttendancesService } from '../../../src/modules/attendances/attendances.service';
+import { EmployeesService } from '../../../src/modules/employees/employees.service';
 import { AuthService } from '../../../src/modules/auth/auth.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -67,6 +69,8 @@ describe('AuthService', () => {
             providers: [
                 AuthService,
                 { provide: PrismaService, useValue: mockPrismaService },
+                { provide: AttendancesService, useValue: {} },
+                { provide: EmployeesService, useValue: {} },
                 { provide: JwtService, useValue: mockJwtService },
                 { provide: UsersService, useValue: mockUsersService },
                 { provide: SessionService, useValue: mockSessionService },

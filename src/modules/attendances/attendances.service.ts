@@ -18,7 +18,6 @@ import { QrManagerService } from './services/qr-manager.service';
 import { CheckInDto } from './dtos/check-in.dto';
 import { CheckOutDto } from './dtos/check-out.dto';
 import { AttendanceSummaryDto } from './dtos/attendance-summary.dto';
-import { DecimalNumber } from 'src/config/decimal-number';
 
 @Injectable()
 export class AttendancesService {

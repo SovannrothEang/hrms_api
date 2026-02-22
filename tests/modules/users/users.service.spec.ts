@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from '../../../src/modules/iam/users/users.service';
+import { FileStorageService } from '../../../src/common/services/file-storage/file-storage.service';
 import { PrismaService } from '../../../src/common/services/prisma/prisma.service';
 import { RoleName } from '../../../src/common/enums/roles.enum';
 
@@ -30,6 +31,7 @@ describe('UsersService', () => {
             providers: [
                 UsersService,
                 { provide: PrismaService, useValue: mockPrismaService },
+                { provide: FileStorageService, useValue: { saveFileAsync: jest.fn(), deleteFileAsync: jest.fn() } }
             ],
         }).compile();
 
