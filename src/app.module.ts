@@ -69,7 +69,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
                             ? {
                                   target: 'pino-pretty',
                                   options: {
-                                      singleLine: true,
+                                      singleLine: false,
                                   },
                               }
                             : undefined,

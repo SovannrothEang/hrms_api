@@ -44,6 +44,9 @@ importers:
       '@prisma/client':
         specifier: ^7.2.0
         version: 7.2.0(prisma@7.2.0(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3))(typescript@5.9.3)
+      '@types/pdfkit':
+        specifier: ^0.17.5
+        version: 0.17.5
       bcrypt:
         specifier: ^6.0.0
         version: 6.0.0
@@ -83,9 +86,9 @@ importers:
       passport-local:
         specifier: ^1.0.0
         version: 1.0.0
-      pdfmake:
-        specifier: ^0.3.3
-        version: 0.3.3
+      pdfkit:
+        specifier: ^0.17.2
+        version: 0.17.2
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -150,9 +153,6 @@ importers:
       '@types/passport-local':
         specifier: ^1.0.38
         version: 1.0.38
-      '@types/pdfmake':
-        specifier: ^0.3.0
-        version: 0.3.0
       '@types/pg':
         specifier: ^8.16.0
         version: 8.16.0
@@ -1544,11 +1544,8 @@ packages:
   '@types/passport@1.0.17':
     resolution: {integrity: sha512-aciLyx+wDwT2t2/kJGJR2AEeBz0nJU4WuRX04Wu9Dqc5lSUtwu0WERPHYsLhF9PtseiAMPBGNUOtFjxZ56prsg==}
 
-  '@types/pdfkit@0.17.4':
-    resolution: {integrity: sha512-odAmVuuguRxKh1X4pbMrJMp8ecwNqHRw6lweupvzK+wuyNmi6wzlUlGVZ9EqMvp3Bs2+L9Ty0sRlrvKL+gsQZg==}
-
-  '@types/pdfmake@0.3.0':
-    resolution: {integrity: sha512-WjkNTseNkoT7Rpg3bfjV1tM5k4BzgmNX7WJwodw1T02KyKSyf4/vCy/2nThnUcsKglYu8blFXmVTXtht39E5YA==}
+  '@types/pdfkit@0.17.5':
+    resolution: {integrity: sha512-T3ZHnvF91HsEco5ClhBCOuBwobZfPcI2jaiSHybkkKYq4KhVIIurod94JVKvDIG0JXT6o3KiERC0X0//m8dyrg==}
 
   '@types/pg@8.16.0':
     resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
@@ -4071,10 +4068,6 @@ packages:
   pdfkit@0.17.2:
     resolution: {integrity: sha512-UnwF5fXy08f0dnp4jchFYAROKMNTaPqb/xgR8GtCzIcqoTnbOqtp3bwKvO4688oHI6vzEEs8Q6vqqEnC5IUELw==}
 
-  pdfmake@0.3.3:
-    resolution: {integrity: sha512-jSnF8rVLkbLLX37bnXWRFhEDO48quE7OIg7lgWBa6ihAbpCxASaBLWFOXNxSDeLBNt92304SBwpYcPkJnIArlA==}
-    engines: {node: '>=20'}
-
   peberminta@0.9.0:
     resolution: {integrity: sha512-XIxfHpEuSJbITd1H3EeQwpcZbTLHc+VVr8ANI9t5sit565tsI4/xK3KWTUFE2e6QiangUkh3B0jihzmGnNrRsQ==}
 
@@ -4445,10 +4438,6 @@ packages:
 
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
-
-  sax@1.4.4:
-    resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
-    engines: {node: '>=11.0.0'}
 
   saxes@5.0.1:
     resolution: {integrity: sha512-5LBh1Tls8c9xgGjw3QrMwETmTMVk0oFgvrFSvWx62llR2hcEInrKNZ2GZCCuuy2lvWrdl5jhbpeqc5hRYKFOcw==}
@@ -5055,10 +5044,6 @@ packages:
 
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
-
-  xmldoc@2.0.3:
-    resolution: {integrity: sha512-6gRk4NY/Jvg67xn7OzJuxLRsGgiXBaPUQplVJ/9l99uIugxh4FTOewYz5ic8WScj7Xx/2WvhENiQKwkK9RpE4w==}
-    engines: {node: '>=12.0.0'}
 
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
@@ -7044,14 +7029,9 @@ snapshots:
     dependencies:
       '@types/express': 5.0.6
 
-  '@types/pdfkit@0.17.4':
+  '@types/pdfkit@0.17.5':
     dependencies:
       '@types/node': 22.19.3
-
-  '@types/pdfmake@0.3.0':
-    dependencies:
-      '@types/node': 22.19.3
-      '@types/pdfkit': 0.17.4
 
   '@types/pg@8.16.0':
     dependencies:
@@ -10175,12 +10155,6 @@ snapshots:
       linebreak: 1.1.0
       png-js: 1.0.0
 
-  pdfmake@0.3.3:
-    dependencies:
-      linebreak: 1.1.0
-      pdfkit: 0.17.2
-      xmldoc: 2.0.3
-
   peberminta@0.9.0:
     optional: true
 
@@ -10616,8 +10590,6 @@ snapshots:
   safe-stable-stringify@2.5.0: {}
 
   safer-buffer@2.1.2: {}
-
-  sax@1.4.4: {}
 
   saxes@5.0.1:
     dependencies:
@@ -11276,10 +11248,6 @@ snapshots:
       signal-exit: 4.1.0
 
   xmlchars@2.2.0: {}
-
-  xmldoc@2.0.3:
-    dependencies:
-      sax: 1.4.4
 
   xtend@4.0.2: {}
 

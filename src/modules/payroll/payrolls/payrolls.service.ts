@@ -24,8 +24,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
-import PdfPrinter from 'pdfmake/js/printer';
-import { TDocumentDefinitions } from 'pdfmake/interfaces';
+import PDFDocument from 'pdfkit';
 import { DecimalNumber } from '../../../config/decimal-number';
 
 // Constants for payroll calculation
@@ -42,6 +41,18 @@ export enum PayrollItemType {
     EARNING = 'EARNING',
     DEDUCTION = 'DEDUCTION',
 }
+
+type PayslipPayroll = Prisma.PayrollGetPayload<{
+    include: {
+        employee: {
+            include: {
+                department: true;
+                position: true;
+            };
+        };
+        items: true;
+    };
+}>;
 
 @Injectable()
 export class PayrollsService {
@@ -984,216 +995,197 @@ export class PayrollsService {
         }
     }
 
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
-    private async generatePdfBuffer(payroll: any): Promise<Buffer> {
-        const fonts = {
-            Helvetica: {
-                normal: 'Helvetica',
-                bold: 'Helvetica-Bold',
-                italics: 'Helvetica-Oblique',
-                bolditalics: 'Helvetica-BoldOblique',
-            },
-        };
-
-        const printer = new PdfPrinter(fonts);
-
-        const periodStr = `${payroll.payPeriodStart.toLocaleDateString()} - ${payroll.payPeriodEnd.toLocaleDateString()}`;
-        const employeeName = `${payroll.employee.firstname} ${payroll.employee.lastname}`;
-        const department = payroll.employee.department?.departmentName || 'N/A';
-        const position = payroll.employee.position?.title || 'N/A';
-
-        const earnings = payroll.items.filter(
-            (i: any) => i.itemType === 'EARNING',
-        );
-        const deductions = payroll.items.filter(
-            (i: any) => i.itemType === 'DEDUCTION',
-        );
-
-        const docDefinition: TDocumentDefinitions = {
-            defaultStyle: {
-                font: 'Helvetica',
-                fontSize: 10,
-                lineHeight: 1.5,
-            },
-            content: [
-                {
-                    text: 'PAYSLIP',
-                    style: 'header',
-                    alignment: 'center',
-                    margin: [0, 0, 0, 20],
-                },
-
-                // Employee Details
-                {
-                    columns: [
-                        {
-                            width: '*',
-                            text: [
-                                { text: 'Employee: ', bold: true },
-                                employeeName,
-                                '\n',
-                                { text: 'ID: ', bold: true },
-                                payroll.employee.employeeCode,
-                                '\n',
-                                { text: 'Department: ', bold: true },
-                                department,
-                                '\n',
-                                { text: 'Position: ', bold: true },
-                                position,
-                            ],
-                        },
-                        {
-                            width: '*',
-                            text: [
-                                { text: 'Pay Period: ', bold: true },
-                                periodStr,
-                                '\n',
-                                { text: 'Pay Date: ', bold: true },
-                                payroll.paymentDate
-                                    ? new Date(
-                                          payroll.paymentDate,
-                                      ).toLocaleDateString()
-                                    : 'Pending',
-                                '\n',
-                                { text: 'Status: ', bold: true },
-                                payroll.status,
-                            ],
-                            alignment: 'right',
-                        },
-                    ],
-                    margin: [0, 0, 0, 20],
-                },
-
-                // Table
-                {
-                    table: {
-                        headerRows: 1,
-                        widths: ['*', 'auto', '*'],
-                        body: [
-                            [
-                                { text: 'Item', style: 'tableHeader' },
-                                { text: 'Type', style: 'tableHeader' },
-                                {
-                                    text: 'Amount',
-                                    style: 'tableHeader',
-                                    alignment: 'right',
-                                },
-                            ],
-                            ...earnings.map((item: any) => [
-                                item.itemName,
-                                'Earning',
-                                {
-                                    text: Number(item.amount).toFixed(2),
-                                    alignment: 'right',
-                                },
-                            ]),
-                            ...deductions.map((item: any) => [
-                                item.itemName,
-                                'Deduction',
-                                {
-                                    text: `(${Number(item.amount).toFixed(2)})`,
-                                    alignment: 'right',
-                                    color: 'red',
-                                },
-                            ]),
-                            // Divider
-                            [
-                                {
-                                    text: '',
-                                    colSpan: 3,
-                                    border: [false, false, false, false],
-                                },
-                                {},
-                                {},
-                            ],
-                            // Totals
-                            [
-                                { text: 'Gross Salary', bold: true },
-                                {},
-                                {
-                                    text: Number(
-                                        payroll.basicSalary
-                                            .plus(
-                                                payroll.overtimeRate.times(
-                                                    payroll.overtimeHrs,
-                                                ),
-                                            )
-                                            .plus(payroll.bonus),
-                                    ).toFixed(2),
-                                    alignment: 'right',
-                                    bold: true,
-                                },
-                            ],
-                            [
-                                { text: 'Total Deductions', bold: true },
-                                {},
-                                {
-                                    text: `(${Number(payroll.deductions.plus(payroll.items.filter((i: any) => i.itemName === 'Tax').reduce((acc: any, curr: any) => acc + Number(curr.amount), 0))).toFixed(2)})`,
-                                    alignment: 'right',
-                                    bold: true,
-                                    color: 'red',
-                                },
-                            ],
-                            [
-                                {
-                                    text: 'NET SALARY',
-                                    style: 'totalObj',
-                                    fillColor: '#eeeeee',
-                                },
-                                { text: '', fillColor: '#eeeeee' },
-                                {
-                                    text: `${payroll.currencyCode} ${Number(payroll.netSalary).toFixed(2)}`,
-                                    style: 'totalObj',
-                                    alignment: 'right',
-                                    fillColor: '#eeeeee',
-                                },
-                            ],
-                        ],
-                    },
-                    layout: 'lightHorizontalLines',
-                },
-
-                {
-                    text: 'This is a computer-generated document. No signature is required.',
-                    style: 'footer',
-                    margin: [0, 40, 0, 0],
-                    alignment: 'center',
-                    italics: true,
-                    fontSize: 8,
-                },
-            ],
-            styles: {
-                header: {
-                    fontSize: 18,
-                    bold: true,
-                },
-                tableHeader: {
-                    bold: true,
-                    fontSize: 11,
-                    color: 'black',
-                },
-                totalObj: {
-                    bold: true,
-                    fontSize: 12,
-                },
-                footer: {
-                    color: 'gray',
-                },
-            },
-        };
-
+    private async generatePdfBuffer(payroll: PayslipPayroll): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             try {
-                const pdfDoc = printer.createPdfKitDocument(docDefinition);
+                const doc = new PDFDocument({ margin: 50 });
                 const chunks: Buffer[] = [];
-                pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-                pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-                pdfDoc.on('error', (err: any) =>
-                    reject(new Error(err?.message || 'PDF Error')),
+
+                doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+                doc.on('end', () => resolve(Buffer.concat(chunks)));
+                doc.on('error', (err: Error) => reject(err));
+
+                const periodStr = `${payroll.payPeriodStart.toLocaleDateString()} - ${payroll.payPeriodEnd.toLocaleDateString()}`;
+                const employeeName = `${payroll.employee.firstname} ${payroll.employee.lastname}`;
+                const department =
+                    payroll.employee.department?.departmentName || 'N/A';
+                const position = payroll.employee.position?.title || 'N/A';
+
+                const earnings = payroll.items.filter(
+                    (item) => item.itemType === 'EARNING',
                 );
-                pdfDoc.end();
-            } catch (err: any) {
-                reject(new Error(err?.message || 'PDF Error'));
+                const deductions = payroll.items.filter(
+                    (item) => item.itemType === 'DEDUCTION',
+                );
+
+                const grossSalary = payroll.basicSalary
+                    .plus(payroll.overtimeRate.times(payroll.overtimeHrs))
+                    .plus(payroll.bonus);
+                const totalTax = payroll.items
+                    .filter((item) => item.itemName === 'Tax')
+                    .reduce(
+                        (acc, curr) => acc.add(curr.amount),
+                        new Decimal(0),
+                    );
+                const totalDeductions = payroll.deductions.plus(totalTax);
+
+                const colX = [50, 300, 450, 550];
+                const rowHeight = 22;
+
+                const drawRow = (
+                    cols: (string | number)[],
+                    options: {
+                        bold?: boolean;
+                        fill?: string;
+                        align?: ('left' | 'right')[];
+                    } = {},
+                ) => {
+                    const y = doc.y;
+                    if (options.fill) {
+                        doc.rect(50, y, 500, rowHeight).fill(options.fill);
+                    }
+                    doc.fillColor('black');
+                    doc.font(
+                        options.bold ? 'Helvetica-Bold' : 'Helvetica',
+                    ).fontSize(10);
+                    cols.forEach((text, i) => {
+                        const align = options.align?.[i] || 'left';
+                        doc.text(String(text), colX[i], y + 6, {
+                            width: colX[i + 1] - colX[i] - 10,
+                            align,
+                        });
+                    });
+                    doc.y = y + rowHeight;
+                };
+
+                doc.font('Helvetica-Bold')
+                    .fontSize(20)
+                    .text('PAYSLIP', { align: 'center' });
+                doc.moveDown(1.5);
+
+                doc.font('Helvetica-Bold').fontSize(10);
+                doc.text('Employee:', 50, doc.y);
+                doc.font('Helvetica').text(employeeName, 130, doc.y);
+                doc.font('Helvetica-Bold').text('Pay Period:', 300, doc.y);
+                doc.font('Helvetica').text(periodStr, 380, doc.y);
+
+                doc.moveDown(0.5);
+                doc.font('Helvetica-Bold').text('ID:', 50, doc.y);
+                doc.font('Helvetica').text(
+                    payroll.employee.employeeCode,
+                    130,
+                    doc.y,
+                );
+                doc.font('Helvetica-Bold').text('Pay Date:', 300, doc.y);
+                doc.font('Helvetica').text(
+                    payroll.paymentDate
+                        ? payroll.paymentDate.toLocaleDateString()
+                        : 'Pending',
+                    380,
+                    doc.y,
+                );
+
+                doc.moveDown(0.5);
+                doc.font('Helvetica-Bold').text('Department:', 50, doc.y);
+                doc.font('Helvetica').text(department, 130, doc.y);
+                doc.font('Helvetica-Bold').text('Status:', 300, doc.y);
+                doc.font('Helvetica').text(payroll.status, 380, doc.y);
+
+                doc.moveDown(0.5);
+                doc.font('Helvetica-Bold').text('Position:', 50, doc.y);
+                doc.font('Helvetica').text(position, 130, doc.y);
+
+                doc.moveDown(2);
+                doc.y += 10;
+
+                drawRow(['Item', 'Type', 'Amount'], {
+                    bold: true,
+                    fill: '#f0f0f0',
+                });
+                doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+
+                earnings.forEach((item) => {
+                    drawRow(
+                        [
+                            item.itemName,
+                            'Earning',
+                            Number(item.amount).toFixed(2),
+                        ],
+                        {
+                            align: ['left', 'left', 'right'],
+                        },
+                    );
+                });
+
+                deductions.forEach((item) => {
+                    doc.fillColor('red');
+                    drawRow(
+                        [
+                            item.itemName,
+                            'Deduction',
+                            `(${Number(item.amount).toFixed(2)})`,
+                        ],
+                        {
+                            align: ['left', 'left', 'right'],
+                        },
+                    );
+                    doc.fillColor('black');
+                });
+
+                doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
+                doc.moveDown(0.5);
+
+                drawRow(['Gross Salary', '', Number(grossSalary).toFixed(2)], {
+                    bold: true,
+                    align: ['left', 'left', 'right'],
+                });
+
+                doc.fillColor('red');
+                drawRow(
+                    [
+                        'Total Deductions',
+                        '',
+                        `(${Number(totalDeductions).toFixed(2)})`,
+                    ],
+                    {
+                        bold: true,
+                        align: ['left', 'left', 'right'],
+                    },
+                );
+                doc.fillColor('black');
+
+                doc.y += 5;
+                drawRow(
+                    [
+                        'NET SALARY',
+                        '',
+                        `${payroll.currencyCode} ${Number(payroll.netSalary).toFixed(2)}`,
+                    ],
+                    {
+                        bold: true,
+                        fill: '#eeeeee',
+                        align: ['left', 'left', 'right'],
+                    },
+                );
+
+                doc.moveDown(3);
+                doc.font('Helvetica-Oblique')
+                    .fontSize(8)
+                    .fillColor('gray')
+                    .text(
+                        'This is a computer-generated document. No signature is required.',
+                        {
+                            align: 'center',
+                        },
+                    );
+
+                doc.end();
+            } catch (err) {
+                reject(
+                    err instanceof Error
+                        ? err
+                        : new Error('PDF generation failed'),
+                );
             }
         });
     }
