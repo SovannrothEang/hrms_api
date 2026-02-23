@@ -15,6 +15,7 @@ import {
     MeLeaveRequestResponseDto,
     MeLeaveRequestSummaryDto,
 } from './dtos/me-leave-request-response.dto';
+import { LeaveRequestSummaryDto } from './dtos/leave-request-summary.dto';
 
 import { EmailService } from '../notifications/email.service';
 import { ErrorCode } from 'src/common/enums/error-codes.enum';
@@ -59,11 +60,14 @@ export class LeavesService {
 
     async findAllPaginatedAsync(
         query: LeaveQueryDto,
-    ): Promise<Result<ResultPagination<LeaveRequestDto>>> {
+    ): Promise<
+        Result<ResultPagination<LeaveRequestDto, LeaveRequestSummaryDto>>
+    > {
         const {
             page = 1,
             limit = 10,
             employeeId,
+            search,
             approverId,
             leaveType,
             status,
@@ -82,6 +86,45 @@ export class LeavesService {
         if (leaveType) whereClause.leaveType = leaveType;
         if (status) whereClause.status = status;
 
+        if (search) {
+            const searchTerm = search.trim().toLowerCase();
+            whereClause.requester = {
+                OR: [
+                    {
+                        employeeCode: {
+                            contains: searchTerm,
+                            mode: 'insensitive',
+                        },
+                    },
+                    {
+                        firstname: {
+                            contains: searchTerm,
+                            mode: 'insensitive',
+                        },
+                    },
+                    { lastname: { contains: searchTerm, mode: 'insensitive' } },
+                    {
+                        user: {
+                            OR: [
+                                {
+                                    username: {
+                                        contains: searchTerm,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                                {
+                                    email: {
+                                        contains: searchTerm,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            };
+        }
+
         if (dateFrom || dateTo) {
             const dateFilter: Prisma.DateTimeFilter = {};
             if (dateFrom) dateFilter.gte = new Date(dateFrom);
@@ -95,7 +138,57 @@ export class LeavesService {
         else if (sortBy === 'requestDate') orderBy.requestDate = sortOrder;
         else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
 
-        const [total, leaves] = await Promise.all([
+        const summaryWhereClause: Prisma.LeaveRequestWhereInput = {
+            isDeleted: false,
+        };
+        if (employeeId) summaryWhereClause.employeeId = employeeId;
+        if (leaveType) summaryWhereClause.leaveType = leaveType;
+        if (search) {
+            const searchTerm = search.trim().toLowerCase();
+            summaryWhereClause.requester = {
+                OR: [
+                    {
+                        employeeCode: {
+                            contains: searchTerm,
+                            mode: 'insensitive',
+                        },
+                    },
+                    {
+                        firstname: {
+                            contains: searchTerm,
+                            mode: 'insensitive',
+                        },
+                    },
+                    { lastname: { contains: searchTerm, mode: 'insensitive' } },
+                    {
+                        user: {
+                            OR: [
+                                {
+                                    username: {
+                                        contains: searchTerm,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                                {
+                                    email: {
+                                        contains: searchTerm,
+                                        mode: 'insensitive',
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+            };
+        }
+        if (dateFrom || dateTo) {
+            const dateFilter: Prisma.DateTimeFilter = {};
+            if (dateFrom) dateFilter.gte = new Date(dateFrom);
+            if (dateTo) dateFilter.lte = new Date(dateTo);
+            summaryWhereClause.startDate = dateFilter;
+        }
+
+        const [total, leaves, statusCounts] = await Promise.all([
             this.prisma.client.leaveRequest.count({ where: whereClause }),
             this.prisma.client.leaveRequest.findMany({
                 where: whereClause,
@@ -127,15 +220,34 @@ export class LeavesService {
                         : false,
                 },
             }),
+            this.prisma.client.leaveRequest.groupBy({
+                by: ['status'],
+                where: summaryWhereClause,
+                _count: { _all: true },
+            }),
         ]);
 
+        const getCount = (s: string) =>
+            statusCounts.find((c) => c.status === s)?._count._all || 0;
+
+        const summary: LeaveRequestSummaryDto = {
+            total_requests: total,
+            pending_count: getCount('PENDING'),
+            approved_count: getCount('APPROVED'),
+            rejected_count: getCount('REJECTED'),
+        };
+
         const dtos = leaves.map((l) => CommonMapper.mapToLeaveRequestDto(l)!);
-        return Result.ok(ResultPagination.of(dtos, total, page, limit));
+        return Result.ok(
+            ResultPagination.of(dtos, total, page, limit, summary),
+        );
     }
 
     async findAllFilteredAsync(
         query: LeaveQueryDto,
-    ): Promise<Result<ResultPagination<LeaveRequestDto>>> {
+    ): Promise<
+        Result<ResultPagination<LeaveRequestDto, LeaveRequestSummaryDto>>
+    > {
         try {
             const paginationResult = await this.findAllPaginatedAsync(query);
             return paginationResult;

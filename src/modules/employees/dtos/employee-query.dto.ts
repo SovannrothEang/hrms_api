@@ -28,6 +28,13 @@ export class EmployeeQueryDto {
     limit?: number = 10;
 
     @ApiPropertyOptional({
+        description: 'Generic search across first name, last name, and employee code',
+    })
+    @IsOptional()
+    @IsString()
+    search?: string;
+
+    @ApiPropertyOptional({
         description: 'Search by employee code',
     })
     @IsOptional()
@@ -54,6 +61,13 @@ export class EmployeeQueryDto {
     @IsOptional()
     @IsString()
     departmentId?: string;
+
+    @ApiPropertyOptional({
+        description: 'Filter by department name (partial match)',
+    })
+    @IsOptional()
+    @IsString()
+    department?: string;
 
     @ApiPropertyOptional({
         description: 'Filter by position ID',

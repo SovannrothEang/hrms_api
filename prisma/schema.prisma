@@ -644,8 +644,14 @@ model AuditLog {
 model CompanySettings {
   id                   String @id @default(uuid()) @db.VarChar(36)
   name                 String @db.VarChar(255)
+  email                String? @db.VarChar(255)
+  phone                String? @db.VarChar(50)
+  address              String? @db.VarChar(500)
   baseCurrencyCode     String @map("base_currency_code") @db.VarChar(5)
   fiscalYearStartMonth Int    @map("fiscal_year_start_month") @db.SmallInt
+  timezone             String @default("UTC") @db.VarChar(50)
+  dateFormat           String @default("mdy") @map("date_format") @db.VarChar(10)
+  workWeekStarts       String @default("monday") @map("work_week_starts") @db.VarChar(10)
 
   baseCurrency Currency @relation(fields: [baseCurrencyCode], references: [code])
 

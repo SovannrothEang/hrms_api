@@ -239,4 +239,42 @@ export class DepartmentsService {
             },
         });
     }
+
+    async getSummaryAsync(): Promise<{
+        totalDepartments: number;
+        totalEmployees: number;
+        avgEmployeesPerDept: number;
+        largestDept: string;
+    }> {
+        const departments = await this.prisma.client.department.findMany({
+            where: { isDeleted: false, isActive: true },
+            include: {
+                _count: { select: { employees: { where: { isDeleted: false } } } },
+            },
+        });
+
+        const totalDepartments = departments.length;
+        const totalEmployees = departments.reduce(
+            (sum, d) => sum + d._count.employees,
+            0,
+        );
+        const avgEmployeesPerDept =
+            totalDepartments > 0 ? totalEmployees / totalDepartments : 0;
+
+        let largestDept = '';
+        let maxEmployees = 0;
+        for (const dept of departments) {
+            if (dept._count.employees > maxEmployees) {
+                maxEmployees = dept._count.employees;
+                largestDept = dept.departmentName;
+            }
+        }
+
+        return {
+            totalDepartments,
+            totalEmployees,
+            avgEmployeesPerDept,
+            largestDept,
+        };
+    }
 }

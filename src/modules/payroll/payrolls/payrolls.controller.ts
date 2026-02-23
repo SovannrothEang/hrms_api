@@ -34,6 +34,7 @@ import {
 } from './dtos/generate-payroll.dto';
 import { MarkPayrollPaidDto } from './dtos/mark-payroll-paid.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';
+import { UpdatePayrollDto } from './dtos/update-payroll.dto';
 import { ResultPagination } from '../../../common/logic/result-pagination';
 
 @ApiTags('Payrolls')
@@ -157,6 +158,36 @@ export class PayrollsController {
         const result = await this.service.findByIdAsync(id);
         if (!result.isSuccess) {
             throw new NotFoundException(result.error ?? 'Payroll not found');
+        }
+        return result.getData();
+    }
+
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
+    @Patch(':id')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Update a pending payroll (recalculates tax and net)',
+    })
+    @ApiParam({ name: 'id', required: true, description: 'Payroll ID' })
+    @ApiResponse({ status: HttpStatus.OK, type: PayrollDto })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Cannot update non-pending payroll',
+    })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Payroll not found',
+    })
+    async update(
+        @Param('id') id: string,
+        @Body() dto: UpdatePayrollDto,
+        @CurrentUser('sub') userId: string,
+    ) {
+        const result = await this.service.updateAsync(id, dto, userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(
+                result.error ?? 'Failed to update payroll',
+            );
         }
         return result.getData();
     }

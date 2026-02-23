@@ -27,6 +27,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 import { MeModule } from './modules/me/me.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
     imports: [
@@ -113,6 +114,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
         ReportsModule,
         RolesModule,
         SecurityModule,
+        SettingsModule,
         ShiftsModule,
         TaxBracketsModule,
         UsersModule,

@@ -148,10 +148,12 @@ export class EmployeesService {
         const {
             page = 1,
             limit = 10,
+            search,
             employeeCode,
             firstname,
             lastname,
             departmentId,
+            department,
             positionId,
             employmentType,
             status,
@@ -171,6 +173,14 @@ export class EmployeesService {
 
         if (isActive !== undefined) {
             where.isActive = isActive;
+        }
+
+        if (search) {
+            where.OR = [
+                { employeeCode: { contains: search, mode: 'insensitive' } },
+                { firstname: { contains: search, mode: 'insensitive' } },
+                { lastname: { contains: search, mode: 'insensitive' } },
+            ];
         }
 
         if (employeeCode) {
@@ -196,6 +206,12 @@ export class EmployeesService {
 
         if (departmentId) {
             where.departmentId = departmentId;
+        }
+
+        if (department) {
+            where.department = {
+                departmentName: { contains: department, mode: 'insensitive' },
+            };
         }
 
         if (positionId) {
@@ -414,5 +430,43 @@ export class EmployeesService {
         });
         // Ideally we should also soft-delete the linked User, but that depends on requirements.
         return Result.ok();
+    }
+
+    async getSummaryAsync(): Promise<{
+        totalEmployees: number;
+        activeCount: number;
+        inactiveCount: number;
+        newThisMonth: number;
+    }> {
+        const now = new Date();
+        const startOfMonth = new Date(
+            Date.UTC(now.getFullYear(), now.getMonth(), 1),
+        );
+
+        const [totalEmployees, activeCount, inactiveCount, newThisMonth] =
+            await Promise.all([
+                this.prisma.client.employee.count({
+                    where: { isDeleted: false },
+                }),
+                this.prisma.client.employee.count({
+                    where: { isDeleted: false, isActive: true },
+                }),
+                this.prisma.client.employee.count({
+                    where: { isDeleted: false, isActive: false },
+                }),
+                this.prisma.client.employee.count({
+                    where: {
+                        hireDate: { gte: startOfMonth },
+                        isDeleted: false,
+                    },
+                }),
+            ]);
+
+        return {
+            totalEmployees,
+            activeCount,
+            inactiveCount,
+            newThisMonth,
+        };
     }
 }

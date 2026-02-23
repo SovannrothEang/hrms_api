@@ -36,6 +36,14 @@ import { DepartmentDto } from './dtos/department.dto';
 export class DepartmentsController {
     constructor(private readonly departmentsService: DepartmentsService) {}
 
+    @Get('summary')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get department summary statistics' })
+    @ApiResponse({ status: HttpStatus.OK })
+    async getSummary() {
+        return await this.departmentsService.getSummaryAsync();
+    }
+
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all departments (Filtered)' })

@@ -13,6 +13,7 @@ import {
     GeneratePayrollDto,
     GeneratePayrollResultDto,
 } from './dtos/generate-payroll.dto';
+import { UpdatePayrollDto } from './dtos/update-payroll.dto';
 import {
     MePayslipResponseDto,
     MePayslipRecordDto,
@@ -266,6 +267,225 @@ export class PayrollsService {
     }
 
     /**
+     * Updates a pending payroll with new values and recalculates tax/net.
+     */
+    async updateAsync(
+        id: string,
+        dto: UpdatePayrollDto,
+        performBy: string,
+    ): Promise<Result<PayrollDto>> {
+        try {
+            const payroll = await this.prisma.client.payroll.findUnique({
+                where: { id, isDeleted: false },
+                include: {
+                    employee: {
+                        include: {
+                            position: true,
+                            taxConfig: true,
+                        },
+                    },
+                    items: { where: { isDeleted: false } },
+                    taxCalculation: true,
+                },
+            });
+
+            if (!payroll) {
+                return Result.fail('Payroll not found');
+            }
+
+            if (payroll.status !== (PayrollStatus.PENDING as string)) {
+                return Result.fail(
+                    `Cannot update payroll with status: ${payroll.status}. Only PENDING payrolls can be updated.`,
+                );
+            }
+
+            const periodStart = dto.payPeriodStart
+                ? new Date(dto.payPeriodStart)
+                : payroll.payPeriodStart;
+            const periodEnd = dto.payPeriodEnd
+                ? new Date(dto.payPeriodEnd)
+                : payroll.payPeriodEnd;
+
+            if (periodEnd <= periodStart) {
+                return Result.fail('Pay period end must be after start date');
+            }
+
+            const basicSalary = dto.basicSalaryOverride
+                ? new Decimal(dto.basicSalaryOverride)
+                : payroll.basicSalary;
+
+            const overtimeHours =
+                dto.overtimeHours !== undefined
+                    ? new Decimal(dto.overtimeHours)
+                    : payroll.overtimeHrs;
+            const hourlyRate = basicSalary.dividedBy(MONTHLY_WORKING_HOURS);
+            const overtimeRate = hourlyRate.times(OVERTIME_MULTIPLIER);
+            const overtimePay = overtimeRate.times(overtimeHours);
+
+            const bonus =
+                dto.bonus !== undefined
+                    ? new Decimal(dto.bonus)
+                    : payroll.bonus;
+
+            const grossIncome = basicSalary.plus(overtimePay).plus(bonus);
+
+            const employee = payroll.employee;
+            const taxConfig = employee.taxConfig;
+            const isTaxExempt = taxConfig?.taxExempt ?? false;
+
+            let taxAmount = new Decimal(0);
+            let taxBracketId: string | null = null;
+            let taxRateUsed = new Decimal(0);
+
+            if (!isTaxExempt) {
+                const currentYear = new Date().getFullYear();
+                const taxCountry = taxConfig?.taxCountry ?? 'KH';
+
+                const bracket = await this.prisma.client.taxBracket.findFirst({
+                    where: {
+                        countryCode: taxCountry,
+                        taxYear: currentYear,
+                        currencyCode: payroll.currencyCode,
+                        minAmount: { lte: grossIncome },
+                        maxAmount: { gt: grossIncome },
+                        isDeleted: false,
+                    },
+                    orderBy: { minAmount: 'desc' },
+                });
+
+                if (bracket) {
+                    taxAmount = grossIncome
+                        .times(bracket.taxRate)
+                        .minus(bracket.fixedAmount);
+                    if (taxAmount.lessThan(0)) {
+                        taxAmount = new Decimal(0);
+                    }
+                    taxBracketId = bracket.id;
+                    taxRateUsed = bracket.taxRate;
+                }
+            }
+
+            const deductions =
+                dto.deductions !== undefined
+                    ? new Decimal(dto.deductions)
+                    : payroll.deductions;
+            const totalDeductions = taxAmount.plus(deductions);
+            const netSalary = grossIncome.minus(totalDeductions);
+
+            await this.prisma.client.$transaction(async (tx) => {
+                await tx.payroll.update({
+                    where: { id },
+                    data: {
+                        payPeriodStart: periodStart,
+                        payPeriodEnd: periodEnd,
+                        basicSalary,
+                        overtimeHrs: overtimeHours,
+                        overtimeRate,
+                        bonus,
+                        deductions,
+                        netSalary,
+                        performBy,
+                    },
+                });
+
+                await tx.payrollItems.deleteMany({
+                    where: { payrollId: id },
+                });
+
+                const itemsData = [
+                    {
+                        payrollId: id,
+                        currencyCode: payroll.currencyCode,
+                        itemType: PayrollItemType.EARNING,
+                        itemName: 'Basic Salary',
+                        amount: basicSalary,
+                        description: 'Monthly base salary',
+                        performBy,
+                    },
+                ];
+
+                if (overtimePay.greaterThan(0)) {
+                    itemsData.push({
+                        payrollId: id,
+                        currencyCode: payroll.currencyCode,
+                        itemType: PayrollItemType.EARNING,
+                        itemName: 'Overtime',
+                        amount: overtimePay,
+                        description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
+                        performBy,
+                    });
+                }
+
+                if (bonus.greaterThan(0)) {
+                    itemsData.push({
+                        payrollId: id,
+                        currencyCode: payroll.currencyCode,
+                        itemType: PayrollItemType.EARNING,
+                        itemName: 'Bonus',
+                        amount: bonus,
+                        description: 'Performance bonus',
+                        performBy,
+                    });
+                }
+
+                if (taxAmount.greaterThan(0)) {
+                    itemsData.push({
+                        payrollId: id,
+                        currencyCode: payroll.currencyCode,
+                        itemType: PayrollItemType.DEDUCTION,
+                        itemName: 'Tax',
+                        amount: taxAmount,
+                        description: `Tax rate: ${taxRateUsed.times(100).toFixed(2)}%`,
+                        performBy,
+                    });
+                }
+
+                if (deductions.greaterThan(0)) {
+                    itemsData.push({
+                        payrollId: id,
+                        currencyCode: payroll.currencyCode,
+                        itemType: PayrollItemType.DEDUCTION,
+                        itemName: 'Other Deductions',
+                        amount: deductions,
+                        description: 'Additional deductions',
+                        performBy,
+                    });
+                }
+
+                await tx.payrollItems.createMany({ data: itemsData });
+
+                if (payroll.taxCalculation) {
+                    await tx.taxCalculation.delete({
+                        where: { payrollId: id },
+                    });
+                }
+
+                if (taxBracketId) {
+                    await tx.taxCalculation.create({
+                        data: {
+                            payrollId: id,
+                            employeeId: payroll.employeeId,
+                            taxBracketId: taxBracketId,
+                            taxPeriodStart: periodStart,
+                            taxPeriodEnd: periodEnd,
+                            grossIncome: grossIncome,
+                            taxableIncome: grossIncome,
+                            taxAmount: taxAmount,
+                            taxRateUsed: taxRateUsed,
+                            performBy,
+                        },
+                    });
+                }
+            });
+
+            return this.findByIdAsync(id);
+        } catch (error) {
+            this.logger.error('Failed to update payroll', error);
+            return Result.fail('Failed to update payroll');
+        }
+    }
+
+    /**
      * Finalizes a payroll, changing status to PROCESSED.
      */
     async finalizeAsync(
@@ -468,6 +688,15 @@ export class PayrollsService {
                     include: {
                         items: {
                             where: { isDeleted: false },
+                        },
+                        employee: {
+                            include: {
+                                department: {
+                                    select: { departmentName: true },
+                                },
+                                position: { select: { title: true } },
+                                user: { select: { id: true, profileImage: true } },
+                            },
                         },
                         taxCalculation: true,
                     },
@@ -1058,45 +1287,47 @@ export class PayrollsService {
                     doc.y = y + rowHeight;
                 };
 
+                const drawInfoRow = (
+                    leftLabel: string,
+                    leftValue: string,
+                    rightLabel: string,
+                    rightValue: string,
+                ) => {
+                    const y = doc.y;
+                    doc.font('Helvetica-Bold').fontSize(10);
+                    doc.text(leftLabel, 50, y);
+                    doc.font('Helvetica').text(leftValue, 130, y);
+                    doc.font('Helvetica-Bold').text(rightLabel, 300, y);
+                    doc.font('Helvetica').text(rightValue, 380, y);
+                    doc.y = y + 18;
+                };
+
                 doc.font('Helvetica-Bold')
                     .fontSize(20)
-                    .text('PAYSLIP', { align: 'center' });
-                doc.moveDown(1.5);
+                    .text('PAYSLIP', 50, doc.y, { align: 'center' });
+                doc.moveDown(2);
 
-                doc.font('Helvetica-Bold').fontSize(10);
-                doc.text('Employee:', 50, doc.y);
-                doc.font('Helvetica').text(employeeName, 130, doc.y);
-                doc.font('Helvetica-Bold').text('Pay Period:', 300, doc.y);
-                doc.font('Helvetica').text(periodStr, 380, doc.y);
-
-                doc.moveDown(0.5);
-                doc.font('Helvetica-Bold').text('ID:', 50, doc.y);
-                doc.font('Helvetica').text(
-                    payroll.employee.employeeCode,
-                    130,
-                    doc.y,
+                drawInfoRow(
+                    'Employee:',
+                    employeeName,
+                    'Pay Period:',
+                    periodStr,
                 );
-                doc.font('Helvetica-Bold').text('Pay Date:', 300, doc.y);
-                doc.font('Helvetica').text(
+                drawInfoRow(
+                    'ID:',
+                    payroll.employee.employeeCode,
+                    'Pay Date:',
                     payroll.paymentDate
                         ? payroll.paymentDate.toLocaleDateString()
                         : 'Pending',
-                    380,
-                    doc.y,
                 );
-
-                doc.moveDown(0.5);
-                doc.font('Helvetica-Bold').text('Department:', 50, doc.y);
-                doc.font('Helvetica').text(department, 130, doc.y);
-                doc.font('Helvetica-Bold').text('Status:', 300, doc.y);
-                doc.font('Helvetica').text(payroll.status, 380, doc.y);
-
-                doc.moveDown(0.5);
-                doc.font('Helvetica-Bold').text('Position:', 50, doc.y);
-                doc.font('Helvetica').text(position, 130, doc.y);
-
-                doc.moveDown(2);
-                doc.y += 10;
+                drawInfoRow(
+                    'Department:',
+                    department,
+                    'Status:',
+                    payroll.status,
+                );
+                drawInfoRow('Position:', position, '', '');
 
                 drawRow(['Item', 'Type', 'Amount'], {
                     bold: true,

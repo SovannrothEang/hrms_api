@@ -42,6 +42,14 @@ import { join } from 'path';
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
+    @Get('summary')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get user summary statistics' })
+    @ApiResponse({ status: HttpStatus.OK })
+    async getSummary() {
+        return await this.usersService.getSummaryAsync();
+    }
+
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all users (paginated with filters)' })

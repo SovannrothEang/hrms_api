@@ -37,6 +37,13 @@ export class LeaveQueryDto {
     employeeId?: string;
 
     @ApiPropertyOptional({
+        description: 'Search by employee code, name, username, or email',
+    })
+    @IsOptional()
+    @IsString()
+    search?: string;
+
+    @ApiPropertyOptional({
         description: 'Filter by approver ID',
     })
     @IsOptional()

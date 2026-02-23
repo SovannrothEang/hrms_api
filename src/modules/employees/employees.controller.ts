@@ -36,6 +36,14 @@ import { EmployeeDto } from './dtos/employee.dto';
 export class EmployeesController {
     constructor(private readonly employeesService: EmployeesService) {}
 
+    @Get('summary')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get employee summary statistics' })
+    @ApiResponse({ status: HttpStatus.OK })
+    async getSummary() {
+        return await this.employeesService.getSummaryAsync();
+    }
+
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all employees (Filtered)' })

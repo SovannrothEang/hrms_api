@@ -185,6 +185,7 @@ export class CommonMapper {
         return {
             id: p.id,
             employeeId: p.employeeId,
+            employee: p.employee ? this.mapToEmployeeDto(p.employee) : null,
             currencyCode: p.currencyCode,
             baseCurrencyCode: p.baseCurrencyCode,
             payPeriodStart: p.payPeriodStart,

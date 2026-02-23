@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Transform, Type } from 'class-transformer';
 import { DecimalNumber, toDecimal } from '../../../../config/decimal-number';
 import { PayrollItemDto } from './payroll-item.dto';
+import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
 
 @Exclude()
 export class TaxCalculationDto {
@@ -47,6 +48,10 @@ export class PayrollDto {
     @Expose()
     @ApiProperty({ example: 'uuid-employee-id' })
     employeeId: string;
+
+    @Expose()
+    @ApiProperty()
+    employee: EmployeeDto | null;
 
     @Expose()
     @ApiProperty({ example: 'USD' })

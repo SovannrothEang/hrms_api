@@ -109,6 +109,9 @@ export class EmployeeDto {
     @Expose({ name: 'isActive' })
     isActive: boolean;
 
+    @Expose()
+    profileImage: string | null;
+
     @Expose({ name: 'createdAt' })
     createdAt: Date;
 

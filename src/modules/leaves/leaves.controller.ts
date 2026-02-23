@@ -26,6 +26,7 @@ import { LeaveRequestCreateDto } from './dtos/leave-request-create.dto';
 import { LeaveRequestStatusUpdateDto } from './dtos/leave-request-status-update.dto';
 import { LeaveQueryDto } from './dtos/leave-query.dto';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
+import { LeaveRequestSummaryDto } from './dtos/leave-request-summary.dto';
 import { ResultPagination } from '../../common/logic/result-pagination';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -42,7 +43,7 @@ export class LeavesController {
     @ApiResponse({ status: HttpStatus.OK })
     async findAll(
         @Query() query: LeaveQueryDto,
-    ): Promise<ResultPagination<LeaveRequestDto>> {
+    ): Promise<ResultPagination<LeaveRequestDto, LeaveRequestSummaryDto>> {
         const result = await this.leavesService.findAllPaginatedAsync(query);
         if (!result.isSuccess) throw new BadRequestException(result.error);
         return result.getData();
