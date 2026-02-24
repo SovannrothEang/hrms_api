@@ -249,7 +249,9 @@ export class DepartmentsService {
         const departments = await this.prisma.client.department.findMany({
             where: { isDeleted: false, isActive: true },
             include: {
-                _count: { select: { employees: { where: { isDeleted: false } } } },
+                _count: {
+                    select: { employees: { where: { isDeleted: false } } },
+                },
             },
         });
 

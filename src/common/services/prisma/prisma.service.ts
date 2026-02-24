@@ -3,37 +3,36 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
-interface SoftDeleteCapable {
-    [model: string]: {
-        delete: (args: unknown) => Promise<unknown>;
-        deleteMany: (args: unknown) => Promise<unknown>;
-        update: (args: unknown) => Promise<unknown>;
-        updateMany: (args: unknown) => Promise<unknown>;
-        findFirst: (args: unknown) => Promise<unknown>;
-        findMany: (args: unknown) => Promise<unknown>;
-        findUnique: (args: unknown) => Promise<unknown>;
-    };
-}
-
-type ExtendedPrismaClient = ReturnType<PrismaService['setupSoftDelete']>;
+const softDeleteModels: readonly string[] = [
+    'User',
+    'Employee',
+    'Department',
+    'Payroll',
+    'Role',
+    'EmployeePosition',
+    'Shift',
+    'PublicHoliday',
+    'Attendance',
+    'LeaveRequest',
+    'LeaveBalance',
+    'Currency',
+    'ExchangeRate',
+    'PayrollItems',
+    'TaxBracket',
+    'EmployeeTaxConfig',
+    'TaxCalculation',
+];
 
 @Injectable()
 export class PrismaService
     extends PrismaClient
     implements OnModuleInit, OnModuleDestroy
 {
-    private readonly _extendedClient: ExtendedPrismaClient;
-
     constructor() {
         const connectionString = process.env.DATABASE_URL || '';
         const pool = new Pool({ connectionString });
         const adapter = new PrismaPg(pool);
         super({ adapter });
-        this._extendedClient = this.setupSoftDelete();
-    }
-
-    get client(): ExtendedPrismaClient {
-        return this._extendedClient;
     }
 
     async onModuleInit(): Promise<void> {
@@ -44,78 +43,106 @@ export class PrismaService
         await this.$disconnect();
     }
 
-    private setupSoftDelete() {
-        const softDeleteModels: string[] = [
-            'User',
-            'Employee',
-            'Department',
-            'Payroll',
-            'Role',
-            'EmployeePosition',
-            'Shift',
-            'PublicHoliday',
-            'Attendance',
-            'LeaveRequest',
-            'LeaveBalance',
-            'Currency',
-            'ExchangeRate',
-            'PayrollItems',
-            'TaxBracket',
-            'EmployeeTaxConfig',
-            'TaxCalculation',
-        ];
-
+    get client(): PrismaClient {
         return this.$extends({
             query: {
                 $allModels: {
                     async delete({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
-                            return (this as unknown as SoftDeleteCapable)[
-                                model
-                            ].update({
-                                ...args,
-                                data: {
-                                    isDeleted: true,
-                                    deletedAt: new Date(),
-                                },
-                            });
+                            const modelKey =
+                                model.charAt(0).toLowerCase() + model.slice(1);
+                            const extended = this as unknown as {
+                                [key: string]: {
+                                    update: (
+                                        args: Record<string, unknown>,
+                                    ) => Promise<unknown>;
+                                };
+                            };
+                            return (
+                                extended[modelKey]?.update({
+                                    ...args,
+                                    data: {
+                                        isDeleted: true,
+                                        deletedAt: new Date(),
+                                    },
+                                }) ?? query(args)
+                            );
                         }
                         return query(args);
                     },
                     async deleteMany({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
-                            return (this as unknown as SoftDeleteCapable)[
-                                model
-                            ].updateMany({
-                                ...args,
-                                data: {
-                                    isDeleted: true,
-                                    deletedAt: new Date(),
-                                },
-                            });
+                            const modelKey =
+                                model.charAt(0).toLowerCase() + model.slice(1);
+                            const extended = this as unknown as {
+                                [key: string]: {
+                                    updateMany: (
+                                        args: Record<string, unknown>,
+                                    ) => Promise<unknown>;
+                                };
+                            };
+                            return (
+                                extended[modelKey]?.updateMany({
+                                    ...args,
+                                    data: {
+                                        isDeleted: true,
+                                        deletedAt: new Date(),
+                                    },
+                                }) ?? query(args)
+                            );
                         }
                         return query(args);
                     },
                     async findMany({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
-                            args.where = { isDeleted: false, ...args.where };
+                            const newArgs = { ...args } as Record<
+                                string,
+                                unknown
+                            >;
+                            newArgs.where = {
+                                isDeleted: false,
+                                ...(newArgs.where as object),
+                            };
+                            return query(
+                                newArgs as Parameters<typeof query>[0],
+                            );
                         }
                         return query(args);
                     },
                     async findFirst({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
-                            args.where = { isDeleted: false, ...args.where };
+                            const newArgs = { ...args } as Record<
+                                string,
+                                unknown
+                            >;
+                            newArgs.where = {
+                                isDeleted: false,
+                                ...(newArgs.where as object),
+                            };
+                            return query(
+                                newArgs as Parameters<typeof query>[0],
+                            );
                         }
                         return query(args);
                     },
                     async findUnique({ model, args, query }) {
                         if (softDeleteModels.includes(model)) {
-                            args.where = { isDeleted: false, ...args.where };
+                            const newArgs = { ...args } as Record<
+                                string,
+                                unknown
+                            >;
+                            newArgs.where = {
+                                isDeleted: false,
+                                ...(newArgs.where as object),
+                            };
+                            return query(
+                                newArgs as Parameters<typeof query>[0],
+                            );
                         }
                         return query(args);
                     },
                 },
             },
-        });
+        }) as unknown as PrismaClient;
     }
 }

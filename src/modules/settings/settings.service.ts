@@ -3,16 +3,15 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { UpdateCompanySettingsDto } from './dtos/update-company-settings.dto';
 import { CompanySettingsResponseDto } from './dtos/company-settings-response.dto';
 import { Result } from '../../common/logic/result';
+import { CompanySettings } from '@prisma/client';
 
 @Injectable()
 export class SettingsService {
     private readonly logger = new Logger(SettingsService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
-    async getCompanySettings(): Promise<
-        Result<CompanySettingsResponseDto>
-    > {
+    async getCompanySettings(): Promise<Result<CompanySettingsResponseDto>> {
         try {
             const settings = await this.prisma.client.companySettings.findFirst(
                 {
@@ -64,7 +63,7 @@ export class SettingsService {
                     },
                 });
 
-            let settings;
+            let settings: CompanySettings;
             if (existingSettings) {
                 settings = await this.prisma.client.companySettings.update({
                     where: { id: existingSettings.id },
@@ -110,7 +109,7 @@ export class SettingsService {
     }
 
     private mapToResponse(
-        settings: any,
+        settings: CompanySettings,
     ): CompanySettingsResponseDto {
         return {
             id: settings.id,

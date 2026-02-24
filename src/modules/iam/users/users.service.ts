@@ -421,26 +421,27 @@ export class UsersService {
         hrCount: number;
         activeCount: number;
     }> {
-        const [totalUsers, adminCount, hrCount, activeCount] = await Promise.all([
-            this.prisma.client.user.count({
-                where: { isDeleted: false },
-            }),
-            this.prisma.client.user.count({
-                where: {
-                    isDeleted: false,
-                    userRoles: { some: { role: { name: 'ADMIN' } } },
-                },
-            }),
-            this.prisma.client.user.count({
-                where: {
-                    isDeleted: false,
-                    userRoles: { some: { role: { name: 'HR_MANAGER' } } },
-                },
-            }),
-            this.prisma.client.user.count({
-                where: { isDeleted: false, isActive: true },
-            }),
-        ]);
+        const [totalUsers, adminCount, hrCount, activeCount] =
+            await Promise.all([
+                this.prisma.client.user.count({
+                    where: { isDeleted: false },
+                }),
+                this.prisma.client.user.count({
+                    where: {
+                        isDeleted: false,
+                        userRoles: { some: { role: { name: 'ADMIN' } } },
+                    },
+                }),
+                this.prisma.client.user.count({
+                    where: {
+                        isDeleted: false,
+                        userRoles: { some: { role: { name: 'HR_MANAGER' } } },
+                    },
+                }),
+                this.prisma.client.user.count({
+                    where: { isDeleted: false, isActive: true },
+                }),
+            ]);
 
         return {
             totalUsers,

@@ -158,8 +158,17 @@ export class AttendancesService {
                 }),
             ]);
 
-        const getCount = (s: string) =>
-            statusCounts.find((c) => c.status === s)?._count._all || 0;
+        type StatusCountResult = {
+            status: string;
+            _count: { _all: number };
+        };
+
+        const getCount = (s: string): number => {
+            const found = (statusCounts as StatusCountResult[]).find(
+                (c) => c.status === s,
+            );
+            return found?._count._all || 0;
+        };
 
         const summary: AttendanceSummaryDto = {
             daysPresent:

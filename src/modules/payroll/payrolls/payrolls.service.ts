@@ -695,7 +695,9 @@ export class PayrollsService {
                                     select: { departmentName: true },
                                 },
                                 position: { select: { title: true } },
-                                user: { select: { id: true, profileImage: true } },
+                                user: {
+                                    select: { id: true, profileImage: true },
+                                },
                             },
                         },
                         taxCalculation: true,

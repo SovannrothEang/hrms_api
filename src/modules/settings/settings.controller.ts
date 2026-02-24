@@ -19,7 +19,6 @@ import { UpdateCompanySettingsDto } from './dtos/update-company-settings.dto';
 import { CompanySettingsResponseDto } from './dtos/company-settings-response.dto';
 import { AuthWithCsrf } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { RoleName } from '../../common/enums/roles.enum';
 
 @ApiTags('Settings')
 @ApiBearerAuth()
