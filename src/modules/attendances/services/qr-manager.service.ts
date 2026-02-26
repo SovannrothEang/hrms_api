@@ -7,29 +7,49 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '../../../common/redis/redis.service';
 import { v4 as uuidv4 } from 'uuid';
+import * as QRCode from 'qrcode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class QrManagerService {
     private readonly logger = new Logger(QrManagerService.name);
     private readonly QR_SECRET = process.env.QR_SECRET || 'qrSuperSecretKey';
     private readonly QR_EXPIRY = 60; // 60 seconds
+    private readonly qrDirectory = path.join(process.cwd(), 'public', 'qrs');
 
     constructor(
         private readonly jwtService: JwtService,
         private readonly redisService: RedisService,
-    ) {}
+    ) {
+        // Ensure directory exists
+        if (!fs.existsSync(this.qrDirectory)) {
+            fs.mkdirSync(this.qrDirectory, { recursive: true });
+        }
+    }
 
-    async generateToken(type: 'IN' | 'OUT'): Promise<string> {
+    async generateToken(type: 'IN' | 'OUT'): Promise<{ token: string; qrUrl: string }> {
+        const jti = uuidv4();
         const payload = {
             type,
             iat: Math.floor(Date.now() / 1000),
-            jti: uuidv4(),
+            jti,
         };
 
-        return this.jwtService.signAsync(payload, {
+        const token = await this.jwtService.signAsync(payload, {
             secret: this.QR_SECRET,
             expiresIn: `${this.QR_EXPIRY}s`,
         });
+
+        // Generate QR code image
+        const fileName = `qr-${jti}.png`;
+        const filePath = path.join(this.qrDirectory, fileName);
+        await QRCode.toFile(filePath, token);
+
+        const appUrl = process.env.API_URL || 'http://localhost:3001';
+        const qrUrl = `${appUrl}/qrs/${fileName}`;
+
+        return { token, qrUrl };
     }
 
     async verifyToken(

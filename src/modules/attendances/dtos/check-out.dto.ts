@@ -3,10 +3,10 @@ import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CheckOutDto {
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @MaxLength(36)
-    @ApiProperty({ name: 'employeeId', required: true, example: 'uuid-string' })
-    employeeId: string;
+    @ApiProperty({ name: 'employeeId', required: false, example: 'uuid-string' })
+    employeeId?: string;
 
     @IsOptional()
     @IsString()

@@ -154,6 +154,7 @@ export class AttendancesService {
                 this.prisma.client.attendance.groupBy({
                     by: ['status'],
                     where,
+                    orderBy: { status: 'asc' },
                     _count: { _all: true },
                 }),
             ]);
@@ -225,7 +226,16 @@ export class AttendancesService {
         dto: CheckInDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        const { employeeId, qrToken } = dto;
+        let { employeeId, qrToken } = dto;
+
+        if (!employeeId && performerId) {
+            const emp = await this.prisma.client.employee.findFirst({
+                where: { userId: performerId }
+            });
+            if (emp) employeeId = emp.id;
+        }
+
+        if (!employeeId) return Result.fail('Employee ID is required');
 
         // Verify QR Token
         await this.qrManagerService.verifyToken(qrToken, 'IN');
@@ -287,7 +297,7 @@ export class AttendancesService {
 
         const attendance = await this.prisma.client.attendance.create({
             data: {
-                employeeId: dto.employeeId,
+                employeeId: employeeId,
                 date: today,
                 checkInTime: now,
                 status: status,
@@ -307,7 +317,16 @@ export class AttendancesService {
         dto: CheckOutDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        const { employeeId, qrToken, notes } = dto;
+        let { employeeId, qrToken, notes } = dto;
+
+        if (!employeeId && performerId) {
+            const emp = await this.prisma.client.employee.findFirst({
+                where: { userId: performerId }
+            });
+            if (emp) employeeId = emp.id;
+        }
+
+        if (!employeeId) return Result.fail('Employee ID is required');
 
         // Verify QR Token
         await this.qrManagerService.verifyToken(qrToken, 'OUT');
@@ -458,6 +477,7 @@ export class AttendancesService {
         const statusCounts = await this.prisma.client.attendance.groupBy({
             by: ['status'],
             where,
+            orderBy: { status: 'asc' },
             _count: { _all: true },
         });
 
@@ -585,6 +605,7 @@ export class AttendancesService {
         const statusCounts = await this.prisma.client.attendance.groupBy({
             by: ['status'],
             where,
+            orderBy: { status: 'asc' },
             _count: { _all: true },
         });
 

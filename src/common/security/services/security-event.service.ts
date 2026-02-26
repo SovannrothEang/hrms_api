@@ -266,10 +266,7 @@ export class SecurityEventService {
                     tableName: 'security_events',
                     recordId: event.sessionId || event.id,
                     newValue: event.details
-                        ? (JSON.parse(JSON.stringify(event.details)) as Record<
-                              string,
-                              unknown
-                          >)
+                        ? (JSON.parse(JSON.stringify(event.details)) as any)
                         : undefined,
                     timestamp: event.timestamp,
                 },

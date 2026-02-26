@@ -6,7 +6,7 @@ export async function seedIam(prisma: PrismaClient) {
     console.log('--- Seeding IAM (Roles & Admin) ---');
 
     // 1. Roles
-    const roles = [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.HR_MANAGER];
+    const roles = [RoleName.ADMIN, RoleName.EMPLOYEE, RoleName.HR_MANAGER, RoleName.HRMS_API];
     const roleIds: Record<string, string> = {};
 
     for (const roleName of roles) {
@@ -53,5 +53,35 @@ export async function seedIam(prisma: PrismaClient) {
         });
     } else {
         console.log('Admin user already exists.');
+    }
+
+    // 3. Machine User (HRMS_API)
+    const machineEmail = 'machine@example.com';
+    const machineUsername = 'machine';
+
+    const existingMachine = await prisma.user.findFirst({
+        where: {
+            OR: [{ email: machineEmail }, { username: machineUsername }]
+        },
+        select: { id: true }
+    });
+
+    if (!existingMachine) {
+        console.log('Creating Machine User...');
+        const hashedPassword = await bcrypt.hash('Machine123!', 12);
+        await prisma.user.create({
+            data: {
+                email: machineEmail,
+                username: machineUsername,
+                password: hashedPassword,
+                isActive: true,
+                userRoles: {
+                    create: { roleId: roleIds[RoleName.HRMS_API] }
+                }
+            },
+            select: { id: true }
+        });
+    } else {
+        console.log('Machine user already exists.');
     }
 }

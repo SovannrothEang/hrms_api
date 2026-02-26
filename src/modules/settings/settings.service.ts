@@ -114,9 +114,9 @@ export class SettingsService {
         return {
             id: settings.id,
             name: settings.name,
-            email: settings.email,
-            phone: settings.phone,
-            address: settings.address,
+            email: settings.email || undefined,
+            phone: settings.phone || undefined,
+            address: settings.address || undefined,
             baseCurrencyCode: settings.baseCurrencyCode,
             fiscalYearStartMonth: settings.fiscalYearStartMonth,
             timezone: settings.timezone,
