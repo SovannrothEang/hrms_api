@@ -28,7 +28,9 @@ export class QrManagerService {
         }
     }
 
-    async generateToken(type: 'IN' | 'OUT'): Promise<{ token: string; qrUrl: string }> {
+    async generateToken(
+        type: 'IN' | 'OUT',
+    ): Promise<{ token: string; qrUrl: string }> {
         const jti = uuidv4();
         const payload = {
             type,

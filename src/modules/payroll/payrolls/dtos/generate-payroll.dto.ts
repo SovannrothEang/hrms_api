@@ -44,6 +44,15 @@ export class GeneratePayrollDto {
     @IsArray()
     @IsUUID(4, { each: true })
     employeeIds?: string[];
+
+    @ApiPropertyOptional({
+        example: true,
+        description:
+            'Auto-calculate overtime from attendance records and leave deductions. If false, creates with 0 values for manual entry.',
+        default: true,
+    })
+    @IsOptional()
+    autoCalculate?: boolean;
 }
 
 export class GeneratePayrollResultDto {

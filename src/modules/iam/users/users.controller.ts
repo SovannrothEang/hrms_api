@@ -16,6 +16,7 @@ import {
     UseInterceptors,
     Res,
 } from '@nestjs/common';
+import * as fs from 'fs';
 import { UsersService } from './users.service';
 import {
     ApiBody,
@@ -38,7 +39,7 @@ import express from 'express';
 import { join } from 'path';
 
 @Controller('users')
-@Auth(RoleName.ADMIN)
+@Auth()
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
@@ -46,6 +47,7 @@ export class UsersController {
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get user summary statistics' })
     @ApiResponse({ status: HttpStatus.OK })
+    @Auth(RoleName.ADMIN)
     async getSummary() {
         return await this.usersService.getSummaryAsync();
     }
@@ -74,6 +76,7 @@ export class UsersController {
         status: HttpStatus.OK,
         description: 'Paginated list of users',
     })
+    @Auth(RoleName.ADMIN)
     async findAll(
         @Query() query: UserQueryDto,
     ): Promise<ResultPagination<UserDto>> {
@@ -93,6 +96,7 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
+    @Auth(RoleName.ADMIN)
     async findOne(@Param('id') id: string): Promise<UserDto> {
         const result = await this.usersService.findOneByIdAsync(id);
         if (!result.isSuccess) {
@@ -116,6 +120,7 @@ export class UsersController {
         description: 'Create user',
     })
     @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad request' })
+    @Auth(RoleName.ADMIN)
     async create(
         @Body() dto: UserCreateDto,
         @CurrentUser('sub') userId: string,
@@ -137,6 +142,7 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
+    @Auth(RoleName.ADMIN)
     async update(
         @Param('id') id: string,
         @Body() dto: UserUpdateDto,
@@ -154,6 +160,7 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
+    @Auth(RoleName.ADMIN)
     async patch(
         @Param('id') id: string,
         @Body() dto: UserUpdateDto,
@@ -171,6 +178,7 @@ export class UsersController {
         status: HttpStatus.NOT_FOUND,
         description: 'User not found',
     })
+    @Auth(RoleName.ADMIN)
     async delete(@Param('id') id: string) {
         await this.usersService.deleteAsync(id);
     }
@@ -196,6 +204,7 @@ export class UsersController {
     @HttpCode(HttpStatus.OK)
     @UseInterceptors(FileInterceptor('file'))
     @ApiConsumes('multipart/form-data')
+    @Auth()
     @ApiBody({
         schema: {
             type: 'object',

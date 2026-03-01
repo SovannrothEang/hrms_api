@@ -1,5 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MaxLength, IsDecimal, Min, Max } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+    IsString,
+    MaxLength,
+    IsDecimal,
+    Min,
+    Max,
+    IsOptional,
+} from 'class-validator';
 
 export class EmployeePositionUpdateDto {
     @IsString()
@@ -7,9 +14,10 @@ export class EmployeePositionUpdateDto {
     @ApiProperty({ example: 'Software Engineer' })
     title?: string;
 
+    @IsOptional()
     @IsString()
     @MaxLength(255)
-    @ApiProperty({ example: "Software Engineer's description" })
+    @ApiPropertyOptional({ example: "Software Engineer's description" })
     description?: string;
 
     @IsDecimal()

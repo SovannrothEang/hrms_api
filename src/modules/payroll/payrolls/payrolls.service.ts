@@ -918,6 +918,102 @@ export class PayrollsService {
     }
 
     /**
+     * Calculate overtime hours from attendance records for an employee in a period.
+     */
+    private async calculateOvertimeFromAttendanceAsync(
+        employeeId: string,
+        periodStart: Date,
+        periodEnd: Date,
+    ): Promise<number> {
+        const result = await this.prisma.client.attendance.aggregate({
+            where: {
+                employeeId,
+                date: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+                isDeleted: false,
+            },
+            _sum: {
+                overtime: true,
+            },
+        });
+
+        return Number(result._sum.overtime ?? 0);
+    }
+
+    /**
+     * Calculate unpaid leave deduction for an employee in a period.
+     * Returns the deduction amount based on daily rate and unpaid leave days.
+     */
+    private async calculateLeaveDeductionAsync(
+        employeeId: string,
+        basicSalary: Decimal,
+        periodStart: Date,
+        periodEnd: Date,
+    ): Promise<{ deductionAmount: number; unpaidDays: number }> {
+        const unpaidLeaves = await this.prisma.client.leaveRequest.findMany({
+            where: {
+                employeeId,
+                status: 'APPROVED',
+                isDeleted: false,
+                OR: [
+                    {
+                        startDate: {
+                            gte: periodStart,
+                            lte: periodEnd,
+                        },
+                    },
+                    {
+                        endDate: {
+                            gte: periodStart,
+                            lte: periodEnd,
+                        },
+                    },
+                    {
+                        AND: [
+                            { startDate: { lte: periodStart } },
+                            { endDate: { gte: periodEnd } },
+                        ],
+                    },
+                ],
+            },
+        });
+
+        let totalUnpaidDays = 0;
+
+        for (const leave of unpaidLeaves) {
+            const leaveStart = new Date(leave.startDate);
+            const leaveEnd = new Date(leave.endDate);
+
+            const effectiveStart =
+                leaveStart < periodStart ? periodStart : leaveStart;
+            const effectiveEnd = leaveEnd > periodEnd ? periodEnd : leaveEnd;
+
+            const daysDiff =
+                Math.ceil(
+                    (effectiveEnd.getTime() - effectiveStart.getTime()) /
+                        (1000 * 60 * 60 * 24),
+                ) + 1;
+
+            totalUnpaidDays += daysDiff;
+        }
+
+        if (totalUnpaidDays === 0) {
+            return { deductionAmount: 0, unpaidDays: 0 };
+        }
+
+        const monthlyWorkingDays = 22;
+        const dailyRate = basicSalary.dividedBy(monthlyWorkingDays);
+        const deductionAmount = dailyRate.times(totalUnpaidDays);
+
+        return {
+            deductionAmount: Number(deductionAmount),
+            unpaidDays: totalUnpaidDays,
+        };
+    }
+
+    /**
      * Bulk generate payrolls for multiple employees.
      */
     async generateBulkAsync(
@@ -1000,6 +1096,30 @@ export class PayrollsService {
                         continue;
                     }
 
+                    // Calculate overtime and leave deductions if auto-calculate is enabled
+                    const shouldAutoCalculate = dto.autoCalculate !== false; // default to true
+                    let overtimeHours = 0;
+                    let leaveDeductions = 0;
+
+                    if (shouldAutoCalculate) {
+                        overtimeHours =
+                            await this.calculateOvertimeFromAttendanceAsync(
+                                employee.id,
+                                periodStart,
+                                periodEnd,
+                            );
+
+                        const basicSalary = employee.position.salaryRangeMin;
+                        const leaveDeductionResult =
+                            await this.calculateLeaveDeductionAsync(
+                                employee.id,
+                                basicSalary,
+                                periodStart,
+                                periodEnd,
+                            );
+                        leaveDeductions = leaveDeductionResult.deductionAmount;
+                    }
+
                     // Create payroll using existing method logic
                     const createResult = await this.createDraftAsync(
                         {
@@ -1007,9 +1127,9 @@ export class PayrollsService {
                             payPeriodStart: dto.payPeriodStart,
                             payPeriodEnd: dto.payPeriodEnd,
                             currencyCode: dto.currencyCode,
-                            overtimeHours: 0,
+                            overtimeHours,
                             bonus: 0,
-                            deductions: 0,
+                            deductions: leaveDeductions,
                         },
                         performBy,
                     );

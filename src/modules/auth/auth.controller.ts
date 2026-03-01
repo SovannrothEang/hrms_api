@@ -150,7 +150,9 @@ export class AuthController {
     @Throttle({ default: { limit: 10, ttl: 60000 } })
     @SkipCsrf()
     @PublicEndpoint()
-    @ApiOperation({ summary: 'Refresh access token (supports cookies or body)' })
+    @ApiOperation({
+        summary: 'Refresh access token (supports cookies or body)',
+    })
     @ApiCookieAuth()
     @ApiResponse({
         status: HttpStatus.OK,
@@ -168,7 +170,7 @@ export class AuthController {
         // Try cookies first, fall back to body
         const cookies = req.cookies as Record<string, string> | undefined;
         let refreshToken = cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
-        let sessionId = cookies?.[COOKIE_NAMES.SESSION_ID];
+        const sessionId = cookies?.[COOKIE_NAMES.SESSION_ID];
 
         // If no cookies, try body (for mobile/non-cookie clients)
         if (!refreshToken && body?.refreshToken) {
@@ -194,21 +196,26 @@ export class AuthController {
             );
         } else {
             // Legacy refresh for mobile clients without session cookies
-            const legacyResult = await this.authService.refreshToken(refreshToken);
+            const legacyResult =
+                await this.authService.refreshToken(refreshToken);
             const legacyData = legacyResult.getData();
-            
+
             // Decode the new access token to get user info
-            const payload = this.jwtService.decode(legacyData.accessToken) as { sub: string; email: string; roles: string[] } | null;
-            
+            const payload = this.jwtService.decode(legacyData.accessToken) as {
+                sub: string;
+                email: string;
+                roles: string[];
+            } | null;
+
             if (!payload) {
                 throw new UnauthorizedException('Invalid token');
             }
-            
+
             result = {
                 getData: () => ({
                     tokens: {
                         accessToken: legacyData.accessToken,
-                        refreshToken: refreshToken,
+                        refreshToken: legacyData.refreshToken,
                         csrfToken: '',
                         sessionId: '',
                         expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour

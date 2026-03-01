@@ -72,6 +72,18 @@ export class AttendancesController {
         return result.getData();
     }
 
+    @Get('today')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: "Get today's attendance for the current user" })
+    @ApiResponse({ status: HttpStatus.OK, type: AttendanceDto })
+    async getToday(@CurrentUser('sub') userId: string) {
+        const result = await this.attendancesService.getTodayAttendance(userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
+        return result.getData();
+    }
+
     @Get(':id')
     @HttpCode(HttpStatus.OK)
     @ApiParam({ name: 'id', required: true, description: 'Attendance ID' })

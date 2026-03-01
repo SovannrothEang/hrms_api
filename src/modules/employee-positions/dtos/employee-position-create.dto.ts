@@ -1,7 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     IsNotEmpty,
     IsNumber,
+    IsOptional,
     IsString,
     Max,
     MaxLength,
@@ -15,10 +16,14 @@ export class EmployeePositionCreateDto {
     @ApiProperty({ example: 'Software Engineer', required: true })
     title: string;
 
+    @IsOptional()
     @IsString()
     @MaxLength(255)
-    @ApiProperty({ example: 'Software Engineer description', required: false })
-    description: string;
+    @ApiPropertyOptional({
+        example: 'Software Engineer description',
+        required: false,
+    })
+    description?: string;
 
     @IsNumber({ maxDecimalPlaces: 2 })
     @IsNotEmpty()

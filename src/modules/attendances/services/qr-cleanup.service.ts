@@ -11,22 +11,26 @@ export class QrCleanupService {
     @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
     handleCron() {
         this.logger.log('Running daily QR code cleanup...');
-        
+
         if (!fs.existsSync(this.qrDirectory)) {
             return;
         }
 
         fs.readdir(this.qrDirectory, (err, files) => {
             if (err) {
-                this.logger.error(`Unable to read QR directory: ${err.message}`);
+                this.logger.error(
+                    `Unable to read QR directory: ${err.message}`,
+                );
                 return;
             }
 
             for (const file of files) {
                 if (file.endsWith('.png')) {
-                    fs.unlink(path.join(this.qrDirectory, file), err => {
+                    fs.unlink(path.join(this.qrDirectory, file), (err) => {
                         if (err) {
-                            this.logger.error(`Failed to delete QR code file ${file}: ${err.message}`);
+                            this.logger.error(
+                                `Failed to delete QR code file ${file}: ${err.message}`,
+                            );
                         }
                     });
                 }

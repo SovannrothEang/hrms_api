@@ -5,14 +5,18 @@ export class CheckInDto {
     @IsString()
     @IsOptional()
     @MaxLength(36)
-    @ApiProperty({ name: 'employeeId', required: false, example: 'uuid-string' })
+    @ApiProperty({
+        name: 'employeeId',
+        required: false,
+        example: 'uuid-string',
+    })
     employeeId?: string;
     @IsString()
-    @IsNotEmpty()
+    @IsOptional()
     @ApiProperty({
         name: 'qrToken',
-        required: true,
+        required: false,
         example: 'signed-jwt-token',
     })
-    qrToken: string;
+    qrToken?: string;
 }

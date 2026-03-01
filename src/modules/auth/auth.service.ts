@@ -308,7 +308,7 @@ export class AuthService {
 
     async refreshToken(
         refreshToken: string,
-    ): Promise<Result<{ accessToken: string }>> {
+    ): Promise<Result<{ accessToken: string; refreshToken: string }>> {
         this.logger.log('Refreshing token');
 
         try {
@@ -340,8 +340,15 @@ export class AuthService {
                 roles: roles,
             };
 
+            const newAccessToken = await this.jwtService.signAsync(payloads);
+            const newRefreshToken = await this.jwtService.signAsync(
+                { ...payloads, type: 'refresh' },
+                { expiresIn: '7d' },
+            );
+
             return Result.ok({
-                accessToken: await this.jwtService.signAsync(payloads),
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
             });
         } catch {
             this.logger.warn('Invalid refresh token');

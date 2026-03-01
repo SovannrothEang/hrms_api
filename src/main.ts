@@ -28,7 +28,7 @@ async function bootstrap() {
     );
 
     const isDev = process.env.NODE_ENV !== 'production';
-    
+
     // Serve static files for QR codes
     app.useStaticAssets(join(__dirname, '..', 'public'));
 

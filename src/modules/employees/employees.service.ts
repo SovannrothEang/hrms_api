@@ -10,12 +10,51 @@ import { Prisma } from '@prisma/client';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { Decimal } from '@prisma/client/runtime/client';
 
 @Injectable()
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
     constructor(private prisma: PrismaService) {}
+
+    private async validateSalaryAgainstPosition(
+        positionId: string,
+        salary: number | undefined,
+    ): Promise<Result<void>> {
+        if (salary === undefined || salary === null) {
+            return Result.ok();
+        }
+
+        const position = await this.prisma.client.employeePosition.findUnique({
+            where: { id: positionId },
+            select: {
+                salaryRangeMin: true,
+                salaryRangeMax: true,
+                title: true,
+            },
+        });
+
+        if (!position) {
+            return Result.fail('Position not found');
+        }
+
+        const salaryDecimal = new Decimal(salary);
+
+        if (salaryDecimal.lessThan(position.salaryRangeMin)) {
+            return Result.fail(
+                `Salary ${salary} is below minimum ${position.salaryRangeMin} for position "${position.title}"`,
+            );
+        }
+
+        if (salaryDecimal.greaterThan(position.salaryRangeMax)) {
+            return Result.fail(
+                `Salary ${salary} is above maximum ${position.salaryRangeMax} for position "${position.title}"`,
+            );
+        }
+
+        return Result.ok();
+    }
 
     async createAsync(
         dto: EmployeeCreateDto,
@@ -49,6 +88,15 @@ export class EmployeesService {
         });
         this.logger.log('Role: ' + JSON.stringify(role));
         if (!role) return Result.fail('Role not found');
+
+        // Validate salary is within position range
+        const salaryValidation = await this.validateSalaryAgainstPosition(
+            dto.positionId,
+            dto.salary,
+        );
+        if (!salaryValidation.isSuccess) {
+            return Result.fail(salaryValidation.error ?? 'Invalid salary');
+        }
 
         try {
             const employee = await this.prisma.client.$transaction(
@@ -368,10 +416,29 @@ export class EmployeesService {
             select: {
                 id: true,
                 userId: true,
+                positionId: true,
+                salary: true,
                 user: { select: { profileImage: true } },
             },
         });
         if (!employee) return Result.fail('Employee not found');
+
+        // Determine which position to validate against
+        const positionIdToValidate = dto.positionId ?? employee.positionId;
+        const salaryToValidate = dto.salary ?? Number(employee.salary);
+
+        // Validate salary if it's being updated or position is changing
+        if (dto.salary !== undefined || dto.positionId !== undefined) {
+            const salaryValidation = await this.validateSalaryAgainstPosition(
+                positionIdToValidate,
+                salaryToValidate,
+            );
+            if (!salaryValidation.isSuccess) {
+                return Result.fail(
+                    salaryValidation.error ?? 'Invalid salary for position',
+                );
+            }
+        }
 
         const {
             employmentType,
