@@ -26,6 +26,25 @@ export class SettingsService {
             );
 
             if (!settings) {
+                // Check if USD currency exists, create it if not
+                let currencyCode = 'USD';
+                const existingCurrency = await this.prisma.client.currency.findUnique({
+                    where: { code: 'USD' },
+                });
+                
+                if (!existingCurrency) {
+                    // Create default USD currency
+                    await this.prisma.client.currency.create({
+                        data: {
+                            code: 'USD',
+                            name: 'US Dollar',
+                            symbol: '$',
+                            country: 'USA',
+                        },
+                    });
+                    this.logger.log('Created default USD currency');
+                }
+
                 const defaultSettings =
                     await this.prisma.client.companySettings.create({
                         data: {
@@ -33,7 +52,7 @@ export class SettingsService {
                             email: 'hr@hrflow.com',
                             phone: '(555) 123-4567',
                             address: '123 Business Street, Tech City',
-                            baseCurrencyCode: 'USD',
+                            baseCurrencyCode: currencyCode,
                             fiscalYearStartMonth: 1,
                             timezone: 'UTC-8',
                             dateFormat: 'mdy',
@@ -55,6 +74,15 @@ export class SettingsService {
         userId: string,
     ): Promise<Result<CompanySettingsResponseDto>> {
         try {
+            // Validate currency exists
+            const currency = await this.prisma.client.currency.findUnique({
+                where: { code: dto.baseCurrencyCode },
+            });
+            
+            if (!currency) {
+                return Result.fail(`Currency '${dto.baseCurrencyCode}' does not exist. Please create the currency first.`);
+            }
+
             const existingSettings =
                 await this.prisma.client.companySettings.findFirst({
                     where: {

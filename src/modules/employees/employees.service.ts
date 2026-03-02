@@ -11,12 +11,16 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { Decimal } from '@prisma/client/runtime/client';
+import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 
 @Injectable()
 export class EmployeesService {
     private readonly logger = new Logger(EmployeesService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(
+        private prisma: PrismaService,
+        private leaveBalancesService: LeaveBalancesService,
+    ) {}
 
     private async validateSalaryAgainstPosition(
         positionId: string,
@@ -150,6 +154,13 @@ export class EmployeesService {
                         },
                     });
                 },
+            );
+
+            // 3. Initialize default leave balances for the new employee
+            await this.leaveBalancesService.initializeDefaultBalances(
+                employee.id,
+                performerId,
+                new Date().getFullYear(),
             );
 
             return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
@@ -403,6 +414,24 @@ export class EmployeesService {
             },
         });
         if (!employee) return Result.fail('Employee not found');
+        return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
+    }
+
+    async findOneByUserIdAsync(
+        userId: string,
+    ): Promise<Result<EmployeeDto>> {
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+            include: {
+                department: true,
+                position: true,
+                user: { include: { userRoles: { include: { role: true } } } },
+                manager: true,
+            },
+        });
+        if (!employee) {
+            return Result.fail('Employee record not found for user');
+        }
         return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
     }
 
