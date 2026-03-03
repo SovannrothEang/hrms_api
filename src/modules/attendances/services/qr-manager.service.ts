@@ -7,26 +7,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '../../../common/redis/redis.service';
 import { v4 as uuidv4 } from 'uuid';
-import * as QRCode from 'qrcode';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class QrManagerService {
     private readonly logger = new Logger(QrManagerService.name);
     private readonly QR_SECRET = process.env.QR_SECRET || 'qrSuperSecretKey';
     private readonly QR_EXPIRY = 60; // 60 seconds
-    private readonly qrDirectory = path.join(process.cwd(), 'public', 'qrs');
 
     constructor(
         private readonly jwtService: JwtService,
         private readonly redisService: RedisService,
-    ) {
-        // Ensure directory exists
-        if (!fs.existsSync(this.qrDirectory)) {
-            fs.mkdirSync(this.qrDirectory, { recursive: true });
-        }
-    }
+    ) {}
 
     async generateToken(
         type: 'IN' | 'OUT',
@@ -43,15 +34,9 @@ export class QrManagerService {
             expiresIn: `${this.QR_EXPIRY}s`,
         });
 
-        // Generate QR code image
-        const fileName = `qr-${jti}.png`;
-        const filePath = path.join(this.qrDirectory, fileName);
-        await QRCode.toFile(filePath, token);
-
-        const appUrl = process.env.API_URL || 'http://localhost:3001';
-        const qrUrl = `${appUrl}/qrs/${fileName}`;
-
-        return { token, qrUrl };
+        // We no longer generate physical QR files to save resources.
+        // The frontend (machine kiosk) generates the QR from the token directly.
+        return { token, qrUrl: '' };
     }
 
     async verifyToken(

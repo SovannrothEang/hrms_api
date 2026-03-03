@@ -289,6 +289,9 @@ export class UsersService {
             if (dto.email !== undefined) {
                 userData.email = dto.email;
             }
+            if (dto.isActive !== undefined) {
+                userData.isActive = dto.isActive;
+            }
 
             if (Object.keys(userData).length > 0) {
                 await tx.user.update({
