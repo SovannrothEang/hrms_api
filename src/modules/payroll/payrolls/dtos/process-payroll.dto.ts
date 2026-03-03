@@ -64,6 +64,22 @@ export class ProcessPayrollDto {
     deductions?: number;
 
     @ApiPropertyOptional({
+        example: 'Unpaid Leave',
+        description: 'Label for the deduction',
+    })
+    @IsOptional()
+    @IsString()
+    deductionName?: string;
+
+    @ApiPropertyOptional({
+        example: '5 days of unpaid leave',
+        description: 'Description for the deduction',
+    })
+    @IsOptional()
+    @IsString()
+    deductionDescription?: string;
+
+    @ApiPropertyOptional({
         example: 2500,
         description: 'Override basic salary (if not using position salary)',
     })

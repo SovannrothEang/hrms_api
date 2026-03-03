@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsOptional, Min, IsDateString } from 'class-validator';
+import { IsNumber, IsOptional, Min, IsDateString, IsString } from 'class-validator';
 
 export class UpdatePayrollDto {
     @ApiPropertyOptional({
@@ -44,6 +44,22 @@ export class UpdatePayrollDto {
     @IsNumber()
     @Min(0)
     deductions?: number;
+
+    @ApiPropertyOptional({
+        example: 'Unpaid Leave',
+        description: 'Label for the deduction',
+    })
+    @IsOptional()
+    @IsString()
+    deductionName?: string;
+
+    @ApiPropertyOptional({
+        example: '5 days of unpaid leave',
+        description: 'Description for the deduction',
+    })
+    @IsOptional()
+    @IsString()
+    deductionDescription?: string;
 
     @ApiPropertyOptional({
         example: 2500,
