@@ -30,6 +30,15 @@ export class AttendanceDto {
     @Expose({ name: 'checkOutTime' })
     checkOutTime: Date;
 
+    @Expose({ name: 'checkInOccurredAt' })
+    checkInOccurredAt: Date | null;
+
+    @Expose({ name: 'checkOutOccurredAt' })
+    checkOutOccurredAt: Date | null;
+
+    @Expose({ name: 'clientTimezone' })
+    clientTimezone: string | null;
+
     @Expose({ name: 'workHours' })
     @Type(() => DecimalNumber)
     @Transform(toDecimal)

@@ -21,7 +21,7 @@ export class ExchangeRatesService {
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
             endOfDay.setHours(23, 59, 59, 999);
-            
+
             // Check for existing for that date
             const existing = await this.prisma.client.exchangeRate.findFirst({
                 where: {
@@ -29,10 +29,10 @@ export class ExchangeRatesService {
                     toCurrencyCode: dto.toCurrencyCode,
                     date: {
                         gte: startOfDay,
-                        lte: endOfDay
+                        lte: endOfDay,
                     },
-                    isDeleted: false
-                }
+                    isDeleted: false,
+                },
             });
 
             let result;
@@ -41,8 +41,8 @@ export class ExchangeRatesService {
                     where: { id: existing.id },
                     data: {
                         rate: dto.rate,
-                        performBy: userId
-                    }
+                        performBy: userId,
+                    },
                 });
             } else {
                 result = await this.prisma.client.exchangeRate.create({
@@ -51,8 +51,8 @@ export class ExchangeRatesService {
                         toCurrencyCode: dto.toCurrencyCode,
                         rate: dto.rate,
                         date: new Date(dto.date),
-                        performBy: userId
-                    }
+                        performBy: userId,
+                    },
                 });
             }
 
@@ -68,42 +68,49 @@ export class ExchangeRatesService {
             const rates = await this.prisma.client.exchangeRate.findMany({
                 where: { isDeleted: false },
                 orderBy: { date: 'desc' },
-                take: 100
+                take: 100,
             });
-            return Result.ok(rates.map(r => this.mapToDto(r)));
+            return Result.ok(rates.map((r) => this.mapToDto(r)));
         } catch (error) {
             this.logger.error(error);
             return Result.fail('Failed to fetch exchange rates');
         }
     }
 
-    async getLatestRateAsync(from: string, to: string): Promise<Result<number>> {
+    async getLatestRateAsync(
+        from: string,
+        to: string,
+    ): Promise<Result<number>> {
         try {
             // 1. Direct match (e.g. USD -> KHR)
             const directRate = await this.prisma.client.exchangeRate.findFirst({
                 where: {
                     fromCurrencyCode: from,
                     toCurrencyCode: to,
-                    isDeleted: false
+                    isDeleted: false,
                 },
-                orderBy: { date: 'desc' }
+                orderBy: { date: 'desc' },
             });
 
             if (directRate) return Result.ok(Number(directRate.rate));
 
             // 2. Inverse match (e.g. KHR -> USD if only USD -> KHR exists)
-            const inverseRate = await this.prisma.client.exchangeRate.findFirst({
-                where: {
-                    fromCurrencyCode: to,
-                    toCurrencyCode: from,
-                    isDeleted: false
+            const inverseRate = await this.prisma.client.exchangeRate.findFirst(
+                {
+                    where: {
+                        fromCurrencyCode: to,
+                        toCurrencyCode: from,
+                        isDeleted: false,
+                    },
+                    orderBy: { date: 'desc' },
                 },
-                orderBy: { date: 'desc' }
-            });
+            );
 
             if (inverseRate) return Result.ok(1 / Number(inverseRate.rate));
 
-            return Result.fail(`No exchange rate found between ${from} and ${to}`);
+            return Result.fail(
+                `No exchange rate found between ${from} and ${to}`,
+            );
         } catch (error) {
             return Result.fail('Error fetching exchange rate');
         }
@@ -116,7 +123,7 @@ export class ExchangeRatesService {
             toCurrencyCode: r.toCurrencyCode,
             rate: new DecimalNumber(r.rate),
             date: r.date,
-            createdAt: r.createdAt
+            createdAt: r.createdAt,
         };
     }
 }

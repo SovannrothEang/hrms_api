@@ -18,6 +18,7 @@ import {
 import { LeaveRequestSummaryDto } from './dtos/leave-request-summary.dto';
 
 import { EmailService } from '../notifications/email.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { ErrorCode } from 'src/common/enums/error-codes.enum';
 import { BusinessError } from 'src/common/exceptions/business-error.exception';
 
@@ -26,6 +27,7 @@ export class LeavesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
+        private readonly pushNotificationService: PushNotificationService,
     ) {}
 
     async findAllAsync(
@@ -418,6 +420,39 @@ export class LeavesService {
                 leave.id,
             );
 
+            // Send Push Notification to Manager
+            const employeeRecord = await this.prisma.client.employee.findUnique(
+                {
+                    where: { id: dto.employeeId },
+                    select: {
+                        managerId: true,
+                        firstname: true,
+                        lastname: true,
+                    },
+                },
+            );
+
+            if (employeeRecord?.managerId) {
+                const manager = await this.prisma.client.employee.findUnique({
+                    where: { id: employeeRecord.managerId },
+                    select: { userId: true },
+                });
+
+                if (manager?.userId) {
+                    const dateStr = startDate.toISOString().split('T')[0];
+                    await this.pushNotificationService.sendNotification(
+                        manager.userId,
+                        'New Leave Request',
+                        `${employeeRecord.firstname} ${employeeRecord.lastname} has requested ${requestedDays} day(s) of ${dto.leaveType} starting from ${dateStr}.`,
+                        'LEAVE_REQUESTED',
+                        {
+                            leaveId: leave.id,
+                            requesterName: `${employeeRecord.firstname} ${employeeRecord.lastname}`,
+                        },
+                    );
+                }
+            }
+
             return Result.ok(CommonMapper.mapToLeaveRequestDto(leave)!);
         } catch (e) {
             if (e instanceof BusinessError) {
@@ -525,6 +560,29 @@ export class LeavesService {
                 id,
                 dto.status,
             );
+
+            // Send Push Notification to Employee
+            const requesterRecord =
+                await this.prisma.client.employee.findUnique({
+                    where: { id: leave.employeeId },
+                    select: { userId: true },
+                });
+
+            if (requesterRecord?.userId) {
+                const statusText =
+                    dto.status === (LeaveStatus.APPROVED as any)
+                        ? 'Approved'
+                        : 'Rejected';
+                const dateRange = `${leave.startDate.toISOString().split('T')[0]} to ${leave.endDate.toISOString().split('T')[0]}`;
+
+                await this.pushNotificationService.sendNotification(
+                    requesterRecord.userId,
+                    `Leave Request ${statusText}`,
+                    `Your ${leave.leaveType} request for ${dateRange} has been ${statusText.toLowerCase()}.`,
+                    'LEAVE_STATUS_UPDATED',
+                    { leaveId: id, status: dto.status },
+                );
+            }
 
             return Result.ok(CommonMapper.mapToLeaveRequestDto(updatedLeave)!);
         } catch (e) {

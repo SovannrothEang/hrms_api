@@ -417,9 +417,7 @@ export class EmployeesService {
         return Result.ok(CommonMapper.mapToEmployeeDto(employee)!);
     }
 
-    async findOneByUserIdAsync(
-        userId: string,
-    ): Promise<Result<EmployeeDto>> {
+    async findOneByUserIdAsync(userId: string): Promise<Result<EmployeeDto>> {
         const employee = await this.prisma.client.employee.findFirst({
             where: { userId, isDeleted: false },
             include: {

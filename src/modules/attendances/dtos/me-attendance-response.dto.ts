@@ -14,6 +14,10 @@ export class ClockInEventDto {
     @Expose({ name: 'is_late' })
     isLate: boolean = false;
 
+    @ApiProperty({ nullable: true })
+    @Expose({ name: 'occurred_at' })
+    occurredAt: Date | null;
+
     @ApiProperty({
         example: 'https://cdn.company.com/clock-photos/att001_in.jpg',
         nullable: true,
@@ -34,6 +38,10 @@ export class ClockOutEventDto {
     @ApiProperty({ example: false })
     @Expose({ name: 'is_early' })
     isEarly: boolean = false;
+
+    @ApiProperty({ nullable: true })
+    @Expose({ name: 'occurred_at' })
+    occurredAt: Date | null;
 
     @ApiProperty({
         example: 'https://cdn.company.com/clock-photos/att001_out.jpg',
@@ -77,6 +85,10 @@ export class MeAttendanceRecordDto {
     @ApiProperty({ example: null, nullable: true })
     @Expose({ name: 'leave_type' })
     leaveType: string | null;
+
+    @ApiProperty({ example: 'Asia/Phnom_Penh', nullable: true })
+    @Expose({ name: 'client_timezone' })
+    clientTimezone: string | null;
 }
 
 export class MeAttendanceSummaryDto {

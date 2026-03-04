@@ -40,7 +40,9 @@ export class LeaveBalancesService {
 
         try {
             await this.prisma.client.$transaction(async (tx) => {
-                for (const [leaveType, totalDays] of Object.entries(defaultBalances)) {
+                for (const [leaveType, totalDays] of Object.entries(
+                    defaultBalances,
+                )) {
                     await tx.leaveBalance.upsert({
                         where: {
                             employeeId_leaveType_year: {
@@ -65,12 +67,16 @@ export class LeaveBalancesService {
                 }
             });
 
-            this.logger.log(`Initialized leave balances for employee ${employeeId}`);
+            this.logger.log(
+                `Initialized leave balances for employee ${employeeId}`,
+            );
             return Result.ok();
         } catch (error) {
             this.logger.error('Failed to initialize leave balances', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to initialize leave balances',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to initialize leave balances',
             );
         }
     }
@@ -101,7 +107,9 @@ export class LeaveBalancesService {
         } catch (error) {
             this.logger.error('Failed to create leave balance', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to create leave balance',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to create leave balance',
             );
         }
     }
@@ -117,7 +125,9 @@ export class LeaveBalancesService {
             const balances: LeaveBalanceResponseDto[] = [];
 
             await this.prisma.client.$transaction(async (tx) => {
-                for (const [leaveType, totalDays] of Object.entries(dto.balances)) {
+                for (const [leaveType, totalDays] of Object.entries(
+                    dto.balances,
+                )) {
                     const balance = await tx.leaveBalance.upsert({
                         where: {
                             employeeId_leaveType_year: {
@@ -150,7 +160,9 @@ export class LeaveBalancesService {
         } catch (error) {
             this.logger.error('Failed to create bulk leave balances', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to create leave balances',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to create leave balances',
             );
         }
     }
@@ -192,13 +204,24 @@ export class LeaveBalancesService {
                 }),
             ]);
 
-            const data = balances.map((balance) => this.mapToResponseDto(balance));
+            const data = balances.map((balance) =>
+                this.mapToResponseDto(balance),
+            );
 
-            return Result.ok(ResultPagination.of(data, total, query.page || 1, query.limit || 10));
+            return Result.ok(
+                ResultPagination.of(
+                    data,
+                    total,
+                    query.page || 1,
+                    query.limit || 10,
+                ),
+            );
         } catch (error) {
             this.logger.error('Failed to fetch leave balances', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to fetch leave balances',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to fetch leave balances',
             );
         }
     }
@@ -229,7 +252,9 @@ export class LeaveBalancesService {
             orderBy: { leaveType: 'asc' },
         });
 
-        const balanceDtos = balances.map((balance) => this.mapToResponseDto(balance));
+        const balanceDtos = balances.map((balance) =>
+            this.mapToResponseDto(balance),
+        );
 
         return Result.ok({
             employeeId,
@@ -268,7 +293,9 @@ export class LeaveBalancesService {
         } catch (error) {
             this.logger.error('Failed to update leave balance', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to update leave balance',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to update leave balance',
             );
         }
     }
@@ -276,10 +303,7 @@ export class LeaveBalancesService {
     /**
      * Delete a leave balance (soft delete)
      */
-    async deleteAsync(
-        id: string,
-        performerId: string,
-    ): Promise<Result<void>> {
+    async deleteAsync(id: string, performerId: string): Promise<Result<void>> {
         try {
             const existing = await this.prisma.client.leaveBalance.findFirst({
                 where: { id, isDeleted: false },
@@ -302,7 +326,9 @@ export class LeaveBalancesService {
         } catch (error) {
             this.logger.error('Failed to delete leave balance', error);
             return Result.fail(
-                error instanceof Error ? error.message : 'Failed to delete leave balance',
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to delete leave balance',
             );
         }
     }

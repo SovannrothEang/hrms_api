@@ -27,4 +27,22 @@ export class CheckOutDto {
         example: 'signed-jwt-token',
     })
     qrToken?: string;
+
+    @IsString()
+    @IsOptional()
+    @ApiProperty({
+        name: 'clientTime',
+        required: false,
+        example: '2024-03-04T18:00:00Z',
+    })
+    clientTime?: string;
+
+    @IsString()
+    @IsOptional()
+    @ApiProperty({
+        name: 'clientTimezone',
+        required: false,
+        example: 'Asia/Phnom_Penh',
+    })
+    clientTimezone?: string;
 }

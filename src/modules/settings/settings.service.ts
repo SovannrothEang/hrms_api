@@ -28,10 +28,11 @@ export class SettingsService {
             if (!settings) {
                 // Check if USD currency exists, create it if not
                 let currencyCode = 'USD';
-                const existingCurrency = await this.prisma.client.currency.findUnique({
-                    where: { code: 'USD' },
-                });
-                
+                const existingCurrency =
+                    await this.prisma.client.currency.findUnique({
+                        where: { code: 'USD' },
+                    });
+
                 if (!existingCurrency) {
                     // Create default USD currency
                     await this.prisma.client.currency.create({
@@ -78,9 +79,11 @@ export class SettingsService {
             const currency = await this.prisma.client.currency.findUnique({
                 where: { code: dto.baseCurrencyCode },
             });
-            
+
             if (!currency) {
-                return Result.fail(`Currency '${dto.baseCurrencyCode}' does not exist. Please create the currency first.`);
+                return Result.fail(
+                    `Currency '${dto.baseCurrencyCode}' does not exist. Please create the currency first.`,
+                );
             }
 
             const existingSettings =

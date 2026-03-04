@@ -3,8 +3,9 @@ dist
 .git
 .gitignore
 .pnpm-store
-Dockerfile
+# Dockerfile removed from ignore
 docker-compose.yml
+
 README.md
 npm-debug.log
 pnpm-debug.log

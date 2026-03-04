@@ -178,7 +178,8 @@ export class MeController {
         @Body() dto: LeaveRequestCreateDto,
     ): Promise<LeaveRequestDto> {
         // Get employee for current user
-        const employeeResult = await this.employeesService.findOneByUserIdAsync(userId);
+        const employeeResult =
+            await this.employeesService.findOneByUserIdAsync(userId);
         if (!employeeResult.isSuccess) {
             throw new BusinessError(
                 employeeResult.error || 'Employee record not found',

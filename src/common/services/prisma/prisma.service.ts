@@ -21,6 +21,7 @@ const softDeleteModels: readonly string[] = [
     'TaxBracket',
     'EmployeeTaxConfig',
     'TaxCalculation',
+    'Notification',
 ];
 
 @Injectable()
