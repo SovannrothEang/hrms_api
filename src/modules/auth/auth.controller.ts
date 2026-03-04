@@ -21,6 +21,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dtos/login.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
@@ -45,6 +46,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly cookieService: CookieService,
+        private readonly jwtService: JwtService,
     ) {}
 
     @Post('login')
@@ -147,7 +149,10 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     @Throttle({ default: { limit: 10, ttl: 60000 } })
     @SkipCsrf()
-    @ApiOperation({ summary: 'Refresh access token using secure cookies' })
+    @PublicEndpoint()
+    @ApiOperation({
+        summary: 'Refresh access token (supports cookies or body)',
+    })
     @ApiCookieAuth()
     @ApiResponse({
         status: HttpStatus.OK,
@@ -160,32 +165,81 @@ export class AuthController {
     async refresh(
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,
+        @Body() body?: RefreshTokenDto,
     ): Promise<AuthResponse> {
+        // Try cookies first, fall back to body
         const cookies = req.cookies as Record<string, string> | undefined;
-        const refreshToken = cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
+        let refreshToken = cookies?.[COOKIE_NAMES.REFRESH_TOKEN];
         const sessionId = cookies?.[COOKIE_NAMES.SESSION_ID];
 
-        if (!refreshToken || !sessionId) {
-            throw new UnauthorizedException('Missing authentication cookies');
+        // If no cookies, try body (for mobile/non-cookie clients)
+        if (!refreshToken && body?.refreshToken) {
+            refreshToken = body.refreshToken;
+            this.logger.debug('Using refresh token from request body');
+        }
+
+        if (!refreshToken) {
+            throw new UnauthorizedException('Missing refresh token');
         }
 
         const ip = this.getClientIp(req);
         const userAgent = req.headers['user-agent'] || 'Unknown';
 
-        const result = await this.authService.refreshTokenSecureAsync(
-            refreshToken,
-            sessionId,
-            ip,
-            userAgent,
-        );
+        // Use secure refresh if we have sessionId, otherwise use legacy
+        let result;
+        if (sessionId) {
+            result = await this.authService.refreshTokenSecureAsync(
+                refreshToken,
+                sessionId,
+                ip,
+                userAgent,
+            );
+        } else {
+            // Legacy refresh for mobile clients without session cookies
+            const legacyResult =
+                await this.authService.refreshToken(refreshToken);
+            const legacyData = legacyResult.getData();
+
+            // Decode the new access token to get user info
+            const payload = this.jwtService.decode(legacyData.accessToken) as {
+                sub: string;
+                email: string;
+                roles: string[];
+            } | null;
+
+            if (!payload) {
+                throw new UnauthorizedException('Invalid token');
+            }
+
+            result = {
+                getData: () => ({
+                    tokens: {
+                        accessToken: legacyData.accessToken,
+                        refreshToken: legacyData.refreshToken,
+                        csrfToken: '',
+                        sessionId: '',
+                        expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
+                    },
+                    user: {
+                        id: payload.sub,
+                        email: payload.email,
+                        username: payload.email,
+                        roles: payload.roles,
+                    },
+                }),
+            };
+        }
 
         const data = result.getData();
 
-        this.cookieService.setAllAuthCookies(res, data.tokens);
+        // Only set cookies for cookie-based clients
+        if (cookies?.[COOKIE_NAMES.REFRESH_TOKEN]) {
+            this.cookieService.setAllAuthCookies(res, data.tokens);
+        }
 
         return {
             accessToken: data.tokens.accessToken,
-            refreshToken: refreshToken,
+            refreshToken: data.tokens.refreshToken || refreshToken,
             csrfToken: data.tokens.csrfToken,
             sessionId: data.tokens.sessionId,
             user: data.user,

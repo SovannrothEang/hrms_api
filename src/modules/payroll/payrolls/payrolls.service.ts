@@ -27,6 +27,7 @@ import { ResultPagination } from '../../../common/logic/result-pagination';
 
 import PDFDocument from 'pdfkit';
 import { DecimalNumber } from '../../../config/decimal-number';
+import { ExchangeRatesService } from '../exchange-rates/exchange-rates.service';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -59,7 +60,19 @@ type PayslipPayroll = Prisma.PayrollGetPayload<{
 export class PayrollsService {
     private readonly logger = new Logger(PayrollsService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly exchangeRatesService: ExchangeRatesService,
+    ) {}
+
+    /**
+     * Calculate taxable income.
+     * Currently simplified: taxable income = gross income.
+     * (No abstract deductions like family relief are applied here as per instructions).
+     */
+    private calculateTaxableIncome(grossIncome: Decimal): Decimal {
+        return grossIncome;
+    }
 
     /**
      * Creates a draft payroll with calculated values (Gross, Tax, Net).
@@ -74,6 +87,22 @@ export class PayrollsService {
             const periodEnd = new Date(dto.payPeriodEnd);
             if (periodEnd <= periodStart) {
                 return Result.fail('Pay period end must be after start date');
+            }
+
+            // 1b. Check for existing payroll for this period
+            const existing = await this.prisma.client.payroll.findFirst({
+                where: {
+                    employeeId: dto.employeeId,
+                    payPeriodStart: periodStart,
+                    payPeriodEnd: periodEnd,
+                    isDeleted: false,
+                },
+            });
+
+            if (existing) {
+                return Result.fail(
+                    `Payroll already exists for this employee in the period ${dto.payPeriodStart} to ${dto.payPeriodEnd}`,
+                );
             }
 
             // 2. Fetch Employee with position and tax config
@@ -100,7 +129,7 @@ export class PayrollsService {
             // 4. Calculate Gross
             const basicSalary = dto.basicSalaryOverride
                 ? new Decimal(dto.basicSalaryOverride)
-                : employee.position.salaryRangeMin;
+                : (employee.salary || employee.position.salaryRangeMin);
 
             const overtimeHours = new Decimal(dto.overtimeHours ?? 0);
             const hourlyRate = basicSalary.dividedBy(MONTHLY_WORKING_HOURS);
@@ -110,47 +139,93 @@ export class PayrollsService {
             const bonus = new Decimal(dto.bonus ?? 0);
             const grossIncome = basicSalary.plus(overtimePay).plus(bonus);
 
-            // 5. Calculate Tax
-            let taxAmount = new Decimal(0);
-            let taxBracketId: string | null = null;
-            let taxRateUsed = new Decimal(0);
+            // 5. Calculate Tax and other bracket-based deductions
+            let totalTaxAmount = new Decimal(0);
+            let taxableIncome = this.calculateTaxableIncome(grossIncome);
+            const matchingBrackets: { bracket: any; amount: Decimal; rate: Decimal; convertedIncome: Decimal }[] = [];
 
             const taxConfig = employee.taxConfig;
             const isTaxExempt = taxConfig?.taxExempt ?? false;
 
             if (!isTaxExempt) {
-                // Find applicable tax bracket
                 const currentYear = new Date().getFullYear();
-                const taxCountry = taxConfig?.taxCountry ?? 'KH'; // Default to Cambodia
+                const taxCountry = taxConfig?.taxCountry ?? 'KH';
 
-                const bracket = await this.prisma.client.taxBracket.findFirst({
+                // Fetch all active brackets for this country and year
+                const allBrackets = await this.prisma.client.taxBracket.findMany({
                     where: {
                         countryCode: taxCountry,
                         taxYear: currentYear,
-                        currencyCode: dto.currencyCode,
-                        minAmount: { lte: grossIncome },
-                        maxAmount: { gt: grossIncome },
                         isDeleted: false,
                     },
-                    orderBy: { minAmount: 'desc' },
                 });
 
-                if (bracket) {
-                    // Tax = (Gross * Rate) - FixedAmount
-                    taxAmount = grossIncome
-                        .times(bracket.taxRate)
-                        .minus(bracket.fixedAmount);
-                    if (taxAmount.lessThan(0)) {
-                        taxAmount = new Decimal(0);
+                for (const bracket of allBrackets) {
+                    let convertedIncome = taxableIncome;
+                    let exchangeRate = new Decimal(1);
+
+                    // Convert income to bracket currency if different
+                    if (bracket.currencyCode !== dto.currencyCode) {
+                        const rateResult = await this.exchangeRatesService.getLatestRateAsync(dto.currencyCode, bracket.currencyCode);
+                        if (rateResult.isSuccess) {
+                            exchangeRate = new Decimal(rateResult.getData());
+                            convertedIncome = taxableIncome.times(exchangeRate);
+                        } else {
+                            continue;
+                        }
                     }
-                    taxBracketId = bracket.id;
-                    taxRateUsed = bracket.taxRate;
+
+                    // CHECK RANGE:
+                    // A bracket matches if:
+                    // 1. Min and Max are both 0 (Universal deduction for ALL employees)
+                    // 2. OR income is within [min, max)
+                    const isUniversal = bracket.minAmount.equals(0) && bracket.maxAmount.equals(0);
+                    const isInRange = convertedIncome.greaterThanOrEqualTo(bracket.minAmount) && 
+                                     (convertedIncome.lessThan(bracket.maxAmount) || bracket.maxAmount.equals(0));
+
+                    if (isUniversal || isInRange) {
+                        // Calculate amount in bracket currency: (Income * Rate) - Fixed
+                        // If Universal (0-0), user likely just wants the Fixed Amount or a flat rate
+                        let bracketAmount = convertedIncome
+                            .times(bracket.taxRate)
+                            .minus(bracket.fixedAmount);
+                        
+                        // If it's a fixed amount deduction with 0% rate (like NSSF flat fee)
+                        // but it's defined as a "fixed amount" to subtract, we might need to flip logic.
+                        // Actually, if fixedAmount is positive, it reduces the tax? 
+                        // Usually, Khmer tax is (Income * Rate) - Constant.
+                        // If it's JUST NSSF flat fee, user might set Rate=0 and FixedAmount=-11500?
+                        // But looking at Image 1, Fixed Amount is 11,500 and Rate is 0%.
+                        // (Income * 0) - 11,500 = -11,500.
+                        // We should probably take the absolute if the user is using it as a "flat deduction".
+                        
+                        if (bracket.taxRate.equals(0) && bracket.fixedAmount.greaterThan(0)) {
+                            bracketAmount = bracket.fixedAmount;
+                        }
+
+                        if (bracketAmount.lessThan(0)) {
+                            bracketAmount = bracketAmount.abs();
+                        }
+
+                        if (bracketAmount.greaterThan(0)) {
+                            // Convert back to payroll currency
+                            const finalAmount = bracketAmount.dividedBy(exchangeRate);
+                            
+                            matchingBrackets.push({
+                                bracket,
+                                amount: finalAmount,
+                                rate: bracket.taxRate,
+                                convertedIncome
+                            });
+                            totalTaxAmount = totalTaxAmount.plus(finalAmount);
+                        }
+                    }
                 }
             }
 
             // 6. Calculate Net
-            const deductions = new Decimal(dto.deductions ?? 0);
-            const totalDeductions = taxAmount.plus(deductions);
+            const otherDeductions = new Decimal(dto.deductions ?? 0);
+            const totalDeductions = totalTaxAmount.plus(otherDeductions);
             const netSalary = grossIncome.minus(totalDeductions);
 
             // 7. Create Payroll record with items using transaction
@@ -166,7 +241,7 @@ export class PayrollsService {
                             overtimeHrs: overtimeHours,
                             overtimeRate: overtimeRate,
                             bonus: bonus,
-                            deductions: deductions,
+                            deductions: otherDeductions, // Manual deductions
                             netSalary: netSalary,
                             status: PayrollStatus.PENDING,
                             performBy,
@@ -193,7 +268,7 @@ export class PayrollsService {
                             itemType: PayrollItemType.EARNING,
                             itemName: 'Overtime',
                             amount: overtimePay,
-                            description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
+                            description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr (${OVERTIME_MULTIPLIER}x multiplier)`,
                             performBy,
                         });
                     }
@@ -210,45 +285,61 @@ export class PayrollsService {
                         });
                     }
 
-                    if (taxAmount.greaterThan(0)) {
+                    // Add items for each matching bracket (Tax, NSSF, etc.)
+                    for (const match of matchingBrackets) {
+                        const { bracket, amount, rate, convertedIncome } = match;
+                        const isTax = bracket.bracketName.toLowerCase().includes('tax');
+                        
+                        let description = `${bracket.bracketName}: `;
+                        if (rate.greaterThan(0)) {
+                            description += `Calculated on ${Number(convertedIncome).toLocaleString()} ${bracket.currencyCode} @ ${rate.times(100).toFixed(2)}%`;
+                        } else {
+                            description += `Fixed amount ${Number(bracket.fixedAmount).toLocaleString()} ${bracket.currencyCode}`;
+                        }
+
+                        if (bracket.currencyCode !== dto.currencyCode) {
+                            description += ` (converted to ${dto.currencyCode})`;
+                        }
+
                         itemsData.push({
                             payrollId: newPayroll.id,
                             currencyCode: dto.currencyCode,
                             itemType: PayrollItemType.DEDUCTION,
-                            itemName: 'Tax',
-                            amount: taxAmount,
-                            description: `Tax rate: ${taxRateUsed.times(100).toFixed(2)}%`,
+                            itemName: bracket.bracketName,
+                            amount: amount,
+                            description: description,
                             performBy,
                         });
                     }
 
-                    if (deductions.greaterThan(0)) {
+                    if (otherDeductions.greaterThan(0)) {
                         itemsData.push({
                             payrollId: newPayroll.id,
                             currencyCode: dto.currencyCode,
                             itemType: PayrollItemType.DEDUCTION,
-                            itemName: 'Other Deductions',
-                            amount: deductions,
-                            description: 'Additional deductions',
+                            itemName: dto.deductionName || 'Other Deductions',
+                            amount: otherDeductions,
+                            description: dto.deductionDescription || 'Additional deductions',
                             performBy,
                         });
                     }
 
                     await tx.payrollItems.createMany({ data: itemsData });
 
-                    // Create TaxCalculation snapshot if tax was applied
-                    if (taxBracketId) {
+                    // Create TaxCalculation snapshot for the first tax-like bracket if any
+                    const primaryTaxMatch = matchingBrackets.find(m => m.bracket.bracketName.toLowerCase().includes('tax')) || matchingBrackets[0];
+                    if (primaryTaxMatch) {
                         await tx.taxCalculation.create({
                             data: {
                                 payrollId: newPayroll.id,
                                 employeeId: dto.employeeId,
-                                taxBracketId: taxBracketId,
+                                taxBracketId: primaryTaxMatch.bracket.id,
                                 taxPeriodStart: periodStart,
                                 taxPeriodEnd: periodEnd,
                                 grossIncome: grossIncome,
-                                taxableIncome: grossIncome, // Simplified: taxable = gross
-                                taxAmount: taxAmount,
-                                taxRateUsed: taxRateUsed,
+                                taxableIncome: taxableIncome,
+                                taxAmount: totalTaxAmount, // Total of all matching brackets
+                                taxRateUsed: primaryTaxMatch.rate,
                                 performBy,
                             },
                         });
@@ -333,43 +424,72 @@ export class PayrollsService {
             const taxConfig = employee.taxConfig;
             const isTaxExempt = taxConfig?.taxExempt ?? false;
 
-            let taxAmount = new Decimal(0);
-            let taxBracketId: string | null = null;
-            let taxRateUsed = new Decimal(0);
+            let totalTaxAmount = new Decimal(0);
+            let taxableIncome = this.calculateTaxableIncome(grossIncome);
+            const matchingBrackets: { bracket: any; amount: Decimal; rate: Decimal; convertedIncome: Decimal }[] = [];
 
             if (!isTaxExempt) {
                 const currentYear = new Date().getFullYear();
                 const taxCountry = taxConfig?.taxCountry ?? 'KH';
 
-                const bracket = await this.prisma.client.taxBracket.findFirst({
+                const allBrackets = await this.prisma.client.taxBracket.findMany({
                     where: {
                         countryCode: taxCountry,
                         taxYear: currentYear,
-                        currencyCode: payroll.currencyCode,
-                        minAmount: { lte: grossIncome },
-                        maxAmount: { gt: grossIncome },
                         isDeleted: false,
                     },
-                    orderBy: { minAmount: 'desc' },
                 });
 
-                if (bracket) {
-                    taxAmount = grossIncome
-                        .times(bracket.taxRate)
-                        .minus(bracket.fixedAmount);
-                    if (taxAmount.lessThan(0)) {
-                        taxAmount = new Decimal(0);
+                for (const bracket of allBrackets) {
+                    let convertedIncome = taxableIncome;
+                    let exchangeRate = new Decimal(1);
+
+                    if (bracket.currencyCode !== payroll.currencyCode) {
+                        const rateResult = await this.exchangeRatesService.getLatestRateAsync(payroll.currencyCode, bracket.currencyCode);
+                        if (rateResult.isSuccess) {
+                            exchangeRate = new Decimal(rateResult.getData());
+                            convertedIncome = taxableIncome.times(exchangeRate);
+                        } else {
+                            continue;
+                        }
                     }
-                    taxBracketId = bracket.id;
-                    taxRateUsed = bracket.taxRate;
+
+                    const isUniversal = bracket.minAmount.equals(0) && bracket.maxAmount.equals(0);
+                    const isInRange = convertedIncome.greaterThanOrEqualTo(bracket.minAmount) && 
+                                     (convertedIncome.lessThan(bracket.maxAmount) || bracket.maxAmount.equals(0));
+
+                    if (isUniversal || isInRange) {
+                        let bracketAmount = convertedIncome
+                            .times(bracket.taxRate)
+                            .minus(bracket.fixedAmount);
+                        
+                        if (bracket.taxRate.equals(0) && bracket.fixedAmount.greaterThan(0)) {
+                            bracketAmount = bracket.fixedAmount;
+                        }
+
+                        if (bracketAmount.lessThan(0)) {
+                            bracketAmount = bracketAmount.abs();
+                        }
+
+                        if (bracketAmount.greaterThan(0)) {
+                            const finalAmount = bracketAmount.dividedBy(exchangeRate);
+                            matchingBrackets.push({
+                                bracket,
+                                amount: finalAmount,
+                                rate: bracket.taxRate,
+                                convertedIncome
+                            });
+                            totalTaxAmount = totalTaxAmount.plus(finalAmount);
+                        }
+                    }
                 }
             }
 
-            const deductions =
+            const otherDeductions =
                 dto.deductions !== undefined
                     ? new Decimal(dto.deductions)
                     : payroll.deductions;
-            const totalDeductions = taxAmount.plus(deductions);
+            const totalDeductions = totalTaxAmount.plus(otherDeductions);
             const netSalary = grossIncome.minus(totalDeductions);
 
             await this.prisma.client.$transaction(async (tx) => {
@@ -382,7 +502,7 @@ export class PayrollsService {
                         overtimeHrs: overtimeHours,
                         overtimeRate,
                         bonus,
-                        deductions,
+                        deductions: otherDeductions,
                         netSalary,
                         performBy,
                     },
@@ -411,7 +531,7 @@ export class PayrollsService {
                         itemType: PayrollItemType.EARNING,
                         itemName: 'Overtime',
                         amount: overtimePay,
-                        description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr`,
+                        description: `${overtimeHours.toFixed(2)} hours @ ${overtimeRate.toFixed(2)}/hr (${OVERTIME_MULTIPLIER}x multiplier)`,
                         performBy,
                     });
                 }
@@ -428,26 +548,38 @@ export class PayrollsService {
                     });
                 }
 
-                if (taxAmount.greaterThan(0)) {
+                for (const match of matchingBrackets) {
+                    const { bracket, amount, rate, convertedIncome } = match;
+                    let description = `${bracket.bracketName}: `;
+                    if (rate.greaterThan(0)) {
+                        description += `Calculated on ${Number(convertedIncome).toLocaleString()} ${bracket.currencyCode} @ ${rate.times(100).toFixed(2)}%`;
+                    } else {
+                        description += `Fixed amount ${Number(bracket.fixedAmount).toLocaleString()} ${bracket.currencyCode}`;
+                    }
+
+                    if (bracket.currencyCode !== payroll.currencyCode) {
+                        description += ` (converted to ${payroll.currencyCode})`;
+                    }
+
                     itemsData.push({
                         payrollId: id,
                         currencyCode: payroll.currencyCode,
                         itemType: PayrollItemType.DEDUCTION,
-                        itemName: 'Tax',
-                        amount: taxAmount,
-                        description: `Tax rate: ${taxRateUsed.times(100).toFixed(2)}%`,
+                        itemName: bracket.bracketName,
+                        amount: amount,
+                        description: description,
                         performBy,
                     });
                 }
 
-                if (deductions.greaterThan(0)) {
+                if (otherDeductions.greaterThan(0)) {
                     itemsData.push({
                         payrollId: id,
                         currencyCode: payroll.currencyCode,
                         itemType: PayrollItemType.DEDUCTION,
-                        itemName: 'Other Deductions',
-                        amount: deductions,
-                        description: 'Additional deductions',
+                        itemName: dto.deductionName || 'Other Deductions',
+                        amount: otherDeductions,
+                        description: dto.deductionDescription || 'Additional deductions',
                         performBy,
                     });
                 }
@@ -460,18 +592,19 @@ export class PayrollsService {
                     });
                 }
 
-                if (taxBracketId) {
+                const primaryTaxMatch = matchingBrackets.find(m => m.bracket.bracketName.toLowerCase().includes('tax')) || matchingBrackets[0];
+                if (primaryTaxMatch) {
                     await tx.taxCalculation.create({
                         data: {
                             payrollId: id,
                             employeeId: payroll.employeeId,
-                            taxBracketId: taxBracketId,
+                            taxBracketId: primaryTaxMatch.bracket.id,
                             taxPeriodStart: periodStart,
                             taxPeriodEnd: periodEnd,
                             grossIncome: grossIncome,
-                            taxableIncome: grossIncome,
-                            taxAmount: taxAmount,
-                            taxRateUsed: taxRateUsed,
+                            taxableIncome: taxableIncome,
+                            taxAmount: totalTaxAmount,
+                            taxRateUsed: primaryTaxMatch.rate,
                             performBy,
                         },
                     });
@@ -918,6 +1051,103 @@ export class PayrollsService {
     }
 
     /**
+     * Calculate overtime hours from attendance records for an employee in a period.
+     */
+    private async calculateOvertimeFromAttendanceAsync(
+        employeeId: string,
+        periodStart: Date,
+        periodEnd: Date,
+    ): Promise<number> {
+        const result = await this.prisma.client.attendance.aggregate({
+            where: {
+                employeeId,
+                date: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+                isDeleted: false,
+            },
+            _sum: {
+                overtime: true,
+            },
+        });
+
+        return Number(result._sum.overtime ?? 0);
+    }
+
+    /**
+     * Calculate unpaid leave deduction for an employee in a period.
+     * Returns the deduction amount based on daily rate and unpaid leave days.
+     */
+    private async calculateLeaveDeductionAsync(
+        employeeId: string,
+        basicSalary: Decimal,
+        periodStart: Date,
+        periodEnd: Date,
+    ): Promise<{ deductionAmount: number; unpaidDays: number }> {
+        const unpaidLeaves = await this.prisma.client.leaveRequest.findMany({
+            where: {
+                employeeId,
+                status: 'APPROVED',
+                leaveType: 'UNPAID',
+                isDeleted: false,
+                OR: [
+                    {
+                        startDate: {
+                            gte: periodStart,
+                            lte: periodEnd,
+                        },
+                    },
+                    {
+                        endDate: {
+                            gte: periodStart,
+                            lte: periodEnd,
+                        },
+                    },
+                    {
+                        AND: [
+                            { startDate: { lte: periodStart } },
+                            { endDate: { gte: periodEnd } },
+                        ],
+                    },
+                ],
+            },
+        });
+
+        let totalUnpaidDays = 0;
+
+        for (const leave of unpaidLeaves) {
+            const leaveStart = new Date(leave.startDate);
+            const leaveEnd = new Date(leave.endDate);
+
+            const effectiveStart =
+                leaveStart < periodStart ? periodStart : leaveStart;
+            const effectiveEnd = leaveEnd > periodEnd ? periodEnd : leaveEnd;
+
+            const daysDiff =
+                Math.ceil(
+                    (effectiveEnd.getTime() - effectiveStart.getTime()) /
+                        (1000 * 60 * 60 * 24),
+                ) + 1;
+
+            totalUnpaidDays += daysDiff;
+        }
+
+        if (totalUnpaidDays === 0) {
+            return { deductionAmount: 0, unpaidDays: 0 };
+        }
+
+        const monthlyWorkingDays = 22;
+        const dailyRate = basicSalary.dividedBy(monthlyWorkingDays);
+        const deductionAmount = dailyRate.times(totalUnpaidDays);
+
+        return {
+            deductionAmount: Number(deductionAmount),
+            unpaidDays: totalUnpaidDays,
+        };
+    }
+
+    /**
      * Bulk generate payrolls for multiple employees.
      */
     async generateBulkAsync(
@@ -1000,33 +1230,93 @@ export class PayrollsService {
                         continue;
                     }
 
-                    // Create payroll using existing method logic
-                    const createResult = await this.createDraftAsync(
-                        {
-                            employeeId: employee.id,
-                            payPeriodStart: dto.payPeriodStart,
-                            payPeriodEnd: dto.payPeriodEnd,
-                            currencyCode: dto.currencyCode,
-                            overtimeHours: 0,
-                            bonus: 0,
-                            deductions: 0,
-                        },
-                        performBy,
-                    );
+                    // Calculate overtime and leave deductions if auto-calculate is enabled
+                    const shouldAutoCalculate = dto.autoCalculate !== false; // default to true
+                    let overtimeHours = 0;
+                    let leaveDeductions = 0;
 
-                    if (createResult.isSuccess) {
-                        result.totalGenerated++;
-                        const payroll = createResult.getData();
-                        if (payroll) {
-                            result.generatedPayrollIds.push(payroll.id);
+                    if (shouldAutoCalculate) {
+                        overtimeHours =
+                            await this.calculateOvertimeFromAttendanceAsync(
+                                employee.id,
+                                periodStart,
+                                periodEnd,
+                            );
+
+                        const basicSalary = employee.salary || employee.position.salaryRangeMin;
+                        const leaveDeductionResult =
+                            await this.calculateLeaveDeductionAsync(
+                                employee.id,
+                                basicSalary,
+                                periodStart,
+                                periodEnd,
+                            );
+                        leaveDeductions = leaveDeductionResult.deductionAmount;
+
+                        const unpaidDays = leaveDeductionResult.unpaidDays;
+                        const deductionDesc = unpaidDays > 0 
+                            ? `Auto-calculated from ${unpaidDays} unpaid leave day(s)` 
+                            : 'Auto-calculated from leave records';
+
+                        // Create payroll using existing method logic
+                        const createResult = await this.createDraftAsync(
+                            {
+                                employeeId: employee.id,
+                                payPeriodStart: dto.payPeriodStart,
+                                payPeriodEnd: dto.payPeriodEnd,
+                                currencyCode: dto.currencyCode,
+                                overtimeHours,
+                                bonus: 0,
+                                deductions: leaveDeductions,
+                                deductionName: leaveDeductions > 0 ? 'Unpaid Leave' : undefined,
+                                deductionDescription: leaveDeductions > 0 ? deductionDesc : undefined,
+                            },
+                            performBy,
+                        );
+
+                        if (createResult.isSuccess) {
+                            result.totalGenerated++;
+                            const payroll = createResult.getData();
+                            if (payroll) {
+                                result.generatedPayrollIds.push(payroll.id);
+                            }
+                        } else {
+                            result.totalFailed++;
+                            result.failedEmployees.push({
+                                employeeId: employee.id,
+                                employeeName: `${employee.firstname} ${employee.lastname}`,
+                                error: createResult.error ?? 'Unknown error',
+                            });
                         }
                     } else {
-                        result.totalFailed++;
-                        result.failedEmployees.push({
-                            employeeId: employee.id,
-                            employeeName: `${employee.firstname} ${employee.lastname}`,
-                            error: createResult.error ?? 'Unknown error',
-                        });
+                        // Create payroll with 0 values for manual entry if auto-calculate is false
+                        const createResult = await this.createDraftAsync(
+                            {
+                                employeeId: employee.id,
+                                payPeriodStart: dto.payPeriodStart,
+                                payPeriodEnd: dto.payPeriodEnd,
+                                currencyCode: dto.currencyCode,
+                                overtimeHours: 0,
+                                bonus: 0,
+                                deductions: 0,
+                            },
+                            performBy,
+                        );
+
+                        if (createResult.isSuccess) {
+                            result.totalGenerated++;
+                            const payroll = createResult.getData();
+                            if (payroll) {
+                                result.generatedPayrollIds.push(payroll.id);
+                            }
+                        } else {
+                            result.totalFailed++;
+                            result.failedEmployees.push({
+                                employeeId: employee.id,
+                                employeeName: `${employee.firstname} ${employee.lastname}`,
+                                error: createResult.error ?? 'Unknown error',
+                            });
+                        }
                     }
                 } catch (error) {
                     result.totalFailed++;

@@ -21,6 +21,7 @@ import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
+import { PositionDropdownDto } from './dtos/position-dropdown.dto';
 import {
     ApiOperation,
     ApiParam,
@@ -53,6 +54,21 @@ export class EmployeePositionsController {
         this._logger.log(`Get all positions`);
         const result =
             await this.employeePositionsService.findAllFilteredAsync(query);
+        return result.getData();
+    }
+
+    @Get('all')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get all positions for dropdown (lightweight)' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'List of all active positions with minimal data',
+        type: [PositionDropdownDto],
+    })
+    async findAllForDropdownAsync(): Promise<PositionDropdownDto[]> {
+        this._logger.log(`Get all positions for dropdown`);
+        const result =
+            await this.employeePositionsService.findAllForDropdownAsync();
         return result.getData();
     }
 

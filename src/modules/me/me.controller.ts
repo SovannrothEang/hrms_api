@@ -1,6 +1,8 @@
 import {
     Controller,
     Get,
+    Post,
+    Body,
     HttpCode,
     HttpStatus,
     BadRequestException,
@@ -18,6 +20,7 @@ import {
 import { LeavesService } from '../leaves/leaves.service';
 import { AttendancesService } from '../attendances/attendances.service';
 import { PayrollsService } from '../payroll/payrolls/payrolls.service';
+import { EmployeesService } from '../employees/employees.service';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AttendanceQueryDto } from '../attendances/dtos/attendance-query.dto';
@@ -29,8 +32,10 @@ import { MePayslipResponseDto } from '../payroll/payrolls/dtos/me-payslip-respon
 import { MeLeaveBalanceResponseDto } from '../leaves/dtos/me-leave-balance-response.dto';
 import { LeaveQueryDto } from '../leaves/dtos/leave-query.dto';
 import { MeLeaveRequestResponseDto } from '../leaves/dtos/me-leave-request-response.dto';
+import { LeaveRequestCreateDto } from '../leaves/dtos/leave-request-create.dto';
 import { PayrollDto } from '../payroll/payrolls/dtos/payroll.dto';
 import { LeaveRequestDto } from '../leaves/dtos/leave-request.dto';
+import { EmployeeDto } from '../employees/dtos/employee.dto';
 import { BusinessError } from '../../common/exceptions/business-error.exception';
 
 @ApiTags('Me')
@@ -43,6 +48,7 @@ export class MeController {
         private readonly leavesService: LeavesService,
         private readonly attendancesService: AttendancesService,
         private readonly payrollsService: PayrollsService,
+        private readonly employeesService: EmployeesService,
     ) {}
 
     @Get('attendances')
@@ -159,6 +165,40 @@ export class MeController {
         return result.getData();
     }
 
+    @Post('leave-requests')
+    @HttpCode(HttpStatus.CREATED)
+    @ApiOperation({ summary: 'Create a new leave request for current user' })
+    @ApiResponse({ status: HttpStatus.CREATED, type: LeaveRequestDto })
+    @ApiResponse({
+        status: HttpStatus.BAD_REQUEST,
+        description: 'Invalid request or validation failed',
+    })
+    async createMyLeaveRequest(
+        @CurrentUser('sub') userId: string,
+        @Body() dto: LeaveRequestCreateDto,
+    ): Promise<LeaveRequestDto> {
+        // Get employee for current user
+        const employeeResult = await this.employeesService.findOneByUserIdAsync(userId);
+        if (!employeeResult.isSuccess) {
+            throw new BusinessError(
+                employeeResult.error || 'Employee record not found',
+                employeeResult.errorCode || undefined,
+            );
+        }
+        const employee = employeeResult.getData();
+
+        // Create leave request with employee ID
+        const createDto = { ...dto, employeeId: employee.id };
+        const result = await this.leavesService.createAsync(createDto, userId);
+        if (!result.isSuccess) {
+            throw new BusinessError(
+                result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
+        }
+        return result.getData();
+    }
+
     @Get('payrolls/:id')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get current user payroll details by ID' })
@@ -211,6 +251,27 @@ export class MeController {
         if (!result.isSuccess) {
             throw new BusinessError(
                 result.error || 'An error occurred',
+                result.errorCode || undefined,
+            );
+        }
+        return result.getData();
+    }
+
+    @Get('employee')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Get current user employee profile' })
+    @ApiResponse({ status: HttpStatus.OK, type: EmployeeDto })
+    @ApiResponse({
+        status: HttpStatus.NOT_FOUND,
+        description: 'Employee record not found for user',
+    })
+    async getMyEmployee(
+        @CurrentUser('sub') userId: string,
+    ): Promise<EmployeeDto> {
+        const result = await this.employeesService.findOneByUserIdAsync(userId);
+        if (!result.isSuccess) {
+            throw new BusinessError(
+                result.error || 'Employee record not found',
                 result.errorCode || undefined,
             );
         }

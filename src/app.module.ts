@@ -23,11 +23,13 @@ import { PublicHolidaysModule } from './modules/public-holidays/public-holidays.
 import { CurrenciesModule } from './modules/payroll/currencies/currencies.module';
 import { TaxBracketsModule } from './modules/payroll/tax-brackets/tax-brackets.module';
 import { PayrollsModule } from './modules/payroll/payrolls/payrolls.module';
+import { ExchangeRatesModule } from './modules/payroll/exchange-rates/exchange-rates.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { MeModule } from './modules/me/me.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { LeaveBalancesModule } from './modules/leave-balances/leave-balances.module';
 
 @Module({
     imports: [
@@ -104,6 +106,8 @@ import { SettingsModule } from './modules/settings/settings.module';
         DepartmentsModule,
         EmployeePositionsModule,
         EmployeesModule,
+        ExchangeRatesModule,
+        LeaveBalancesModule,
         LeavesModule,
         MeModule,
         NotificationsModule,

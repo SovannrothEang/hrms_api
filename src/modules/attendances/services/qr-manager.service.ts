@@ -19,17 +19,24 @@ export class QrManagerService {
         private readonly redisService: RedisService,
     ) {}
 
-    async generateToken(type: 'IN' | 'OUT'): Promise<string> {
+    async generateToken(
+        type: 'IN' | 'OUT',
+    ): Promise<{ token: string; qrUrl: string }> {
+        const jti = uuidv4();
         const payload = {
             type,
             iat: Math.floor(Date.now() / 1000),
-            jti: uuidv4(),
+            jti,
         };
 
-        return this.jwtService.signAsync(payload, {
+        const token = await this.jwtService.signAsync(payload, {
             secret: this.QR_SECRET,
             expiresIn: `${this.QR_EXPIRY}s`,
         });
+
+        // We no longer generate physical QR files to save resources.
+        // The frontend (machine kiosk) generates the QR from the token directly.
+        return { token, qrUrl: '' };
     }
 
     async verifyToken(

@@ -8,10 +8,12 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { CommonMapper } from 'src/common/mappers/common.mapper';
 import { EmployeePositionCreateDto } from './dtos/employee-position-create.dto';
 import { EmployeePositionDto } from './dtos/employee-position.dto';
+import { PositionDropdownDto } from './dtos/position-dropdown.dto';
 import { Result } from 'src/common/logic/result';
 import { EmployeePositionUpdateDto } from './dtos/employee-position-update.dto';
 import { EmployeePositionQueryDto } from './dtos/employee-position-query.dto';
 import { Prisma } from '@prisma/client';
+import { DecimalNumber } from '../../config/decimal-number';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 
@@ -42,6 +44,29 @@ export class EmployeePositionsService {
         return Result.ok(
             positions.map((p) => CommonMapper.mapToPositionDto(p)!),
         );
+    }
+
+    async findAllForDropdownAsync(): Promise<Result<PositionDropdownDto[]>> {
+        this._logger.log('Get all positions for dropdown');
+        const positions = await this.prisma.client.employeePosition.findMany({
+            where: { isDeleted: false, isActive: true },
+            select: {
+                id: true,
+                title: true,
+                salaryRangeMin: true,
+                salaryRangeMax: true,
+            },
+            orderBy: { title: 'asc' },
+        });
+
+        const dtos: PositionDropdownDto[] = positions.map((p) => ({
+            id: p.id,
+            title: p.title,
+            salaryRangeMin: new DecimalNumber(p.salaryRangeMin),
+            salaryRangeMax: new DecimalNumber(p.salaryRangeMax),
+        }));
+
+        return Result.ok(dtos);
     }
 
     async findAllPaginatedAsync(

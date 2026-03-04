@@ -6,6 +6,7 @@ import { AttendanceDto } from './dtos/attendance.dto';
 import { AttendanceQueryDto } from './dtos/attendance-query.dto';
 import { Result } from 'src/common/logic/result';
 import { AttendanceStatus } from 'src/common/enums/attendance-status.enum';
+import { RoleName } from 'src/common/enums/roles.enum';
 
 import { ResultPagination } from '../../common/logic/result-pagination';
 import {
@@ -154,6 +155,7 @@ export class AttendancesService {
                 this.prisma.client.attendance.groupBy({
                     by: ['status'],
                     where,
+                    orderBy: { status: 'asc' },
                     _count: { _all: true },
                 }),
             ]);
@@ -221,14 +223,72 @@ export class AttendancesService {
         return Result.ok(CommonMapper.mapToAttendanceDto(attendance)!);
     }
 
+    async getTodayAttendance(
+        userId: string,
+    ): Promise<Result<AttendanceDto | null>> {
+        const employee = await this.prisma.client.employee.findFirst({
+            where: { userId, isDeleted: false },
+        });
+
+        if (!employee) return Result.fail('Employee record not found');
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const attendance = await this.prisma.client.attendance.findFirst({
+            where: {
+                employeeId: employee.id,
+                date: today,
+                isDeleted: false,
+            },
+            include: {
+                employee: {
+                    include: {
+                        user: { select: { profileImage: true } },
+                    },
+                },
+            },
+        });
+
+        if (!attendance) return Result.ok(null);
+        return Result.ok(CommonMapper.mapToAttendanceDto(attendance));
+    }
+
     async checkIn(
         dto: CheckInDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        const { employeeId, qrToken } = dto;
+        let { employeeId, qrToken } = dto;
 
-        // Verify QR Token
-        await this.qrManagerService.verifyToken(qrToken, 'IN');
+        if (!employeeId && performerId) {
+            const emp = await this.prisma.client.employee.findFirst({
+                where: { userId: performerId },
+            });
+            if (emp) employeeId = emp.id;
+        }
+
+        if (!employeeId) return Result.fail('Employee ID is required');
+
+        // Verify QR Token or Check Performer Permissions
+        if (qrToken) {
+            await this.qrManagerService.verifyToken(qrToken, 'IN');
+        } else if (performerId) {
+            const performer = await this.prisma.client.user.findUnique({
+                where: { id: performerId },
+                include: { userRoles: { include: { role: true } } },
+            });
+            const roles = performer?.userRoles.map((ur) => ur.role.name) || [];
+            if (
+                !roles.includes(RoleName.ADMIN) &&
+                !roles.includes(RoleName.HR_MANAGER)
+            ) {
+                return Result.fail(
+                    'Manual clock-in requires Admin or HR roles.',
+                );
+            }
+        } else {
+            return Result.fail('QR token or manual authorization required.');
+        }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -238,10 +298,11 @@ export class AttendancesService {
                 where: {
                     employeeId: employeeId,
                     date: today,
+                    isDeleted: false,
                 },
             });
 
-        if (existingAttendance) {
+        if (existingAttendance && existingAttendance.checkInTime) {
             return Result.fail('Employee has already checked in for today.');
         }
 
@@ -259,46 +320,62 @@ export class AttendancesService {
         if (employee.shift) {
             const shiftStart = new Date(employee.shift.startTime); // 1970-01-01T09:00:00.000Z generally
 
-            // Construct today's expected start time
+            // Construct today's expected start time in UTC
             const expectedStart = new Date(now);
-            expectedStart.setHours(
+            expectedStart.setUTCHours(
                 shiftStart.getUTCHours(),
                 shiftStart.getUTCMinutes(),
                 0,
                 0,
             );
 
-            // Adjust for local time offset if needed? checkInTime is usually stored/handled in server time.
-            // Assuming Shift.startTime is stored as UTC for the time-of-day.
-            // If checking "LATE", we compare now vs expectedStart + gracePeriod.
-
             const graceMinutes = employee.shift.gracePeriodMins || 0;
-            expectedStart.setMinutes(expectedStart.getMinutes() + graceMinutes);
+            expectedStart.setUTCMinutes(
+                expectedStart.getUTCMinutes() + graceMinutes,
+            );
 
             if (now > expectedStart) {
                 status = AttendanceStatus.LATE;
             }
         } else {
-            // Default fallback if no shift assigned (e.g. 9 AM)
-            const startWorkTime = new Date();
-            startWorkTime.setHours(9, 0, 0, 0);
+            // Default fallback if no shift assigned (9 AM UTC)
+            const startWorkTime = new Date(now);
+            startWorkTime.setUTCHours(9, 0, 0, 0);
             if (now > startWorkTime) status = AttendanceStatus.LATE;
         }
 
-        const attendance = await this.prisma.client.attendance.create({
-            data: {
-                employeeId: dto.employeeId,
-                date: today,
-                checkInTime: now,
-                status: status,
-                performBy: performerId,
-            },
-            include: {
-                employee: {
-                    include: { user: { select: { profileImage: true } } },
+        let attendance;
+        if (existingAttendance) {
+            // Update existing record (e.g. if it was marked as ABSENT)
+            attendance = await this.prisma.client.attendance.update({
+                where: { id: existingAttendance.id },
+                data: {
+                    checkInTime: now,
+                    status: status,
+                    performBy: performerId,
                 },
-            },
-        });
+                include: {
+                    employee: {
+                        include: { user: { select: { profileImage: true } } },
+                    },
+                },
+            });
+        } else {
+            attendance = await this.prisma.client.attendance.create({
+                data: {
+                    employeeId: employeeId,
+                    date: today,
+                    checkInTime: now,
+                    status: status,
+                    performBy: performerId,
+                },
+                include: {
+                    employee: {
+                        include: { user: { select: { profileImage: true } } },
+                    },
+                },
+            });
+        }
 
         return Result.ok(CommonMapper.mapToAttendanceDto(attendance)!);
     }
@@ -307,10 +384,37 @@ export class AttendancesService {
         dto: CheckOutDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        const { employeeId, qrToken, notes } = dto;
+        let { employeeId, qrToken, notes } = dto;
 
-        // Verify QR Token
-        await this.qrManagerService.verifyToken(qrToken, 'OUT');
+        if (!employeeId && performerId) {
+            const emp = await this.prisma.client.employee.findFirst({
+                where: { userId: performerId },
+            });
+            if (emp) employeeId = emp.id;
+        }
+
+        if (!employeeId) return Result.fail('Employee ID is required');
+
+        // Verify QR Token or Check Performer Permissions
+        if (qrToken) {
+            await this.qrManagerService.verifyToken(qrToken, 'OUT');
+        } else if (performerId) {
+            const performer = await this.prisma.client.user.findUnique({
+                where: { id: performerId },
+                include: { userRoles: { include: { role: true } } },
+            });
+            const roles = performer?.userRoles.map((ur) => ur.role.name) || [];
+            if (
+                !roles.includes(RoleName.ADMIN) &&
+                !roles.includes(RoleName.HR_MANAGER)
+            ) {
+                return Result.fail(
+                    'Manual clock-out requires Admin or HR roles.',
+                );
+            }
+        } else {
+            return Result.fail('QR token or manual authorization required.');
+        }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -319,6 +423,7 @@ export class AttendancesService {
             where: {
                 employeeId: employeeId,
                 date: today,
+                isDeleted: false,
             },
             include: {
                 employee: {
@@ -347,11 +452,24 @@ export class AttendancesService {
         let overtime = 0;
 
         if (checkInTime) {
-            const diffMs = checkOutTime.getTime() - checkInTime.getTime();
-            workHours = diffMs / (1000 * 60 * 60); // Convert to hours
+            // Calculate duration using UTC components to avoid 1970 vs today year mismatch
+            // and timezone issues. Prisma returns 1970-01-01 for @db.Time.
+            const startTotalMinutes =
+                checkInTime.getUTCHours() * 60 + checkInTime.getUTCMinutes();
+            const endTotalMinutes =
+                checkOutTime.getUTCHours() * 60 + checkOutTime.getUTCMinutes();
+
+            let diffMinutes = endTotalMinutes - startTotalMinutes;
+
+            // Handle night shifts (clock out on "next" day relative to clock in)
+            if (diffMinutes < 0) {
+                diffMinutes += 24 * 60;
+            }
+
+            workHours = diffMinutes / 60;
 
             // Calculate overtime (hours beyond standard 8-hour workday)
-            const standardWorkHours = attendance.employee?.shift ? 8 : 8; // Default 8 hours
+            const standardWorkHours = 8; // Default 8 hours
             if (workHours > standardWorkHours) {
                 overtime = workHours - standardWorkHours;
                 workHours = standardWorkHours;
@@ -362,8 +480,8 @@ export class AttendancesService {
             where: { id: attendance.id },
             data: {
                 checkOutTime,
-                workHours: Math.round(workHours * 100) / 100,
-                overtime: Math.round(overtime * 100) / 100,
+                workHours: Math.min(Math.round(workHours * 100) / 100, 999.99),
+                overtime: Math.min(Math.round(overtime * 100) / 100, 999.99),
                 notes: notes,
                 performBy: performerId,
             },
@@ -458,6 +576,7 @@ export class AttendancesService {
         const statusCounts = await this.prisma.client.attendance.groupBy({
             by: ['status'],
             where,
+            orderBy: { status: 'asc' },
             _count: { _all: true },
         });
 
@@ -585,6 +704,7 @@ export class AttendancesService {
         const statusCounts = await this.prisma.client.attendance.groupBy({
             by: ['status'],
             where,
+            orderBy: { status: 'asc' },
             _count: { _all: true },
         });
 

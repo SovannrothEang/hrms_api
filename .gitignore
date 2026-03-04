@@ -9,6 +9,7 @@ docs/
 /build
 
 public/images/
+public/qrs/
 
 # Logs
 logs

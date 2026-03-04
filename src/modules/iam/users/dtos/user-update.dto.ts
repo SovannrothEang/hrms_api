@@ -47,4 +47,13 @@ export class UserUpdateDto {
         enum: RoleName,
     })
     roles?: RoleName[];
+
+    @IsOptional()
+    @ApiProperty({
+        example: true,
+        description: 'Whether the user is active',
+        required: false,
+        type: Boolean,
+    })
+    isActive?: boolean;
 }

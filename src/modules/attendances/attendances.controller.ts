@@ -41,18 +41,18 @@ export class AttendancesController {
         private readonly qrManagerService: QrManagerService,
     ) {}
 
-    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER, RoleName.HRMS_API])
     @Get('qr/in')
     @ApiOperation({ summary: 'Generate QR code for clock-in' })
     async generateQrIn() {
-        return { token: await this.qrManagerService.generateToken('IN') };
+        return await this.qrManagerService.generateToken('IN');
     }
 
-    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
+    @Auth([RoleName.ADMIN, RoleName.HR_MANAGER, RoleName.HRMS_API])
     @Get('qr/out')
     @ApiOperation({ summary: 'Generate QR code for clock-out' })
     async generateQrOut() {
-        return { token: await this.qrManagerService.generateToken('OUT') };
+        return await this.qrManagerService.generateToken('OUT');
     }
 
     @Get()
@@ -69,6 +69,18 @@ export class AttendancesController {
             throw new BadRequestException(result.error);
         }
 
+        return result.getData();
+    }
+
+    @Get('today')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: "Get today's attendance for the current user" })
+    @ApiResponse({ status: HttpStatus.OK, type: AttendanceDto })
+    async getToday(@CurrentUser('sub') userId: string) {
+        const result = await this.attendancesService.getTodayAttendance(userId);
+        if (!result.isSuccess) {
+            throw new BadRequestException(result.error);
+        }
         return result.getData();
     }
 
