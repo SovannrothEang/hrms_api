@@ -1,4 +1,4 @@
-﻿# --- Base ---
+# --- Base ---
 FROM node:20-alpine AS base
 RUN apk add --no-cache libc6-compat python3 build-base
 RUN corepack enable && corepack prepare pnpm@latest --activate
