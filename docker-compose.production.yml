@@ -1,0 +1,79 @@
+services:
+    api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: runner
+        container_name: hrms_api_prod
+        restart: always
+        ports:
+            - '3001:3001'
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        environment:
+            - NODE_ENV=production
+            - PORT=3001
+            - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@db:5432/${POSTGRES_DB:-hrms_db}
+            - REDIS_HOST=redis
+            - REDIS_PORT=6379
+            - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+            - NEXT_APP_URL=${NEXT_APP_URL:-http://localhost:3000}
+            - JWT_SECRET=${JWT_SECRET:-production_secret_key_change_me}
+            - JWT_EXPIRATION=${JWT_EXPIRATION:-1d}
+            - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-production_refresh_secret_key_change_me}
+            - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-7d}
+        networks:
+            - app_network
+
+    db:
+        image: postgres:15-alpine
+        container_name: hrms_db_prod
+        restart: always
+        environment:
+            - POSTGRES_USER=${POSTGRES_USER:-postgres}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin123}
+            - POSTGRES_DB=${POSTGRES_DB:-hrms_db}
+        # Optional: expose port to host for external access
+        # ports:
+        #   - '5432:5432'
+        volumes:
+            - postgres_data_prod:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hrms_db}',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - app_network
+
+    redis:
+        image: redis:7-alpine
+        container_name: hrms_redis_prod
+        restart: always
+        # Optional: expose port to host for external access
+        # ports:
+        #   - '6379:6379'
+        volumes:
+            - redis_data_prod:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - app_network
+
+networks:
+    app_network:
+        driver: bridge
+
+volumes:
+    postgres_data_prod:
+    redis_data_prod:
