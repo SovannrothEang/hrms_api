@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsString, IsDateString, Min } from 'class-validator';
+import {
+    IsNotEmpty,
+    IsNumber,
+    IsString,
+    IsDateString,
+    Min,
+} from 'class-validator';
 
 export class CreateExchangeRateDto {
     @ApiProperty({ example: 'USD' })

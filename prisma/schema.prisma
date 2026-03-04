@@ -25,12 +25,14 @@ model User {
   isLocked         Boolean   @default(false)
   lockUntil        DateTime? @db.Timestamptz
   profileImage     String?   @map("profile_image") @db.Text
+  fcmToken         String?   @map("fcm_token") @db.Text
 
   userRoles    UserRole[]
   employee     Employee?
   auditLogs    AuditLog[]
   createdSlugs Slug[]     @relation("SlugCreator")
   updatedSlugs Slug[]     @relation("SlugUpdater")
+  notifications Notification[]
 
   performedRoles           Role[]              @relation("RolePerformer")
   performedUserRoles       UserRole[]          @relation("UserRolePerformer")
@@ -281,6 +283,9 @@ model Attendance {
   date         DateTime  @db.Date
   checkInTime  DateTime? @map("check_in_time") @db.Time
   checkOutTime DateTime? @map("check_out_time") @db.Time
+  checkInOccurredAt  DateTime? @map("check_in_occurred_at") @db.Timestamptz
+  checkOutOccurredAt DateTime? @map("check_out_occurred_at") @db.Timestamptz
+  clientTimezone     String?   @map("client_timezone") @db.VarChar(50)
   workHours    Decimal?  @map("work_hours") @db.Decimal(5, 2)
   overtime     Decimal?  @default(0) @map("overtime") @db.Decimal(5, 2)
   notes        String?   @db.Text
@@ -694,4 +699,27 @@ model Slug {
   @@index([createdAt])
   @@index([updatedAt])
   @@map("slugs")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @map("user_id") @db.VarChar(36)
+  title     String   @db.VarChar(255)
+  body      String   @db.Text
+  type      String   @db.VarChar(50) // e.g., "LEAVE_APPROVED", "PAYROLL_PROCESSED"
+  metadata  Json?    // For navigation data like { "requestId": "..." }
+  isRead    Boolean  @default(false) @map("is_read")
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }

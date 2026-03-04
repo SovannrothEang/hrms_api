@@ -129,7 +129,7 @@ export class PayrollsService {
             // 4. Calculate Gross
             const basicSalary = dto.basicSalaryOverride
                 ? new Decimal(dto.basicSalaryOverride)
-                : (employee.salary || employee.position.salaryRangeMin);
+                : employee.salary || employee.position.salaryRangeMin;
 
             const overtimeHours = new Decimal(dto.overtimeHours ?? 0);
             const hourlyRate = basicSalary.dividedBy(MONTHLY_WORKING_HOURS);
@@ -142,7 +142,12 @@ export class PayrollsService {
             // 5. Calculate Tax and other bracket-based deductions
             let totalTaxAmount = new Decimal(0);
             let taxableIncome = this.calculateTaxableIncome(grossIncome);
-            const matchingBrackets: { bracket: any; amount: Decimal; rate: Decimal; convertedIncome: Decimal }[] = [];
+            const matchingBrackets: {
+                bracket: any;
+                amount: Decimal;
+                rate: Decimal;
+                convertedIncome: Decimal;
+            }[] = [];
 
             const taxConfig = employee.taxConfig;
             const isTaxExempt = taxConfig?.taxExempt ?? false;
@@ -152,13 +157,14 @@ export class PayrollsService {
                 const taxCountry = taxConfig?.taxCountry ?? 'KH';
 
                 // Fetch all active brackets for this country and year
-                const allBrackets = await this.prisma.client.taxBracket.findMany({
-                    where: {
-                        countryCode: taxCountry,
-                        taxYear: currentYear,
-                        isDeleted: false,
-                    },
-                });
+                const allBrackets =
+                    await this.prisma.client.taxBracket.findMany({
+                        where: {
+                            countryCode: taxCountry,
+                            taxYear: currentYear,
+                            isDeleted: false,
+                        },
+                    });
 
                 for (const bracket of allBrackets) {
                     let convertedIncome = taxableIncome;
@@ -166,7 +172,11 @@ export class PayrollsService {
 
                     // Convert income to bracket currency if different
                     if (bracket.currencyCode !== dto.currencyCode) {
-                        const rateResult = await this.exchangeRatesService.getLatestRateAsync(dto.currencyCode, bracket.currencyCode);
+                        const rateResult =
+                            await this.exchangeRatesService.getLatestRateAsync(
+                                dto.currencyCode,
+                                bracket.currencyCode,
+                            );
                         if (rateResult.isSuccess) {
                             exchangeRate = new Decimal(rateResult.getData());
                             convertedIncome = taxableIncome.times(exchangeRate);
@@ -179,9 +189,15 @@ export class PayrollsService {
                     // A bracket matches if:
                     // 1. Min and Max are both 0 (Universal deduction for ALL employees)
                     // 2. OR income is within [min, max)
-                    const isUniversal = bracket.minAmount.equals(0) && bracket.maxAmount.equals(0);
-                    const isInRange = convertedIncome.greaterThanOrEqualTo(bracket.minAmount) && 
-                                     (convertedIncome.lessThan(bracket.maxAmount) || bracket.maxAmount.equals(0));
+                    const isUniversal =
+                        bracket.minAmount.equals(0) &&
+                        bracket.maxAmount.equals(0);
+                    const isInRange =
+                        convertedIncome.greaterThanOrEqualTo(
+                            bracket.minAmount,
+                        ) &&
+                        (convertedIncome.lessThan(bracket.maxAmount) ||
+                            bracket.maxAmount.equals(0));
 
                     if (isUniversal || isInRange) {
                         // Calculate amount in bracket currency: (Income * Rate) - Fixed
@@ -189,17 +205,20 @@ export class PayrollsService {
                         let bracketAmount = convertedIncome
                             .times(bracket.taxRate)
                             .minus(bracket.fixedAmount);
-                        
+
                         // If it's a fixed amount deduction with 0% rate (like NSSF flat fee)
                         // but it's defined as a "fixed amount" to subtract, we might need to flip logic.
-                        // Actually, if fixedAmount is positive, it reduces the tax? 
+                        // Actually, if fixedAmount is positive, it reduces the tax?
                         // Usually, Khmer tax is (Income * Rate) - Constant.
                         // If it's JUST NSSF flat fee, user might set Rate=0 and FixedAmount=-11500?
                         // But looking at Image 1, Fixed Amount is 11,500 and Rate is 0%.
                         // (Income * 0) - 11,500 = -11,500.
                         // We should probably take the absolute if the user is using it as a "flat deduction".
-                        
-                        if (bracket.taxRate.equals(0) && bracket.fixedAmount.greaterThan(0)) {
+
+                        if (
+                            bracket.taxRate.equals(0) &&
+                            bracket.fixedAmount.greaterThan(0)
+                        ) {
                             bracketAmount = bracket.fixedAmount;
                         }
 
@@ -209,13 +228,14 @@ export class PayrollsService {
 
                         if (bracketAmount.greaterThan(0)) {
                             // Convert back to payroll currency
-                            const finalAmount = bracketAmount.dividedBy(exchangeRate);
-                            
+                            const finalAmount =
+                                bracketAmount.dividedBy(exchangeRate);
+
                             matchingBrackets.push({
                                 bracket,
                                 amount: finalAmount,
                                 rate: bracket.taxRate,
-                                convertedIncome
+                                convertedIncome,
                             });
                             totalTaxAmount = totalTaxAmount.plus(finalAmount);
                         }
@@ -287,9 +307,12 @@ export class PayrollsService {
 
                     // Add items for each matching bracket (Tax, NSSF, etc.)
                     for (const match of matchingBrackets) {
-                        const { bracket, amount, rate, convertedIncome } = match;
-                        const isTax = bracket.bracketName.toLowerCase().includes('tax');
-                        
+                        const { bracket, amount, rate, convertedIncome } =
+                            match;
+                        const isTax = bracket.bracketName
+                            .toLowerCase()
+                            .includes('tax');
+
                         let description = `${bracket.bracketName}: `;
                         if (rate.greaterThan(0)) {
                             description += `Calculated on ${Number(convertedIncome).toLocaleString()} ${bracket.currencyCode} @ ${rate.times(100).toFixed(2)}%`;
@@ -319,7 +342,9 @@ export class PayrollsService {
                             itemType: PayrollItemType.DEDUCTION,
                             itemName: dto.deductionName || 'Other Deductions',
                             amount: otherDeductions,
-                            description: dto.deductionDescription || 'Additional deductions',
+                            description:
+                                dto.deductionDescription ||
+                                'Additional deductions',
                             performBy,
                         });
                     }
@@ -327,7 +352,10 @@ export class PayrollsService {
                     await tx.payrollItems.createMany({ data: itemsData });
 
                     // Create TaxCalculation snapshot for the first tax-like bracket if any
-                    const primaryTaxMatch = matchingBrackets.find(m => m.bracket.bracketName.toLowerCase().includes('tax')) || matchingBrackets[0];
+                    const primaryTaxMatch =
+                        matchingBrackets.find((m) =>
+                            m.bracket.bracketName.toLowerCase().includes('tax'),
+                        ) || matchingBrackets[0];
                     if (primaryTaxMatch) {
                         await tx.taxCalculation.create({
                             data: {
@@ -426,26 +454,36 @@ export class PayrollsService {
 
             let totalTaxAmount = new Decimal(0);
             let taxableIncome = this.calculateTaxableIncome(grossIncome);
-            const matchingBrackets: { bracket: any; amount: Decimal; rate: Decimal; convertedIncome: Decimal }[] = [];
+            const matchingBrackets: {
+                bracket: any;
+                amount: Decimal;
+                rate: Decimal;
+                convertedIncome: Decimal;
+            }[] = [];
 
             if (!isTaxExempt) {
                 const currentYear = new Date().getFullYear();
                 const taxCountry = taxConfig?.taxCountry ?? 'KH';
 
-                const allBrackets = await this.prisma.client.taxBracket.findMany({
-                    where: {
-                        countryCode: taxCountry,
-                        taxYear: currentYear,
-                        isDeleted: false,
-                    },
-                });
+                const allBrackets =
+                    await this.prisma.client.taxBracket.findMany({
+                        where: {
+                            countryCode: taxCountry,
+                            taxYear: currentYear,
+                            isDeleted: false,
+                        },
+                    });
 
                 for (const bracket of allBrackets) {
                     let convertedIncome = taxableIncome;
                     let exchangeRate = new Decimal(1);
 
                     if (bracket.currencyCode !== payroll.currencyCode) {
-                        const rateResult = await this.exchangeRatesService.getLatestRateAsync(payroll.currencyCode, bracket.currencyCode);
+                        const rateResult =
+                            await this.exchangeRatesService.getLatestRateAsync(
+                                payroll.currencyCode,
+                                bracket.currencyCode,
+                            );
                         if (rateResult.isSuccess) {
                             exchangeRate = new Decimal(rateResult.getData());
                             convertedIncome = taxableIncome.times(exchangeRate);
@@ -454,16 +492,25 @@ export class PayrollsService {
                         }
                     }
 
-                    const isUniversal = bracket.minAmount.equals(0) && bracket.maxAmount.equals(0);
-                    const isInRange = convertedIncome.greaterThanOrEqualTo(bracket.minAmount) && 
-                                     (convertedIncome.lessThan(bracket.maxAmount) || bracket.maxAmount.equals(0));
+                    const isUniversal =
+                        bracket.minAmount.equals(0) &&
+                        bracket.maxAmount.equals(0);
+                    const isInRange =
+                        convertedIncome.greaterThanOrEqualTo(
+                            bracket.minAmount,
+                        ) &&
+                        (convertedIncome.lessThan(bracket.maxAmount) ||
+                            bracket.maxAmount.equals(0));
 
                     if (isUniversal || isInRange) {
                         let bracketAmount = convertedIncome
                             .times(bracket.taxRate)
                             .minus(bracket.fixedAmount);
-                        
-                        if (bracket.taxRate.equals(0) && bracket.fixedAmount.greaterThan(0)) {
+
+                        if (
+                            bracket.taxRate.equals(0) &&
+                            bracket.fixedAmount.greaterThan(0)
+                        ) {
                             bracketAmount = bracket.fixedAmount;
                         }
 
@@ -472,12 +519,13 @@ export class PayrollsService {
                         }
 
                         if (bracketAmount.greaterThan(0)) {
-                            const finalAmount = bracketAmount.dividedBy(exchangeRate);
+                            const finalAmount =
+                                bracketAmount.dividedBy(exchangeRate);
                             matchingBrackets.push({
                                 bracket,
                                 amount: finalAmount,
                                 rate: bracket.taxRate,
-                                convertedIncome
+                                convertedIncome,
                             });
                             totalTaxAmount = totalTaxAmount.plus(finalAmount);
                         }
@@ -579,7 +627,8 @@ export class PayrollsService {
                         itemType: PayrollItemType.DEDUCTION,
                         itemName: dto.deductionName || 'Other Deductions',
                         amount: otherDeductions,
-                        description: dto.deductionDescription || 'Additional deductions',
+                        description:
+                            dto.deductionDescription || 'Additional deductions',
                         performBy,
                     });
                 }
@@ -592,7 +641,10 @@ export class PayrollsService {
                     });
                 }
 
-                const primaryTaxMatch = matchingBrackets.find(m => m.bracket.bracketName.toLowerCase().includes('tax')) || matchingBrackets[0];
+                const primaryTaxMatch =
+                    matchingBrackets.find((m) =>
+                        m.bracket.bracketName.toLowerCase().includes('tax'),
+                    ) || matchingBrackets[0];
                 if (primaryTaxMatch) {
                     await tx.taxCalculation.create({
                         data: {
@@ -1243,7 +1295,8 @@ export class PayrollsService {
                                 periodEnd,
                             );
 
-                        const basicSalary = employee.salary || employee.position.salaryRangeMin;
+                        const basicSalary =
+                            employee.salary || employee.position.salaryRangeMin;
                         const leaveDeductionResult =
                             await this.calculateLeaveDeductionAsync(
                                 employee.id,
@@ -1254,9 +1307,10 @@ export class PayrollsService {
                         leaveDeductions = leaveDeductionResult.deductionAmount;
 
                         const unpaidDays = leaveDeductionResult.unpaidDays;
-                        const deductionDesc = unpaidDays > 0 
-                            ? `Auto-calculated from ${unpaidDays} unpaid leave day(s)` 
-                            : 'Auto-calculated from leave records';
+                        const deductionDesc =
+                            unpaidDays > 0
+                                ? `Auto-calculated from ${unpaidDays} unpaid leave day(s)`
+                                : 'Auto-calculated from leave records';
 
                         // Create payroll using existing method logic
                         const createResult = await this.createDraftAsync(
@@ -1268,8 +1322,14 @@ export class PayrollsService {
                                 overtimeHours,
                                 bonus: 0,
                                 deductions: leaveDeductions,
-                                deductionName: leaveDeductions > 0 ? 'Unpaid Leave' : undefined,
-                                deductionDescription: leaveDeductions > 0 ? deductionDesc : undefined,
+                                deductionName:
+                                    leaveDeductions > 0
+                                        ? 'Unpaid Leave'
+                                        : undefined,
+                                deductionDescription:
+                                    leaveDeductions > 0
+                                        ? deductionDesc
+                                        : undefined,
                             },
                             performBy,
                         );

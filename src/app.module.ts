@@ -1,8 +1,9 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './common/services/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { SecurityModule } from './common/security/security.module';
@@ -94,6 +95,17 @@ import { LeaveBalancesModule } from './modules/leave-balances/leave-balances.mod
                             params: req.params,
                         }),
                     },
+                },
+            }),
+        }),
+        BullModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                connection: {
+                    host: configService.get<string>('REDIS_HOST'),
+                    port: configService.get<number>('REDIS_PORT', 6379),
+                    password: configService.get<string>('REDIS_PASSWORD'),
                 },
             }),
         }),

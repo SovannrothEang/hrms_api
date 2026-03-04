@@ -38,7 +38,10 @@ export class ExchangeRatesController {
     @Get()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get all exchange rates' })
-    @ApiResponse({ status: HttpStatus.OK, description: 'List of exchange rates' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'List of exchange rates',
+    })
     async findAll() {
         const result = await this.service.findAllAsync();
         if (!result.isSuccess)

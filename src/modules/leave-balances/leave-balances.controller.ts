@@ -46,9 +46,14 @@ export class LeaveBalancesController {
         @Body() dto: LeaveBalanceCreateDto,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.leaveBalancesService.createAsync(dto, performerId);
+        const result = await this.leaveBalancesService.createAsync(
+            dto,
+            performerId,
+        );
         if (!result.isSuccess) {
-            throw new BusinessError(result.error || 'Failed to create leave balance');
+            throw new BusinessError(
+                result.error || 'Failed to create leave balance',
+            );
         }
         return result.getData();
     }
@@ -56,14 +61,22 @@ export class LeaveBalancesController {
     @Post('bulk')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create multiple leave balances for an employee' })
-    @ApiResponse({ status: HttpStatus.CREATED, type: [LeaveBalanceResponseDto] })
+    @ApiResponse({
+        status: HttpStatus.CREATED,
+        type: [LeaveBalanceResponseDto],
+    })
     async createBulk(
         @Body() dto: LeaveBalanceBulkCreateDto,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.leaveBalancesService.createBulkAsync(dto, performerId);
+        const result = await this.leaveBalancesService.createBulkAsync(
+            dto,
+            performerId,
+        );
         if (!result.isSuccess) {
-            throw new BusinessError(result.error || 'Failed to create leave balances');
+            throw new BusinessError(
+                result.error || 'Failed to create leave balances',
+            );
         }
         return result.getData();
     }
@@ -80,7 +93,11 @@ export class LeaveBalancesController {
     @Get('employee/:employeeId')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Get leave balances for a specific employee' })
-    @ApiParam({ name: 'employeeId', required: true, description: 'Employee ID' })
+    @ApiParam({
+        name: 'employeeId',
+        required: true,
+        description: 'Employee ID',
+    })
     @ApiQuery({ name: 'year', required: false, type: Number })
     @ApiResponse({ status: HttpStatus.OK })
     async findByEmployee(
@@ -107,7 +124,11 @@ export class LeaveBalancesController {
         @Body() dto: LeaveBalanceUpdateDto,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.leaveBalancesService.updateAsync(id, dto, performerId);
+        const result = await this.leaveBalancesService.updateAsync(
+            id,
+            dto,
+            performerId,
+        );
         if (!result.isSuccess) {
             throw new BusinessError(result.error || 'Leave balance not found');
         }
@@ -123,7 +144,10 @@ export class LeaveBalancesController {
         @Param('id') id: string,
         @CurrentUser('sub') performerId: string,
     ) {
-        const result = await this.leaveBalancesService.deleteAsync(id, performerId);
+        const result = await this.leaveBalancesService.deleteAsync(
+            id,
+            performerId,
+        );
         if (!result.isSuccess) {
             throw new BusinessError(result.error || 'Leave balance not found');
         }

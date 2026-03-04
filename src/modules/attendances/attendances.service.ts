@@ -258,7 +258,7 @@ export class AttendancesService {
         dto: CheckInDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        let { employeeId, qrToken } = dto;
+        let { employeeId, qrToken, clientTime, clientTimezone } = dto;
 
         if (!employeeId && performerId) {
             const emp = await this.prisma.client.employee.findFirst({
@@ -315,6 +315,7 @@ export class AttendancesService {
         if (!employee) return Result.fail('Employee not found');
 
         const now = new Date();
+        const effectiveCheckInTime = clientTime ? new Date(clientTime) : now;
         let status = AttendanceStatus.PRESENT;
 
         if (employee.shift) {
@@ -334,14 +335,17 @@ export class AttendancesService {
                 expectedStart.getUTCMinutes() + graceMinutes,
             );
 
-            if (now > expectedStart) {
+            // Use clientTime for status comparison if provided, else use server time
+            const comparisonTime = clientTime ? new Date(clientTime) : now;
+            if (comparisonTime > expectedStart) {
                 status = AttendanceStatus.LATE;
             }
         } else {
             // Default fallback if no shift assigned (9 AM UTC)
             const startWorkTime = new Date(now);
             startWorkTime.setUTCHours(9, 0, 0, 0);
-            if (now > startWorkTime) status = AttendanceStatus.LATE;
+            const comparisonTime = clientTime ? new Date(clientTime) : now;
+            if (comparisonTime > startWorkTime) status = AttendanceStatus.LATE;
         }
 
         let attendance;
@@ -350,7 +354,9 @@ export class AttendancesService {
             attendance = await this.prisma.client.attendance.update({
                 where: { id: existingAttendance.id },
                 data: {
-                    checkInTime: now,
+                    checkInTime: effectiveCheckInTime,
+                    checkInOccurredAt: now,
+                    clientTimezone: clientTimezone,
                     status: status,
                     performBy: performerId,
                 },
@@ -365,7 +371,9 @@ export class AttendancesService {
                 data: {
                     employeeId: employeeId,
                     date: today,
-                    checkInTime: now,
+                    checkInTime: effectiveCheckInTime,
+                    checkInOccurredAt: now,
+                    clientTimezone: clientTimezone,
                     status: status,
                     performBy: performerId,
                 },
@@ -384,7 +392,7 @@ export class AttendancesService {
         dto: CheckOutDto,
         performerId?: string,
     ): Promise<Result<AttendanceDto>> {
-        let { employeeId, qrToken, notes } = dto;
+        let { employeeId, qrToken, notes, clientTime, clientTimezone } = dto;
 
         if (!employeeId && performerId) {
             const emp = await this.prisma.client.employee.findFirst({
@@ -445,7 +453,8 @@ export class AttendancesService {
             return Result.fail('Employee has already checked out for today.');
         }
 
-        const checkOutTime = new Date();
+        const now = new Date();
+        const effectiveCheckOutTime = clientTime ? new Date(clientTime) : now;
         const checkInTime = attendance.checkInTime;
 
         let workHours = 0;
@@ -457,7 +466,8 @@ export class AttendancesService {
             const startTotalMinutes =
                 checkInTime.getUTCHours() * 60 + checkInTime.getUTCMinutes();
             const endTotalMinutes =
-                checkOutTime.getUTCHours() * 60 + checkOutTime.getUTCMinutes();
+                effectiveCheckOutTime.getUTCHours() * 60 +
+                effectiveCheckOutTime.getUTCMinutes();
 
             let diffMinutes = endTotalMinutes - startTotalMinutes;
 
@@ -479,7 +489,9 @@ export class AttendancesService {
         const updatedAttendance = await this.prisma.client.attendance.update({
             where: { id: attendance.id },
             data: {
-                checkOutTime,
+                checkOutTime: effectiveCheckOutTime,
+                checkOutOccurredAt: now,
+                clientTimezone: clientTimezone || attendance.clientTimezone,
                 workHours: Math.min(Math.round(workHours * 100) / 100, 999.99),
                 overtime: Math.min(Math.round(overtime * 100) / 100, 999.99),
                 notes: notes,
@@ -616,17 +628,20 @@ export class AttendancesService {
                 clockIn: {
                     time: formatTime(r.checkInTime),
                     isLate: r.status === 'LATE',
+                    occurredAt: r.checkInOccurredAt,
                 },
                 clockOut: r.checkOutTime
                     ? {
                           time: formatTime(r.checkOutTime),
                           isEarly: r.status === 'EARLY_OUT',
+                          occurredAt: r.checkOutOccurredAt,
                       }
                     : null,
                 hoursWorked: Number(r.workHours || 0),
                 overtimeHours: Number(r.overtime || 0),
                 status: statusMap[r.status] || r.status.toLowerCase(),
                 leaveType: null,
+                clientTimezone: r.clientTimezone,
             };
         });
 
