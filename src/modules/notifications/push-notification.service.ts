@@ -70,13 +70,13 @@ export class PushNotificationService {
         try {
             const [items, total] = await Promise.all([
                 this.prisma.client.notification.findMany({
-                    where: { userId },
+                    where: { userId, isDeleted: false },
                     orderBy: { createdAt: 'desc' },
                     take: limit,
                     skip: offset,
                 }),
                 this.prisma.client.notification.count({
-                    where: { userId },
+                    where: { userId, isDeleted: false },
                 }),
             ]);
 

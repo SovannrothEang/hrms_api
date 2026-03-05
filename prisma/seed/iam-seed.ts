@@ -43,6 +43,8 @@ export async function seedIam(prisma: PrismaClient) {
             data: {
                 email: adminEmail,
                 username: adminUsername,
+                profileImage: `https://ui-avatars.com/api/?name=Admin+User&background=random`,
+
                 password: hashedPassword,
                 isActive: true,
                 userRoles: {
@@ -73,6 +75,8 @@ export async function seedIam(prisma: PrismaClient) {
             data: {
                 email: machineEmail,
                 username: machineUsername,
+                profileImage: `https://ui-avatars.com/api/?name=Machine+User&background=random`,
+
                 password: hashedPassword,
                 isActive: true,
                 userRoles: {

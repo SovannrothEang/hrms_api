@@ -2,12 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { AttendanceStatus } from '../../common/enums/attendance-status.enum';
+import { PushNotificationService } from '../notifications/push-notification.service';
 
 @Injectable()
 export class AutomationService {
     private readonly logger = new Logger(AutomationService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly pushNotificationService: PushNotificationService,
+    ) {}
 
     // Run every day at 23:59:00
     @Cron('0 59 23 * * *')
@@ -80,6 +84,17 @@ export class AutomationService {
                         checkOutTime: null,
                     },
                 });
+
+                if (employee.userId) {
+                    await this.pushNotificationService.sendNotification(
+                        employee.userId,
+                        'Attendance Reminder',
+                        'You have been marked as absent for today. If this is a mistake, please contact HR.',
+                        'ATTENDANCE_REMINDER',
+                        { date: today.toISOString().split('T')[0] },
+                    );
+                }
+
                 this.logger.log(`Marked Employee ${employee.id} as ABSENT`);
             }
         }

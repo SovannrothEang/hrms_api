@@ -26,6 +26,7 @@
         "seed:shifts": "ts-node prisma/seed/run-seed.ts shifts",
         "seed:holidays": "ts-node prisma/seed/run-seed.ts holidays",
         "seed:payroll": "ts-node prisma/seed/run-seed.ts payroll",
+        "seed:company-settings": "ts-node prisma/seed/run-seed.ts company-settings",
         "seed:employees": "ts-node prisma/seed/run-seed.ts employees",
         "seed:attendances": "ts-node prisma/seed/run-seed.ts attendances",
         "seed:leaves": "ts-node prisma/seed/run-seed.ts leaves",

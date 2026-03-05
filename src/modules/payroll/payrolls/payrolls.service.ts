@@ -28,6 +28,7 @@ import { ResultPagination } from '../../../common/logic/result-pagination';
 import PDFDocument from 'pdfkit';
 import { DecimalNumber } from '../../../config/decimal-number';
 import { ExchangeRatesService } from '../exchange-rates/exchange-rates.service';
+import { PushNotificationService } from '../../notifications/push-notification.service';
 
 // Constants for payroll calculation
 const MONTHLY_WORKING_HOURS = 160;
@@ -63,6 +64,7 @@ export class PayrollsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly exchangeRatesService: ExchangeRatesService,
+        private readonly pushNotificationService: PushNotificationService,
     ) {}
 
     /**
@@ -700,6 +702,33 @@ export class PayrollsService {
                     performBy,
                 },
             });
+
+            // Send Push Notification to Employee
+            const payrollWithUser = await this.prisma.client.payroll.findUnique({
+                where: { id },
+                include: {
+                    employee: {
+                        select: { userId: true, firstname: true },
+                    },
+                },
+            });
+
+            if (payrollWithUser?.employee?.userId) {
+                const monthName = payroll.payPeriodStart.toLocaleString(
+                    'en-US',
+                    {
+                        month: 'long',
+                        year: 'numeric',
+                    },
+                );
+                await this.pushNotificationService.sendNotification(
+                    payrollWithUser.employee.userId,
+                    'Payroll Processed',
+                    `Your payslip for ${monthName} has been processed and is ready for viewing.`,
+                    'PAYROLL_PROCESSED',
+                    { payrollId: id },
+                );
+            }
 
             return this.findByIdAsync(id);
         } catch (error) {

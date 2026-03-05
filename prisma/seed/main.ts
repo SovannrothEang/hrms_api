@@ -9,6 +9,7 @@ import { seedPositions } from './positions-seed';
 import { seedShifts } from './shifts-seed';
 import { seedHolidays } from './holidays-seed';
 import { seedPayroll } from './payroll-seed';
+import { seedCompanySettings } from './company-settings-seed';
 import { seedEmployees } from './employees-seed';
 import { seedAttendances } from './attendances-seed';
 import { seedLeaves } from './leaves-seed';
@@ -28,6 +29,7 @@ async function main() {
     await seedShifts(prisma);
     await seedHolidays(prisma);
     await seedPayroll(prisma);
+    await seedCompanySettings(prisma);
 
     // Dependencies on above
     await seedEmployees(prisma);

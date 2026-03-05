@@ -9,6 +9,7 @@ import { seedPositions } from './positions-seed';
 import { seedShifts } from './shifts-seed';
 import { seedHolidays } from './holidays-seed';
 import { seedPayroll } from './payroll-seed';
+import { seedCompanySettings } from './company-settings-seed';
 import { seedEmployees } from './employees-seed';
 import { seedAttendances } from './attendances-seed';
 import { seedLeaves } from './leaves-seed';
@@ -27,6 +28,7 @@ const availableSeeds: Record<string, (prisma: PrismaClient) => Promise<void>> =
         shifts: seedShifts,
         holidays: seedHolidays,
         payroll: seedPayroll,
+        "company-settings": seedCompanySettings,
         employees: seedEmployees,
         attendances: seedAttendances,
         leaves: seedLeaves,
@@ -41,6 +43,7 @@ const dependencies: Record<string, string[]> = {
         'shifts',
         'holidays',
         'payroll',
+        'company-settings',
     ],
     attendances: ['employees'],
     leaves: ['employees'],

@@ -36,6 +36,7 @@ export async function seedEmployees(prisma: PrismaClient) {
             user = await prisma.user.create({
                 data: {
                     username: `employee${i + 1}`,
+                    profileImage: `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=random`,
                     email,
                     password: hashedPassword,
                     userRoles: {

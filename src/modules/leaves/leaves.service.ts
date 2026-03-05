@@ -573,13 +573,17 @@ export class LeavesService {
                     dto.status === (LeaveStatus.APPROVED as any)
                         ? 'Approved'
                         : 'Rejected';
+                const statusType =
+                    dto.status === (LeaveStatus.APPROVED as any)
+                        ? 'LEAVE_APPROVED'
+                        : 'LEAVE_REJECTED';
                 const dateRange = `${leave.startDate.toISOString().split('T')[0]} to ${leave.endDate.toISOString().split('T')[0]}`;
 
                 await this.pushNotificationService.sendNotification(
                     requesterRecord.userId,
                     `Leave Request ${statusText}`,
                     `Your ${leave.leaveType} request for ${dateRange} has been ${statusText.toLowerCase()}.`,
-                    'LEAVE_STATUS_UPDATED',
+                    statusType,
                     { leaveId: id, status: dto.status },
                 );
             }
