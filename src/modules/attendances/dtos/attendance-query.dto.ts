@@ -58,6 +58,13 @@ export class AttendanceQueryDto {
     status?: string;
 
     @ApiPropertyOptional({
+        description: 'Search by employee name or code',
+    })
+    @IsOptional()
+    @IsString()
+    search?: string;
+
+    @ApiPropertyOptional({
         description: 'Include performer and employee details in response',
     })
     @IsOptional()

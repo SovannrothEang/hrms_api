@@ -99,6 +99,10 @@ export class CommonMapper {
             salaryRangeMax: p.salaryRangeMax
                 ? new DecimalNumber(p.salaryRangeMax)
                 : null,
+            employeeCount: p._count?.employees ?? 0,
+            employees: p.employees?.map((e: any) => this.mapToEmployeeDto(e)),
+            performBy: p.performBy,
+            performer: p.performer ? this.mapToUserDto(p.performer) : null,
             isActive: p.isActive,
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,

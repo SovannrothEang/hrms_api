@@ -86,8 +86,14 @@ describe('EmployeePositionsService', () => {
     });
 
     describe('findAllAsync', () => {
-        it('should return positions', async () => {
-            const list = [{ id: '1', title: 'Developer' }];
+        it('should return positions with employeeCount', async () => {
+            const list = [
+                {
+                    id: '1',
+                    title: 'Developer',
+                    _count: { employees: 5 },
+                },
+            ];
             (
                 prismaClient.employeePosition.findMany as jest.Mock
             ).mockResolvedValue(list);
@@ -95,6 +101,7 @@ describe('EmployeePositionsService', () => {
             const result = await service.findAllAsync();
             expect(result.isSuccess).toBe(true);
             expect(result.getData()).toHaveLength(1);
+            expect(result.getData()[0].employeeCount).toBe(5);
         });
     });
 });

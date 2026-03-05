@@ -285,9 +285,17 @@ export class PayrollsController {
     async getMyPayslipPdf(
         @Param('id') id: string,
         @CurrentUser('sub') userId: string,
+        @CurrentUser('roles') roles: string[],
         @Res() res: Response,
     ) {
-        const result = await this.service.downloadPayslipPdfAsync(id, userId);
+        const isAdminOrManager =
+            roles.includes(RoleName.ADMIN) ||
+            roles.includes(RoleName.HR_MANAGER);
+
+        const result = isAdminOrManager
+            ? await this.service.downloadAnyPayslipPdfAsync(id)
+            : await this.service.downloadPayslipPdfAsync(id, userId);
+
         if (!result.isSuccess) {
             throw new BadRequestException(result.error);
         }

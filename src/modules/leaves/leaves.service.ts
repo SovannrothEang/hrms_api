@@ -82,42 +82,49 @@ export class LeavesService {
         } = query;
 
         const whereClause: Prisma.LeaveRequestWhereInput = { isDeleted: false };
+        const summaryWhereClause: Prisma.LeaveRequestWhereInput = { isDeleted: false };
 
-        if (employeeId) whereClause.employeeId = employeeId;
+        if (employeeId) {
+            whereClause.employeeId = employeeId;
+            summaryWhereClause.employeeId = employeeId;
+        }
         if (approverId) whereClause.approvedBy = approverId;
-        if (leaveType) whereClause.leaveType = leaveType;
+        if (leaveType) {
+            whereClause.leaveType = leaveType;
+            summaryWhereClause.leaveType = leaveType;
+        }
         if (status) whereClause.status = status;
 
         if (search) {
             const searchTerm = search.trim().toLowerCase();
-            whereClause.requester = {
+            const searchFilter = {
                 OR: [
                     {
                         employeeCode: {
                             contains: searchTerm,
-                            mode: 'insensitive',
+                            mode: 'insensitive' as const,
                         },
                     },
                     {
                         firstname: {
                             contains: searchTerm,
-                            mode: 'insensitive',
+                            mode: 'insensitive' as const,
                         },
                     },
-                    { lastname: { contains: searchTerm, mode: 'insensitive' } },
+                    { lastname: { contains: searchTerm, mode: 'insensitive' as const } },
                     {
                         user: {
                             OR: [
                                 {
                                     username: {
                                         contains: searchTerm,
-                                        mode: 'insensitive',
+                                        mode: 'insensitive' as const,
                                     },
                                 },
                                 {
                                     email: {
                                         contains: searchTerm,
-                                        mode: 'insensitive',
+                                        mode: 'insensitive' as const,
                                     },
                                 },
                             ],
@@ -125,13 +132,20 @@ export class LeavesService {
                     },
                 ],
             };
+            whereClause.requester = searchFilter;
+            summaryWhereClause.requester = searchFilter;
         }
 
         if (dateFrom || dateTo) {
             const dateFilter: Prisma.DateTimeFilter = {};
             if (dateFrom) dateFilter.gte = new Date(dateFrom);
-            if (dateTo) dateFilter.lte = new Date(dateTo);
-            whereClause.startDate = dateFilter;
+            if (dateTo) {
+                const end = new Date(dateTo);
+                end.setHours(23, 59, 59, 999);
+                dateFilter.lte = end;
+            }
+            whereClause.createdAt = dateFilter;
+            summaryWhereClause.createdAt = dateFilter;
         }
 
         const orderBy: Prisma.LeaveRequestOrderByWithRelationInput = {};
@@ -139,56 +153,6 @@ export class LeavesService {
         else if (sortBy === 'endDate') orderBy.endDate = sortOrder;
         else if (sortBy === 'requestDate') orderBy.requestDate = sortOrder;
         else if (sortBy === 'createdAt') orderBy.createdAt = sortOrder;
-
-        const summaryWhereClause: Prisma.LeaveRequestWhereInput = {
-            isDeleted: false,
-        };
-        if (employeeId) summaryWhereClause.employeeId = employeeId;
-        if (leaveType) summaryWhereClause.leaveType = leaveType;
-        if (search) {
-            const searchTerm = search.trim().toLowerCase();
-            summaryWhereClause.requester = {
-                OR: [
-                    {
-                        employeeCode: {
-                            contains: searchTerm,
-                            mode: 'insensitive',
-                        },
-                    },
-                    {
-                        firstname: {
-                            contains: searchTerm,
-                            mode: 'insensitive',
-                        },
-                    },
-                    { lastname: { contains: searchTerm, mode: 'insensitive' } },
-                    {
-                        user: {
-                            OR: [
-                                {
-                                    username: {
-                                        contains: searchTerm,
-                                        mode: 'insensitive',
-                                    },
-                                },
-                                {
-                                    email: {
-                                        contains: searchTerm,
-                                        mode: 'insensitive',
-                                    },
-                                },
-                            ],
-                        },
-                    },
-                ],
-            };
-        }
-        if (dateFrom || dateTo) {
-            const dateFilter: Prisma.DateTimeFilter = {};
-            if (dateFrom) dateFilter.gte = new Date(dateFrom);
-            if (dateTo) dateFilter.lte = new Date(dateTo);
-            summaryWhereClause.startDate = dateFilter;
-        }
 
         const [total, leaves, statusCounts] = await Promise.all([
             this.prisma.client.leaveRequest.count({ where: whereClause }),
@@ -723,8 +687,12 @@ export class LeavesService {
         if (dateFrom || dateTo) {
             const dateFilter: Prisma.DateTimeFilter = {};
             if (dateFrom) dateFilter.gte = new Date(dateFrom);
-            if (dateTo) dateFilter.lte = new Date(dateTo);
-            whereClause.startDate = dateFilter;
+            if (dateTo) {
+                const end = new Date(dateTo);
+                end.setHours(23, 59, 59, 999);
+                dateFilter.lte = end;
+            }
+            whereClause.createdAt = dateFilter;
         }
 
         const orderBy: Prisma.LeaveRequestOrderByWithRelationInput = {};

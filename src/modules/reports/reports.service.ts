@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { ResultPagination } from '../../common/logic/result-pagination';
 
@@ -164,21 +165,22 @@ export class ReportsService {
             whereClause.employeeId = params.employeeId;
         }
 
-        // Get attendance status counts
-        const attendanceStats = await this.prisma.client.attendance.groupBy({
-            by: ['status'],
-            where: whereClause,
-            _count: { id: true },
-        });
+        // Fetch required aggregates and counts
+        const [activeEmployeesCount, workHoursAgg] = await Promise.all([
+            this.prisma.client.employee.count({
+                where: {
+                    status: { in: ['ACTIVE', 'PROBATION', 'ON_LEAVE'] },
+                    isDeleted: false,
+                    ...(params?.employeeId ? { id: params.employeeId } : {}),
+                },
+            }),
+            this.prisma.client.attendance.aggregate({
+                where: whereClause,
+                _avg: { workHours: true },
+                _sum: { overtime: true },
+            }),
+        ]);
 
-        // Get work hours aggregation
-        const workHoursAgg = await this.prisma.client.attendance.aggregate({
-            where: whereClause,
-            _avg: { workHours: true },
-            _sum: { overtime: true },
-        });
-
-        // Count approved leave days within the date range
         const leaveWhereClause: {
             status: 'APPROVED';
             isDeleted: boolean;
@@ -196,52 +198,89 @@ export class ReportsService {
             leaveWhereClause.employeeId = params.employeeId;
         }
 
+        // 1. Get all presence records for the period to build a "Working Days" set
+        const attendances = await this.prisma.client.attendance.findMany({
+            where: whereClause,
+            select: {
+                employeeId: true,
+                date: true,
+                status: true,
+            },
+        });
+
+        const presenceSet = new Set<string>(); // "employeeId:YYYY-MM-DD"
+        let presentDays = 0;
+        let lateDays = 0;
+        let manualAbsentRecords = 0;
+
+        for (const att of attendances) {
+            const dateStr = new Date(att.date).toISOString().split('T')[0];
+            const key = `${att.employeeId}:${dateStr}`;
+            presenceSet.add(key);
+
+            if (att.status === 'PRESENT' || att.status === 'EARLY_OUT') {
+                presentDays++;
+            } else if (att.status === 'LATE') {
+                lateDays++;
+            } else if (att.status === 'ABSENT') {
+                manualAbsentRecords++;
+            }
+        }
+
+        // 2. Build a "Leave Days" set
         const approvedLeaves = await this.prisma.client.leaveRequest.findMany({
             where: leaveWhereClause,
             select: {
+                employeeId: true,
                 startDate: true,
                 endDate: true,
             },
         });
 
-        // Calculate total leave days (considering overlap with date range)
-        let leaveDays = 0;
+        const leaveSet = new Set<string>();
         for (const leave of approvedLeaves) {
-            const leaveStart =
-                leave.startDate > start ? leave.startDate : start;
+            const leaveStart = leave.startDate > start ? leave.startDate : start;
             const leaveEnd = leave.endDate < end ? leave.endDate : end;
-            const diffTime = leaveEnd.getTime() - leaveStart.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            leaveDays += Math.max(0, diffDays);
-        }
-
-        let presentDays = 0;
-        let absentDays = 0;
-        let lateDays = 0;
-
-        for (const stat of attendanceStats) {
-            if (stat.status === 'PRESENT') {
-                presentDays = stat._count.id;
-            } else if (stat.status === 'ABSENT') {
-                absentDays = stat._count.id;
-            } else if (stat.status === 'LATE') {
-                lateDays = stat._count.id;
+            
+            const current = new Date(leaveStart);
+            while (current <= leaveEnd) {
+                const dateStr = current.toISOString().split('T')[0];
+                const key = `${leave.employeeId}:${dateStr}`;
+                // Only count as leave if they didn't actually show up (presenceSet takes priority)
+                if (!presenceSet.has(key)) {
+                    leaveSet.add(key);
+                }
+                current.setDate(current.getDate() + 1);
             }
         }
 
-        const totalDays = presentDays + absentDays + lateDays + leaveDays;
+        // 3. Calculate Totals
+        const totalLeaveDays = leaveSet.size;
+        
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const rangeDaysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const totalExpectedManDays = activeEmployeesCount * rangeDaysCount;
+
+        // Virtual absences = Expected - (Working + Leave + Manual Absents)
+        const virtualAbsences = Math.max(
+            0,
+            totalExpectedManDays - (presentDays + lateDays + totalLeaveDays + manualAbsentRecords),
+        );
+        const totalAbsents = manualAbsentRecords + virtualAbsences;
+
         const attendanceRate =
-            totalDays > 0
-                ? Math.round(((presentDays + lateDays) / totalDays) * 10000) /
-                  100
+            totalExpectedManDays > 0
+                ? Math.round(
+                      ((presentDays + lateDays) / totalExpectedManDays) * 10000,
+                  ) / 100
                 : 0;
 
         return {
-            totalDays,
+            totalDays: totalExpectedManDays,
             presentDays,
-            absentDays,
+            absentDays: totalAbsents,
             lateDays,
-            leaveDays,
+            leaveDays: totalLeaveDays,
             attendanceRate,
             averageWorkHours:
                 Math.round(Number(workHoursAgg._avg?.workHours ?? 0) * 100) /
@@ -666,7 +705,7 @@ export class ReportsService {
                 by: ['status'],
                 where: {
                     isDeleted: false,
-                    requestDate: { gte: startDate, lte: endDate },
+                    createdAt: { gte: startDate, lte: endDate },
                 },
                 _count: { id: true },
             }),
@@ -992,9 +1031,22 @@ export class ReportsService {
             params?.endDate,
         );
 
-        const whereClause = {
+        const whereClause: Prisma.PayrollWhereInput = {
             isDeleted: false,
-            payPeriodStart: { gte: start, lte: end },
+            OR: [
+                {
+                    payPeriodStart: { gte: start, lte: end },
+                },
+                {
+                    payPeriodEnd: { gte: start, lte: end },
+                },
+                {
+                    AND: [
+                        { payPeriodStart: { lte: start } },
+                        { payPeriodEnd: { gte: end } },
+                    ],
+                },
+            ],
         };
 
         // Aggregate payroll data
@@ -1092,7 +1144,7 @@ export class ReportsService {
 
         const whereClause = {
             isDeleted: false,
-            requestDate: { gte: start, lte: end },
+            createdAt: { gte: start, lte: end },
         };
 
         // Get status counts
@@ -1151,7 +1203,7 @@ export class ReportsService {
             const count = await this.prisma.client.leaveRequest.count({
                 where: {
                     isDeleted: false,
-                    requestDate: { gte: monthStart, lte: monthEnd },
+                    createdAt: { gte: monthStart, lte: monthEnd },
                 },
             });
 

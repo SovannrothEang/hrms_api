@@ -83,6 +83,7 @@ export class AttendancesService {
             dateFrom,
             dateTo,
             status,
+            search,
             childIncluded = false,
             sortBy = 'date',
             sortOrder = 'desc',
@@ -90,37 +91,188 @@ export class AttendancesService {
 
         const skip = query.skip;
 
-        const where: Prisma.AttendanceWhereInput = { isDeleted: false };
+        // 1. Setup Date Range
+        const start = dateFrom ? new Date(dateFrom) : new Date();
+        const end = dateTo ? new Date(dateTo) : new Date();
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
 
-        if (employeeId) {
-            where.employeeId = employeeId;
-        }
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const rangeDaysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        if (status) {
-            where.status = status;
-        }
+        // Determine if we should do a "Dense" roll call (showing all employees)
+        // We do it for small ranges to provide accurate absent/on-leave tracking
+        const isDenseRange = rangeDaysCount <= 31;
 
-        if (dateFrom || dateTo) {
-            const dateFilter: Prisma.DateTimeFilter = {};
-            if (dateFrom) {
-                dateFilter.gte = new Date(dateFrom);
+        if (isDenseRange) {
+            // 2. Fetch data for Dense Roll Call
+            const [employees, existingAttendances, approvedLeaves] = await Promise.all([
+                this.prisma.client.employee.findMany({
+                    where: {
+                        isDeleted: false,
+                        status: { in: ['ACTIVE', 'PROBATION', 'ON_LEAVE'] },
+                        ...(employeeId ? { id: employeeId } : {}),
+                        ...(search ? {
+                            OR: [
+                                { firstname: { contains: search, mode: 'insensitive' } },
+                                { lastname: { contains: search, mode: 'insensitive' } },
+                                { employeeCode: { contains: search, mode: 'insensitive' } },
+                            ]
+                        } : {}),
+                    },
+                    include: { department: true, position: true }
+                }),
+                this.prisma.client.attendance.findMany({
+                    where: {
+                        isDeleted: false,
+                        date: { gte: start, lte: end },
+                        ...(employeeId ? { employeeId } : {}),
+                    },
+                    include: {
+                        performer: childIncluded
+                            ? {
+                                  include: {
+                                      userRoles: {
+                                          include: { role: true },
+                                      },
+                                  },
+                               }
+                            : false,
+                        employee: childIncluded ? { include: { department: true, position: true } } : false,
+                    }
+                }),
+                this.prisma.client.leaveRequest.findMany({
+                    where: {
+                        status: 'APPROVED',
+                        isDeleted: false,
+                        startDate: { lte: end },
+                        endDate: { gte: start },
+                        ...(employeeId ? { employeeId } : {}),
+                    }
+                })
+            ]);
+
+            // 3. Generate Dense List
+            const dateRangeDays: string[] = [];
+            const tempDate = new Date(start);
+            while (tempDate <= end) {
+                dateRangeDays.push(tempDate.toISOString().split('T')[0]);
+                tempDate.setDate(tempDate.getDate() + 1);
             }
-            if (dateTo) {
-                dateFilter.lte = new Date(dateTo);
+
+            const fullRollCall: AttendanceDto[] = [];
+            for (const dateStr of dateRangeDays) {
+                const dayDate = new Date(dateStr);
+                dayDate.setHours(0, 0, 0, 0);
+
+                for (const emp of employees) {
+                    // 1. Find matching attendance record
+                    const record = existingAttendances.find(a => {
+                        const aDateStr = new Date(a.date).toLocaleDateString('sv-SE');
+                        return a.employeeId === emp.id && aDateStr === dateStr;
+                    });
+
+                    // 2. Check for approved leave
+                    const leave = approvedLeaves.find(l => {
+                        const lStart = new Date(l.startDate);
+                        const lEnd = new Date(l.endDate);
+                        lStart.setHours(0, 0, 0, 0);
+                        lEnd.setHours(23, 59, 59, 999);
+                        return l.employeeId === emp.id && dayDate >= lStart && dayDate <= lEnd;
+                    });
+
+                    if (record) {
+                        // Use existing record, even if they are on leave (could be working while on leave)
+                        fullRollCall.push(CommonMapper.mapToAttendanceDto(record)!);
+                    } else if (leave) {
+                        // No record, but on leave -> ON_LEAVE
+                        const leaveRecord = {
+                            id: `v-leave-${emp.id}-${dateStr}`,
+                            employeeId: emp.id,
+                            date: dayDate,
+                            status: AttendanceStatus.ON_LEAVE,
+                            employee: emp,
+                            isActive: true,
+                            createdAt: dayDate,
+                            updatedAt: dayDate,
+                        };
+                        fullRollCall.push(CommonMapper.mapToAttendanceDto(leaveRecord)!);
+                    } else {
+                        // No record, not on leave -> ABSENT
+                        const absentRecord = {
+                            id: `v-absent-${emp.id}-${dateStr}`,
+                            employeeId: emp.id,
+                            date: dayDate,
+                            status: AttendanceStatus.ABSENT,
+                            employee: emp,
+                            isActive: true,
+                            createdAt: dayDate,
+                            updatedAt: dayDate,
+                        };
+                        fullRollCall.push(CommonMapper.mapToAttendanceDto(absentRecord)!);
+                    }
+                }
             }
-            where.date = dateFilter;
+
+            // 4. Apply Filters (Status)
+            let filtered = fullRollCall;
+            if (status) {
+                filtered = filtered.filter(a => a.status === status);
+            }
+
+            // 5. Calculate Summary from fullRollCall (before pagination)
+            const getStatusCount = (s: string) => fullRollCall.filter(a => a.status === s).length;
+            const summary: AttendanceSummaryDto = {
+                daysPresent: getStatusCount(AttendanceStatus.PRESENT) + getStatusCount(AttendanceStatus.LATE) + getStatusCount(AttendanceStatus.EARLY_OUT),
+                lateCount: getStatusCount(AttendanceStatus.LATE),
+                daysAbsent: getStatusCount(AttendanceStatus.ABSENT),
+                daysOnLeave: getStatusCount(AttendanceStatus.ON_LEAVE),
+                totalHoursWorked: fullRollCall.reduce((sum, a) => sum + Number(a.workHours || 0), 0),
+                totalOvertimeHours: fullRollCall.reduce((sum, a) => sum + Number(a.overtime || 0), 0),
+            };
+
+            // 6. Sort
+            filtered.sort((a, b) => {
+                let valA = (a as any)[sortBy];
+                let valB = (b as any)[sortBy];
+
+                if (valA instanceof Date) valA = valA.getTime();
+                if (valB instanceof Date) valB = valB.getTime();
+                
+                // Handle nulls
+                if (valA === null || valA === undefined) return 1;
+                if (valB === null || valB === undefined) return -1;
+
+                if (sortOrder === 'desc') return valB > valA ? 1 : -1;
+                return valA > valB ? 1 : -1;
+            });
+
+            // 7. Paginate
+            const total = filtered.length;
+            const data = filtered.slice(skip, skip + limit);
+
+            return Result.ok(ResultPagination.of(data, total, page, limit, summary));
         }
 
-        const orderBy: Prisma.AttendanceOrderByWithRelationInput = {};
-        if (sortBy === 'date') {
-            orderBy.date = sortOrder;
-        } else if (sortBy === 'checkInTime') {
-            orderBy.checkInTime = sortOrder;
-        } else if (sortBy === 'createdAt') {
-            orderBy.createdAt = sortOrder;
+        // Fallback for large ranges (> 31 days) - only showing existing records
+        const where: Prisma.AttendanceWhereInput = { 
+            isDeleted: false,
+            date: { gte: start, lte: end }
+        };
+
+        if (employeeId) where.employeeId = employeeId;
+        if (status) where.status = status as any;
+        if (search) {
+            where.employee = {
+                OR: [
+                    { firstname: { contains: search, mode: 'insensitive' } },
+                    { lastname: { contains: search, mode: 'insensitive' } },
+                    { employeeCode: { contains: search, mode: 'insensitive' } },
+                ]
+            };
         }
 
-        const [attendances, total, aggregates, statusCounts] =
+        const [attendances, total, aggregates, statusCounts, activeEmployeesCount, leaveRequestsCount] =
             await this.prisma.$transaction([
                 this.prisma.client.attendance.findMany({
                     where,
@@ -134,18 +286,11 @@ export class AttendancesService {
                                           include: { role: true },
                                       },
                                   },
-                              }
+                               }
                             : false,
-                        employee: childIncluded
-                            ? {
-                                  include: {
-                                      department: true,
-                                      position: true,
-                                  },
-                              }
-                            : false,
+                        employee: childIncluded ? { include: { department: true, position: true } } : false,
                     },
-                    orderBy,
+                    orderBy: { [sortBy]: sortOrder },
                 }),
                 this.prisma.client.attendance.count({ where }),
                 this.prisma.client.attendance.aggregate({
@@ -158,38 +303,74 @@ export class AttendancesService {
                     orderBy: { status: 'asc' },
                     _count: { _all: true },
                 }),
+                this.prisma.client.employee.count({
+                    where: { status: 'ACTIVE', isDeleted: false },
+                }),
+                this.prisma.client.leaveRequest.count({
+                    where: {
+                        status: 'APPROVED',
+                        isDeleted: false,
+                        startDate: { lte: end },
+                        endDate: { gte: start },
+                    },
+                }),
             ]);
 
-        type StatusCountResult = {
-            status: string;
-            _count: { _all: number };
-        };
+        // Calculate Summary using Set-based approach to avoid double-counting
+        const [allRecordsForRange, approvedLeavesForRange] = await Promise.all([
+            this.prisma.client.attendance.findMany({
+                where: { isDeleted: false, date: { gte: start, lte: end } },
+                select: { employeeId: true, date: true, status: true }
+            }),
+            this.prisma.client.leaveRequest.findMany({
+                where: { status: 'APPROVED', isDeleted: false, startDate: { lte: end }, endDate: { gte: start } },
+                select: { employeeId: true, startDate: true, endDate: true }
+            })
+        ]);
 
-        const getCount = (s: string): number => {
-            const found = (statusCounts as StatusCountResult[]).find(
-                (c) => c.status === s,
-            );
-            return found?._count._all || 0;
-        };
+        const workingSet = new Set<string>(); // "empId:YYYY-MM-DD"
+        let presentDays = 0;
+        let lateDays = 0;
+        let manualAbsents = 0;
+
+        for (const att of allRecordsForRange) {
+            const dStr = new Date(att.date).toISOString().split('T')[0];
+            const key = `${att.employeeId}:${dStr}`;
+            workingSet.add(key);
+            
+            if (att.status === 'PRESENT' || att.status === 'EARLY_OUT') presentDays++;
+            else if (att.status === 'LATE') lateDays++;
+            else if (att.status === 'ABSENT') manualAbsents++;
+        }
+
+        const leaveSet = new Set<string>();
+        for (const leave of approvedLeavesForRange) {
+            const lStart = new Date(leave.startDate) > start ? new Date(leave.startDate) : start;
+            const lEnd = new Date(leave.endDate) < end ? new Date(leave.endDate) : end;
+            const cur = new Date(lStart);
+            while (cur <= lEnd) {
+                const dStr = cur.toISOString().split('T')[0];
+                const key = `${leave.employeeId}:${dStr}`;
+                if (!workingSet.has(key)) leaveSet.add(key);
+                cur.setDate(cur.getDate() + 1);
+            }
+        }
+
+        const totalExpectedDays = activeEmployeesCount * rangeDaysCount;
+        const totalLeaveDays = leaveSet.size;
+        const virtualAbsences = Math.max(0, totalExpectedDays - (presentDays + lateDays + totalLeaveDays + manualAbsents));
 
         const summary: AttendanceSummaryDto = {
-            daysPresent:
-                getCount(AttendanceStatus.PRESENT) +
-                getCount(AttendanceStatus.LATE) +
-                getCount(AttendanceStatus.EARLY_OUT),
-            lateCount: getCount(AttendanceStatus.LATE),
-            daysAbsent: getCount(AttendanceStatus.ABSENT),
-            daysOnLeave: getCount(AttendanceStatus.ON_LEAVE),
+            daysPresent: presentDays + lateDays,
+            lateCount: lateDays,
+            daysAbsent: manualAbsents + virtualAbsences,
+            daysOnLeave: totalLeaveDays,
             totalHoursWorked: Number(aggregates._sum.workHours || 0),
             totalOvertimeHours: Number(aggregates._sum.overtime || 0),
         };
 
-        const data = attendances.map(
-            (a) => CommonMapper.mapToAttendanceDto(a)!,
-        );
-        return Result.ok(
-            ResultPagination.of(data, total, page, limit, summary),
-        );
+        const data = attendances.map((a) => CommonMapper.mapToAttendanceDto(a)!);
+        return Result.ok(ResultPagination.of(data, total, page, limit, summary));
     }
 
     async findOneByIdAsync(

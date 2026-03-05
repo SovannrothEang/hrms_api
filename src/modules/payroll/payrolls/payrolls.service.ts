@@ -143,7 +143,7 @@ export class PayrollsService {
 
             // 5. Calculate Tax and other bracket-based deductions
             let totalTaxAmount = new Decimal(0);
-            let taxableIncome = this.calculateTaxableIncome(grossIncome);
+            const taxableIncome = this.calculateTaxableIncome(grossIncome);
             const matchingBrackets: {
                 bracket: any;
                 amount: Decimal;
@@ -455,7 +455,7 @@ export class PayrollsService {
             const isTaxExempt = taxConfig?.taxExempt ?? false;
 
             let totalTaxAmount = new Decimal(0);
-            let taxableIncome = this.calculateTaxableIncome(grossIncome);
+            const taxableIncome = this.calculateTaxableIncome(grossIncome);
             const matchingBrackets: {
                 bracket: any;
                 amount: Decimal;
@@ -704,14 +704,16 @@ export class PayrollsService {
             });
 
             // Send Push Notification to Employee
-            const payrollWithUser = await this.prisma.client.payroll.findUnique({
-                where: { id },
-                include: {
-                    employee: {
-                        select: { userId: true, firstname: true },
+            const payrollWithUser = await this.prisma.client.payroll.findUnique(
+                {
+                    where: { id },
+                    include: {
+                        employee: {
+                            select: { userId: true, firstname: true },
+                        },
                     },
                 },
-            });
+            );
 
             if (payrollWithUser?.employee?.userId) {
                 const monthName = payroll.payPeriodStart.toLocaleString(
@@ -1578,6 +1580,40 @@ export class PayrollsService {
                 where: {
                     id,
                     employee: { userId },
+                    isDeleted: false,
+                },
+                include: {
+                    employee: {
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    },
+                    items: true,
+                },
+            });
+
+            if (!payroll) {
+                return Result.fail('Payslip not found or access denied');
+            }
+
+            const buffer = await this.generatePdfBuffer(payroll);
+            const filename = `payslip_${payroll.payPeriodStart.toISOString().split('T')[0]}_${payroll.employee.employeeCode}.pdf`;
+
+            return Result.ok({ buffer, filename });
+        } catch (error) {
+            this.logger.error('Failed to generate payslip PDF', error);
+            return Result.fail('Failed to download payslip');
+        }
+    }
+
+    async downloadAnyPayslipPdfAsync(
+        id: string,
+    ): Promise<Result<{ buffer: Buffer; filename: string }>> {
+        try {
+            const payroll = await this.prisma.client.payroll.findUnique({
+                where: {
+                    id,
                     isDeleted: false,
                 },
                 include: {
