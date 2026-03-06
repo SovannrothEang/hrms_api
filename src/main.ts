@@ -10,12 +10,17 @@ import { PrismaExceptionFilter } from './filters/prisma-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { SECURITY_HEADERS } from './common/security/constants/security.constants';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { join } from 'path';
+import express from 'express';
 
 const APP_URL = process.env.NEXT_APP_URL || ('http://localhost:3000' as string);
 
+const server = express();
+
 async function bootstrap() {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule,
+        new ExpressAdapter(server), {
         bufferLogs: true,
     });
 
