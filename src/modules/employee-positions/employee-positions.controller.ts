@@ -36,7 +36,7 @@ import { ResultPagination } from 'src/common/logic/result-pagination';
 
 @Controller('positions')
 @ApiTags('Employee Positions')
-@Auth(RoleName.ADMIN)
+@Auth([RoleName.ADMIN, RoleName.HR_MANAGER])
 export class EmployeePositionsController {
     private readonly _logger = new Logger(EmployeePositionsController.name);
 

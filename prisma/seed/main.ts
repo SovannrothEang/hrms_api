@@ -16,7 +16,13 @@ import { seedLeaves } from './leaves-seed';
 import { seedPayrollRecords } from './payroll-records-seed';
 
 const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
+const pool = new Pool({
+    connectionString,
+    ssl: connectionString?.includes('render.com')
+        ? { rejectUnauthorized: false }
+        : false,
+    connectionTimeoutMillis: 10000,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -49,4 +55,5 @@ main()
     })
     .finally(async () => {
         await prisma.$disconnect();
+        await pool.end();
     });

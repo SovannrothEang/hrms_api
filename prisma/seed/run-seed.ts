@@ -16,7 +16,13 @@ import { seedLeaves } from './leaves-seed';
 import { seedPayrollRecords } from './payroll-records-seed';
 
 const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
+const pool = new Pool({
+    connectionString,
+    ssl: connectionString?.includes('render.com')
+        ? { rejectUnauthorized: false }
+        : false,
+    connectionTimeoutMillis: 10000,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
@@ -28,7 +34,7 @@ const availableSeeds: Record<string, (prisma: PrismaClient) => Promise<void>> =
         shifts: seedShifts,
         holidays: seedHolidays,
         payroll: seedPayroll,
-        "company-settings": seedCompanySettings,
+        'company-settings': seedCompanySettings,
         employees: seedEmployees,
         attendances: seedAttendances,
         leaves: seedLeaves,
@@ -109,6 +115,7 @@ async function main() {
         process.exit(1);
     } finally {
         await prisma.$disconnect();
+        await pool.end();
     }
 }
 
