@@ -14,7 +14,10 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { join } from 'path';
 import express from 'express';
 
-const APP_URL = process.env.NEXT_APP_URL || ('http://localhost:3000' as string);
+const APP_URL = process.env.NEXT_APP_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',') 
+    : [APP_URL];
 
 const server = express();
 
@@ -38,7 +41,18 @@ async function bootstrap() {
     app.useStaticAssets(join(__dirname, '..', 'public'));
 
     app.enableCors({
-        origin: isDev ? true : APP_URL, // Allow all origins in dev for network access
+        origin: (origin, callback) => {
+            // Allow requests with no origin (like mobile apps or curl)
+            if (!origin) {
+                return callback(null, true);
+            }
+            
+            if (isDev || ALLOWED_ORIGINS.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: [
             'Content-Type',
