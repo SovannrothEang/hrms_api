@@ -3,23 +3,23 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { UserDto } from 'src/modules/iam/users/dtos/user.dto';
-import { EmployeeDto } from 'src/modules/employees/dtos/employee.dto';
-import { DepartmentDto } from 'src/modules/departments/dtos/department.dto';
-import { EmployeePositionDto } from 'src/modules/employee-positions/dtos/employee-position.dto';
-import { AttendanceDto } from 'src/modules/attendances/dtos/attendance.dto';
-import { LeaveRequestDto } from 'src/modules/leaves/dtos/leave-request.dto';
-import { RoleDto } from 'src/modules/iam/roles/dtos/roles.dto';
-import { ShiftDto } from 'src/modules/shifts/dtos/shift.dto';
+import { UserDto } from '../../modules/iam/users/dtos/user.dto';
+import { EmployeeDto } from '../../modules/employees/dtos/employee.dto';
+import { DepartmentDto } from '../../modules/departments/dtos/department.dto';
+import { EmployeePositionDto } from '../../modules/employee-positions/dtos/employee-position.dto';
+import { AttendanceDto } from '../../modules/attendances/dtos/attendance.dto';
+import { LeaveRequestDto } from '../../modules/leaves/dtos/leave-request.dto';
+import { RoleDto } from '../../modules/iam/roles/dtos/roles.dto';
+import { ShiftDto } from '../../modules/shifts/dtos/shift.dto';
 import {
     PayrollDto,
     TaxCalculationDto,
-} from 'src/modules/payroll/payrolls/dtos/payroll.dto';
-import { PayrollItemDto } from 'src/modules/payroll/payrolls/dtos/payroll-item.dto';
-import { CurrencyDto } from 'src/modules/payroll/currencies/dtos/currency.dto';
-import { PublicHolidayDto } from 'src/modules/public-holidays/dtos/public-holiday.dto';
-import { TaxBracketDto } from 'src/modules/payroll/tax-brackets/dtos/tax-bracket.dto';
-import { DecimalNumber } from 'src/config/decimal-number';
+} from '../../modules/payroll/payrolls/dtos/payroll.dto';
+import { PayrollItemDto } from '../../modules/payroll/payrolls/dtos/payroll-item.dto';
+import { CurrencyDto } from '../../modules/payroll/currencies/dtos/currency.dto';
+import { PublicHolidayDto } from '../../modules/public-holidays/dtos/public-holiday.dto';
+import { TaxBracketDto } from '../../modules/payroll/tax-brackets/dtos/tax-bracket.dto';
+import { DecimalNumber } from '../../config/decimal-number';
 
 export class CommonMapper {
     static mapToUserDto(u: any): UserDto | null {

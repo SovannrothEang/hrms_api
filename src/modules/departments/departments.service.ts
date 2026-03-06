@@ -7,7 +7,7 @@ import { PrismaService } from '../../common/services/prisma/prisma.service';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { DepartmentQueryDto } from './dtos/department-query.dto';
 import { Prisma } from '@prisma/client';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 
 @Injectable()
 export class DepartmentsService {

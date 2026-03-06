@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { AttendanceDto } from './dtos/attendance.dto';
 import { AttendanceQueryDto } from './dtos/attendance-query.dto';
@@ -106,51 +106,76 @@ export class AttendancesService {
 
         if (isDenseRange) {
             // 2. Fetch data for Dense Roll Call
-            const [employees, existingAttendances, approvedLeaves] = await Promise.all([
-                this.prisma.client.employee.findMany({
-                    where: {
-                        isDeleted: false,
-                        status: { in: ['ACTIVE', 'PROBATION', 'ON_LEAVE'] },
-                        ...(employeeId ? { id: employeeId } : {}),
-                        ...(search ? {
-                            OR: [
-                                { firstname: { contains: search, mode: 'insensitive' } },
-                                { lastname: { contains: search, mode: 'insensitive' } },
-                                { employeeCode: { contains: search, mode: 'insensitive' } },
-                            ]
-                        } : {}),
-                    },
-                    include: { department: true, position: true }
-                }),
-                this.prisma.client.attendance.findMany({
-                    where: {
-                        isDeleted: false,
-                        date: { gte: start, lte: end },
-                        ...(employeeId ? { employeeId } : {}),
-                    },
-                    include: {
-                        performer: childIncluded
-                            ? {
-                                  include: {
-                                      userRoles: {
-                                          include: { role: true },
+            const [employees, existingAttendances, approvedLeaves] =
+                await Promise.all([
+                    this.prisma.client.employee.findMany({
+                        where: {
+                            isDeleted: false,
+                            status: { in: ['ACTIVE', 'PROBATION', 'ON_LEAVE'] },
+                            ...(employeeId ? { id: employeeId } : {}),
+                            ...(search
+                                ? {
+                                      OR: [
+                                          {
+                                              firstname: {
+                                                  contains: search,
+                                                  mode: 'insensitive',
+                                              },
+                                          },
+                                          {
+                                              lastname: {
+                                                  contains: search,
+                                                  mode: 'insensitive',
+                                              },
+                                          },
+                                          {
+                                              employeeCode: {
+                                                  contains: search,
+                                                  mode: 'insensitive',
+                                              },
+                                          },
+                                      ],
+                                  }
+                                : {}),
+                        },
+                        include: { department: true, position: true },
+                    }),
+                    this.prisma.client.attendance.findMany({
+                        where: {
+                            isDeleted: false,
+                            date: { gte: start, lte: end },
+                            ...(employeeId ? { employeeId } : {}),
+                        },
+                        include: {
+                            performer: childIncluded
+                                ? {
+                                      include: {
+                                          userRoles: {
+                                              include: { role: true },
+                                          },
                                       },
-                                  },
-                               }
-                            : false,
-                        employee: childIncluded ? { include: { department: true, position: true } } : false,
-                    }
-                }),
-                this.prisma.client.leaveRequest.findMany({
-                    where: {
-                        status: 'APPROVED',
-                        isDeleted: false,
-                        startDate: { lte: end },
-                        endDate: { gte: start },
-                        ...(employeeId ? { employeeId } : {}),
-                    }
-                })
-            ]);
+                                  }
+                                : false,
+                            employee: childIncluded
+                                ? {
+                                      include: {
+                                          department: true,
+                                          position: true,
+                                      },
+                                  }
+                                : false,
+                        },
+                    }),
+                    this.prisma.client.leaveRequest.findMany({
+                        where: {
+                            status: 'APPROVED',
+                            isDeleted: false,
+                            startDate: { lte: end },
+                            endDate: { gte: start },
+                            ...(employeeId ? { employeeId } : {}),
+                        },
+                    }),
+                ]);
 
             // 3. Generate Dense List
             const dateRangeDays: string[] = [];
@@ -167,23 +192,31 @@ export class AttendancesService {
 
                 for (const emp of employees) {
                     // 1. Find matching attendance record
-                    const record = existingAttendances.find(a => {
-                        const aDateStr = new Date(a.date).toLocaleDateString('sv-SE');
+                    const record = existingAttendances.find((a) => {
+                        const aDateStr = new Date(a.date).toLocaleDateString(
+                            'sv-SE',
+                        );
                         return a.employeeId === emp.id && aDateStr === dateStr;
                     });
 
                     // 2. Check for approved leave
-                    const leave = approvedLeaves.find(l => {
+                    const leave = approvedLeaves.find((l) => {
                         const lStart = new Date(l.startDate);
                         const lEnd = new Date(l.endDate);
                         lStart.setHours(0, 0, 0, 0);
                         lEnd.setHours(23, 59, 59, 999);
-                        return l.employeeId === emp.id && dayDate >= lStart && dayDate <= lEnd;
+                        return (
+                            l.employeeId === emp.id &&
+                            dayDate >= lStart &&
+                            dayDate <= lEnd
+                        );
                     });
 
                     if (record) {
                         // Use existing record, even if they are on leave (could be working while on leave)
-                        fullRollCall.push(CommonMapper.mapToAttendanceDto(record)!);
+                        fullRollCall.push(
+                            CommonMapper.mapToAttendanceDto(record)!,
+                        );
                     } else if (leave) {
                         // No record, but on leave -> ON_LEAVE
                         const leaveRecord = {
@@ -196,7 +229,9 @@ export class AttendancesService {
                             createdAt: dayDate,
                             updatedAt: dayDate,
                         };
-                        fullRollCall.push(CommonMapper.mapToAttendanceDto(leaveRecord)!);
+                        fullRollCall.push(
+                            CommonMapper.mapToAttendanceDto(leaveRecord)!,
+                        );
                     } else {
                         // No record, not on leave -> ABSENT
                         const absentRecord = {
@@ -209,7 +244,9 @@ export class AttendancesService {
                             createdAt: dayDate,
                             updatedAt: dayDate,
                         };
-                        fullRollCall.push(CommonMapper.mapToAttendanceDto(absentRecord)!);
+                        fullRollCall.push(
+                            CommonMapper.mapToAttendanceDto(absentRecord)!,
+                        );
                     }
                 }
             }
@@ -217,18 +254,28 @@ export class AttendancesService {
             // 4. Apply Filters (Status)
             let filtered = fullRollCall;
             if (status) {
-                filtered = filtered.filter(a => a.status === status);
+                filtered = filtered.filter((a) => a.status === status);
             }
 
             // 5. Calculate Summary from fullRollCall (before pagination)
-            const getStatusCount = (s: string) => fullRollCall.filter(a => a.status === s).length;
+            const getStatusCount = (s: string) =>
+                fullRollCall.filter((a) => a.status === s).length;
             const summary: AttendanceSummaryDto = {
-                daysPresent: getStatusCount(AttendanceStatus.PRESENT) + getStatusCount(AttendanceStatus.LATE) + getStatusCount(AttendanceStatus.EARLY_OUT),
+                daysPresent:
+                    getStatusCount(AttendanceStatus.PRESENT) +
+                    getStatusCount(AttendanceStatus.LATE) +
+                    getStatusCount(AttendanceStatus.EARLY_OUT),
                 lateCount: getStatusCount(AttendanceStatus.LATE),
                 daysAbsent: getStatusCount(AttendanceStatus.ABSENT),
                 daysOnLeave: getStatusCount(AttendanceStatus.ON_LEAVE),
-                totalHoursWorked: fullRollCall.reduce((sum, a) => sum + Number(a.workHours || 0), 0),
-                totalOvertimeHours: fullRollCall.reduce((sum, a) => sum + Number(a.overtime || 0), 0),
+                totalHoursWorked: fullRollCall.reduce(
+                    (sum, a) => sum + Number(a.workHours || 0),
+                    0,
+                ),
+                totalOvertimeHours: fullRollCall.reduce(
+                    (sum, a) => sum + Number(a.overtime || 0),
+                    0,
+                ),
             };
 
             // 6. Sort
@@ -238,7 +285,7 @@ export class AttendancesService {
 
                 if (valA instanceof Date) valA = valA.getTime();
                 if (valB instanceof Date) valB = valB.getTime();
-                
+
                 // Handle nulls
                 if (valA === null || valA === undefined) return 1;
                 if (valB === null || valB === undefined) return -1;
@@ -251,13 +298,15 @@ export class AttendancesService {
             const total = filtered.length;
             const data = filtered.slice(skip, skip + limit);
 
-            return Result.ok(ResultPagination.of(data, total, page, limit, summary));
+            return Result.ok(
+                ResultPagination.of(data, total, page, limit, summary),
+            );
         }
 
         // Fallback for large ranges (> 31 days) - only showing existing records
-        const where: Prisma.AttendanceWhereInput = { 
+        const where: Prisma.AttendanceWhereInput = {
             isDeleted: false,
-            date: { gte: start, lte: end }
+            date: { gte: start, lte: end },
         };
 
         if (employeeId) where.employeeId = employeeId;
@@ -268,64 +317,77 @@ export class AttendancesService {
                     { firstname: { contains: search, mode: 'insensitive' } },
                     { lastname: { contains: search, mode: 'insensitive' } },
                     { employeeCode: { contains: search, mode: 'insensitive' } },
-                ]
+                ],
             };
         }
 
-        const [attendances, total, aggregates, statusCounts, activeEmployeesCount, leaveRequestsCount] =
-            await this.prisma.$transaction([
-                this.prisma.client.attendance.findMany({
-                    where,
-                    skip,
-                    take: limit,
-                    include: {
-                        performer: childIncluded
-                            ? {
-                                  include: {
-                                      userRoles: {
-                                          include: { role: true },
-                                      },
+        const [
+            attendances,
+            total,
+            aggregates,
+            statusCounts,
+            activeEmployeesCount,
+            leaveRequestsCount,
+        ] = await this.prisma.$transaction([
+            this.prisma.client.attendance.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    performer: childIncluded
+                        ? {
+                              include: {
+                                  userRoles: {
+                                      include: { role: true },
                                   },
-                               }
-                            : false,
-                        employee: childIncluded ? { include: { department: true, position: true } } : false,
-                    },
-                    orderBy: { [sortBy]: sortOrder },
-                }),
-                this.prisma.client.attendance.count({ where }),
-                this.prisma.client.attendance.aggregate({
-                    where,
-                    _sum: { workHours: true, overtime: true },
-                }),
-                this.prisma.client.attendance.groupBy({
-                    by: ['status'],
-                    where,
-                    orderBy: { status: 'asc' },
-                    _count: { _all: true },
-                }),
-                this.prisma.client.employee.count({
-                    where: { status: 'ACTIVE', isDeleted: false },
-                }),
-                this.prisma.client.leaveRequest.count({
-                    where: {
-                        status: 'APPROVED',
-                        isDeleted: false,
-                        startDate: { lte: end },
-                        endDate: { gte: start },
-                    },
-                }),
-            ]);
+                              },
+                          }
+                        : false,
+                    employee: childIncluded
+                        ? { include: { department: true, position: true } }
+                        : false,
+                },
+                orderBy: { [sortBy]: sortOrder },
+            }),
+            this.prisma.client.attendance.count({ where }),
+            this.prisma.client.attendance.aggregate({
+                where,
+                _sum: { workHours: true, overtime: true },
+            }),
+            this.prisma.client.attendance.groupBy({
+                by: ['status'],
+                where,
+                orderBy: { status: 'asc' },
+                _count: { _all: true },
+            }),
+            this.prisma.client.employee.count({
+                where: { status: 'ACTIVE', isDeleted: false },
+            }),
+            this.prisma.client.leaveRequest.count({
+                where: {
+                    status: 'APPROVED',
+                    isDeleted: false,
+                    startDate: { lte: end },
+                    endDate: { gte: start },
+                },
+            }),
+        ]);
 
         // Calculate Summary using Set-based approach to avoid double-counting
         const [allRecordsForRange, approvedLeavesForRange] = await Promise.all([
             this.prisma.client.attendance.findMany({
                 where: { isDeleted: false, date: { gte: start, lte: end } },
-                select: { employeeId: true, date: true, status: true }
+                select: { employeeId: true, date: true, status: true },
             }),
             this.prisma.client.leaveRequest.findMany({
-                where: { status: 'APPROVED', isDeleted: false, startDate: { lte: end }, endDate: { gte: start } },
-                select: { employeeId: true, startDate: true, endDate: true }
-            })
+                where: {
+                    status: 'APPROVED',
+                    isDeleted: false,
+                    startDate: { lte: end },
+                    endDate: { gte: start },
+                },
+                select: { employeeId: true, startDate: true, endDate: true },
+            }),
         ]);
 
         const workingSet = new Set<string>(); // "empId:YYYY-MM-DD"
@@ -337,16 +399,21 @@ export class AttendancesService {
             const dStr = new Date(att.date).toISOString().split('T')[0];
             const key = `${att.employeeId}:${dStr}`;
             workingSet.add(key);
-            
-            if (att.status === 'PRESENT' || att.status === 'EARLY_OUT') presentDays++;
+
+            if (att.status === 'PRESENT' || att.status === 'EARLY_OUT')
+                presentDays++;
             else if (att.status === 'LATE') lateDays++;
             else if (att.status === 'ABSENT') manualAbsents++;
         }
 
         const leaveSet = new Set<string>();
         for (const leave of approvedLeavesForRange) {
-            const lStart = new Date(leave.startDate) > start ? new Date(leave.startDate) : start;
-            const lEnd = new Date(leave.endDate) < end ? new Date(leave.endDate) : end;
+            const lStart =
+                new Date(leave.startDate) > start
+                    ? new Date(leave.startDate)
+                    : start;
+            const lEnd =
+                new Date(leave.endDate) < end ? new Date(leave.endDate) : end;
             const cur = new Date(lStart);
             while (cur <= lEnd) {
                 const dStr = cur.toISOString().split('T')[0];
@@ -358,7 +425,11 @@ export class AttendancesService {
 
         const totalExpectedDays = activeEmployeesCount * rangeDaysCount;
         const totalLeaveDays = leaveSet.size;
-        const virtualAbsences = Math.max(0, totalExpectedDays - (presentDays + lateDays + totalLeaveDays + manualAbsents));
+        const virtualAbsences = Math.max(
+            0,
+            totalExpectedDays -
+                (presentDays + lateDays + totalLeaveDays + manualAbsents),
+        );
 
         const summary: AttendanceSummaryDto = {
             daysPresent: presentDays + lateDays,
@@ -369,8 +440,12 @@ export class AttendancesService {
             totalOvertimeHours: Number(aggregates._sum.overtime || 0),
         };
 
-        const data = attendances.map((a) => CommonMapper.mapToAttendanceDto(a)!);
-        return Result.ok(ResultPagination.of(data, total, page, limit, summary));
+        const data = attendances.map(
+            (a) => CommonMapper.mapToAttendanceDto(a)!,
+        );
+        return Result.ok(
+            ResultPagination.of(data, total, page, limit, summary),
+        );
     }
 
     async findOneByIdAsync(

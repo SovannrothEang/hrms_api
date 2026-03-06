@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { Result } from 'src/common/logic/result';
 import { LeaveRequestDto } from './dtos/leave-request.dto';
@@ -82,7 +82,9 @@ export class LeavesService {
         } = query;
 
         const whereClause: Prisma.LeaveRequestWhereInput = { isDeleted: false };
-        const summaryWhereClause: Prisma.LeaveRequestWhereInput = { isDeleted: false };
+        const summaryWhereClause: Prisma.LeaveRequestWhereInput = {
+            isDeleted: false,
+        };
 
         if (employeeId) {
             whereClause.employeeId = employeeId;
@@ -111,7 +113,12 @@ export class LeavesService {
                             mode: 'insensitive' as const,
                         },
                     },
-                    { lastname: { contains: searchTerm, mode: 'insensitive' as const } },
+                    {
+                        lastname: {
+                            contains: searchTerm,
+                            mode: 'insensitive' as const,
+                        },
+                    },
                     {
                         user: {
                             OR: [

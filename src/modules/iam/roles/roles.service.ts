@@ -8,7 +8,7 @@ import { RoleDto } from './dtos/roles.dto';
 import { Result } from 'src/common/logic/result';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../../common/mappers/common.mapper';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 

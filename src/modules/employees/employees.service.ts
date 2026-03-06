@@ -9,7 +9,7 @@ import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ResultPagination } from 'src/common/logic/result-pagination';
 import { EmployeeQueryDto } from './dtos/employee-query.dto';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 import { Decimal } from '@prisma/client/runtime/client';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 

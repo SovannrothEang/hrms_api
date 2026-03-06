@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../../common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { CreateTaxBracketDto } from './dtos/create-tax-bracket.dto';
 import { TaxBracketDto } from './dtos/tax-bracket.dto';

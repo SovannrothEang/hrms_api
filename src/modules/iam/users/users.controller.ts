@@ -26,14 +26,14 @@ import {
     ApiQuery,
     ApiResponse,
 } from '@nestjs/swagger';
-import { Auth } from 'src/common/decorators/auth.decorator';
-import { RoleName } from 'src/common/enums/roles.enum';
+import { Auth } from '../../../common/decorators/auth.decorator';
+import { RoleName } from '../../../common/enums/roles.enum';
 import { UserDto } from './dtos/user.dto';
 import UserCreateDto from './dtos/user-create.dto';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { UserUpdateDto } from './dtos/user-update.dto';
 import { UserQueryDto } from './dtos/user-query.dto';
-import { ResultPagination } from 'src/common/logic/result-pagination';
+import { ResultPagination } from '../../../common/logic/result-pagination';
 import { FileInterceptor } from '@nestjs/platform-express';
 import express from 'express';
 import { join } from 'path';

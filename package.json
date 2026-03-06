@@ -122,8 +122,7 @@
         "coverageDirectory": "./coverage",
         "testEnvironment": "node",
         "moduleNameMapper": {
-            "^src/(.*)$": "<rootDir>/src/$1",
-            "^uuid$": "<rootDir>/tests/__mocks__/uuid.ts"
+            "^src/(.*)$": "<rootDir>/src/$1"
         }
     },
     "prisma": {

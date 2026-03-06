@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../../common/mappers/common.mapper';
 import { CreateCurrencyDto } from './dtos/create-currency.dto';
 import { CurrencyDto } from './dtos/currency.dto';
 import { CurrencyQueryDto } from './dtos/currency-query.dto';

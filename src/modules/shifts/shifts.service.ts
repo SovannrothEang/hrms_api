@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 import { Result } from 'src/common/logic/result';
 import { CreateShiftDto } from './dtos/create-shift.dto';
 import { ShiftDto } from './dtos/shift.dto';

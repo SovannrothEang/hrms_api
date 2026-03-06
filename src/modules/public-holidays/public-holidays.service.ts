@@ -3,7 +3,7 @@ import { Result } from 'src/common/logic/result';
 import { CreatePublicHolidayDto } from './dtos/create-public-holiday.dto';
 import { PublicHolidayDto } from './dtos/public-holiday.dto';
 import { PrismaService } from '../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../common/mappers/common.mapper';
 
 import { ResultPagination } from 'src/common/logic/result-pagination';
 

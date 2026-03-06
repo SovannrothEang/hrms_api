@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../../common/mappers/common.mapper';
 import { ProcessPayrollDto } from './dtos/process-payroll.dto';
 import { PayrollDto } from './dtos/payroll.dto';
 import { PayrollQueryDto } from './dtos/payroll-query.dto';

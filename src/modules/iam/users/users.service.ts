@@ -5,18 +5,18 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../common/services/prisma/prisma.service';
-import { CommonMapper } from 'src/common/mappers/common.mapper';
+import { CommonMapper } from '../../../common/mappers/common.mapper';
 import { Prisma } from '@prisma/client';
 import { UserDto } from './dtos/user.dto';
 import UserCreateDto from './dtos/user-create.dto';
 import * as bcrypt from 'bcrypt';
 import { UserUpdateDto } from './dtos/user-update.dto';
 import { UserQueryDto } from './dtos/user-query.dto';
-import { Result } from 'src/common/logic/result';
-import { RoleName } from 'src/common/enums/roles.enum';
-import { FileStorageService } from 'src/common/services/file-storage/file-storage.service';
+import { Result } from '../../../common/logic/result';
+import { RoleName } from '../../../common/enums/roles.enum';
+import { FileStorageService } from '../../../common/services/file-storage/file-storage.service';
 
-import { ResultPagination } from 'src/common/logic/result-pagination';
+import { ResultPagination } from '../../../common/logic/result-pagination';
 
 @Injectable()
 export class UsersService {
