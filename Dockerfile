@@ -4,6 +4,7 @@ RUN apk add --no-cache libc6-compat python3 build-base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
+ENV NODE_OPTIONS=--max-old-space-size=2048
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 # Ensure pnpm store is isolated inside the container
@@ -41,6 +42,7 @@ RUN pnpm install --prod --frozen-lockfile
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
+COPY src ./src
 COPY prisma ./prisma
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
