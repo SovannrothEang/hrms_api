@@ -1,22 +1,4 @@
-// Mock Guards global replacement
-jest.mock('src/common/guards/jwt-auth.guard', () => ({
-    JwtAuthGuard: class {
-        canActivate(context: any) {
-            const req = context.switchToHttp().getRequest();
-            req.user = { sub: 'user-id-123', roles: ['ADMIN'] };
-            return true;
-        }
-    },
-}));
-jest.mock('src/common/guards/roles.guard', () => ({
-    RolesGuard: class {
-        canActivate() {
-            return true;
-        }
-    },
-}));
-
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test as NestTest, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PayrollsController } from '../../../../src/modules/payroll/payrolls/payrolls.controller';
@@ -25,8 +7,26 @@ import {
     PayrollStatus,
 } from '../../../../src/modules/payroll/payrolls/payrolls.service';
 import { Result } from '../../../../src/common/logic/result';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
+import { JwtAuthGuard } from '../../../../src/common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../../src/common/guards/roles.guard';
+
+// Mock Guards global replacement
+jest.mock('../../../../src/common/guards/jwt-auth.guard', () => ({
+    JwtAuthGuard: class {
+        canActivate(context: any) {
+            const req = context.switchToHttp().getRequest();
+            req.user = { sub: 'user-id-123', roles: ['ADMIN'] };
+            return true;
+        }
+    },
+}));
+jest.mock('../../../../src/common/guards/roles.guard', () => ({
+    RolesGuard: class {
+        canActivate() {
+            return true;
+        }
+    },
+}));
 
 const mockPayrollsService = {
     createDraftAsync: jest.fn(),
@@ -42,12 +42,14 @@ describe('PayrollsController (Feature)', () => {
     let app: INestApplication;
 
     beforeEach(async () => {
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            controllers: [PayrollsController],
-            providers: [
-                { provide: PayrollsService, useValue: mockPayrollsService },
-            ],
-        }).compile();
+        const moduleFixture: TestingModule = await NestTest.createTestingModule(
+            {
+                controllers: [PayrollsController],
+                providers: [
+                    { provide: PayrollsService, useValue: mockPayrollsService },
+                ],
+            },
+        ).compile();
 
         app = moduleFixture.createNestApplication();
         await app.init();

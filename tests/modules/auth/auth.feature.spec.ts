@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test as NestTest, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Result } from '../../../src/common/logic/result';
@@ -6,7 +6,7 @@ import { AuthController } from '../../../src/modules/auth/auth.controller';
 import { AuthService } from '../../../src/modules/auth/auth.service';
 import { CookieService } from '../../../src/common/security/services/cookie.service';
 
-jest.mock('src/common/guards/jwt-auth.guard', () => ({
+jest.mock('../../../src/common/guards/jwt-auth.guard', () => ({
     JwtAuthGuard: class {
         canActivate(context: any) {
             const req = context.switchToHttp().getRequest();
@@ -15,14 +15,14 @@ jest.mock('src/common/guards/jwt-auth.guard', () => ({
         }
     },
 }));
-jest.mock('src/common/guards/roles.guard', () => ({
+jest.mock('../../../src/common/guards/roles.guard', () => ({
     RolesGuard: class {
         canActivate() {
             return true;
         }
     },
 }));
-jest.mock('src/common/security/guards/session.guard', () => ({
+jest.mock('../../../src/common/security/guards/session.guard', () => ({
     SessionGuard: class {
         canActivate() {
             return true;
@@ -61,13 +61,15 @@ describe('AuthController (Feature)', () => {
     let app: INestApplication;
 
     beforeEach(async () => {
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            controllers: [AuthController],
-            providers: [
-                { provide: AuthService, useValue: mockService },
-                { provide: CookieService, useValue: mockCookieService },
-            ],
-        }).compile();
+        const moduleFixture: TestingModule = await NestTest.createTestingModule(
+            {
+                controllers: [AuthController],
+                providers: [
+                    { provide: AuthService, useValue: mockService },
+                    { provide: CookieService, useValue: mockCookieService },
+                ],
+            },
+        ).compile();
 
         app = moduleFixture.createNestApplication();
         await app.init();
