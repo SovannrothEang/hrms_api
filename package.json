@@ -34,7 +34,8 @@
         "seed:employees": "ts-node prisma/seed/run-seed.ts employees",
         "seed:attendances": "ts-node prisma/seed/run-seed.ts attendances",
         "seed:leaves": "ts-node prisma/seed/run-seed.ts leaves",
-        "seed:payroll-records": "ts-node prisma/seed/run-seed.ts payroll-records"
+        "seed:payroll-records": "ts-node prisma/seed/run-seed.ts payroll-records",
+        "postinstall": "prisma generate"
     },
     "dependencies": {
         "@nestjs-modules/mailer": "^2.0.2",
@@ -50,6 +51,7 @@
         "@nestjs/throttler": "^6.5.0",
         "@prisma/adapter-pg": "^7.2.0",
         "@prisma/client": "^7.2.0",
+        "@types/node": "^22.10.7",
         "@types/pdfkit": "^0.17.5",
         "bcrypt": "^6.0.0",
         "bullmq": "^5.70.1",
@@ -73,7 +75,6 @@
         "rxjs": "^7.8.1",
         "ts-node": "^10.9.2",
         "typescript": "^5.7.3",
-        "@types/node": "^22.10.7",
         "uuid": "^9.0.1"
     },
     "devDependencies": {
